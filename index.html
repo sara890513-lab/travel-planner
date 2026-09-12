@@ -51,9 +51,30 @@ document.addEventListener('DOMContentLoaded',()=>{
   function toast(msg){ const t=$('#toast'); t.textContent=msg; t.classList.add('show'); setTimeout(()=>t.classList.remove('show'),1800); }
   function openModal(target){ const m=typeof target==='string'?$(target):target; if(!m)return; m.classList.add('open'); document.body.style.overflow='hidden'; }
   function closeModal(target){ const m=typeof target==='string'?$(target):target; if(!m)return; m.classList.remove('open'); if(!document.querySelector('.modal.open'))document.body.style.overflow=''; }
-  function localLoad(){ const raw=localStorage.getItem(LS); if(raw){ try{Object.assign(state,JSON.parse(raw)); state.supabase=null; state.user=null; state.cloud=false;}catch{} } render(); }
-  function localSave(){ const out={trips:state.trips,itineraries:state.itineraries,expenses:state.expenses,photos:state.photos,currentTripId:state.currentTripId}; localStorage.setItem(LS,JSON.stringify(out)); }
-  function persist(){ if(!state.cloud) localSave(); }
+  let storageAvailable=true;
+  function localLoad(){
+    try{
+      const raw=localStorage.getItem(LS);
+      if(raw){Object.assign(state,JSON.parse(raw)); state.supabase=null; state.user=null; state.cloud=false;}
+    }catch(err){
+      storageAvailable=false;
+      console.warn('localStorage unavailable; using memory mode',err);
+    }
+    render();
+  }
+  function localSave(){
+    if(!storageAvailable) return false;
+    try{
+      const out={trips:state.trips,itineraries:state.itineraries,expenses:state.expenses,photos:state.photos,currentTripId:state.currentTripId};
+      localStorage.setItem(LS,JSON.stringify(out));
+      return true;
+    }catch(err){
+      storageAvailable=false;
+      console.warn('localStorage save failed; continuing in memory mode',err);
+      return false;
+    }
+  }
+  function persist(){ if(!state.cloud) return localSave(); return true; }
 
   function setView(name){ $$('.view').forEach(v=>v.classList.remove('active')); $(`#${name}View`).classList.add('active'); if(name==='home') renderTrips(); }
   function setTab(name){ $$('.tab').forEach(b=>b.classList.toggle('active',b.dataset.tab===name)); $$('.tab-panel').forEach(p=>p.classList.remove('active')); $(`#${name}Tab`).classList.add('active'); }
@@ -180,7 +201,7 @@ document.addEventListener('DOMContentLoaded',()=>{
   async function saveTrip(){
     const id=$('#tripId').value||uid();let cover=state.trips.find(t=>t.id===id)?.cover_url||'';const file=$('#tripCoverInput').files[0];if(file){if(state.cloud){cover=await uploadPhotoFile(file,id,true);}else cover=await dataURL(file);}
     const row={id,name:$('#tripName').value.trim(),start_date:$('#tripStart').value||null,end_date:$('#tripEnd').value||null,location:$('#tripLocation').value.trim(),people:$('#tripPeople').value.split(',').map(x=>x.trim()).filter(Boolean),note:$('#tripNote').value.trim(),cover_url:cover,updated_at:new Date().toISOString()}; if(!row.name)return;
-    if(state.cloud){await cloudUpsert('trips',row);await loadCloud();} else {const i=state.trips.findIndex(t=>t.id===id); if(i>=0)state.trips[i]=row;else state.trips.unshift(row);persist();renderTrips();} toast('旅程已儲存 ♡');
+    if(state.cloud){await cloudUpsert('trips',row);await loadCloud();} else {const i=state.trips.findIndex(t=>t.id===id); if(i>=0)state.trips[i]=row;else state.trips.unshift(row);renderTrips();const saved=persist();if(!saved)toast('旅程已新增；此瀏覽器暫時無法永久保存');} if(storageAvailable||state.cloud)toast('旅程已儲存 ♡');
   }
   async function saveItinerary(){const row={id:$('#itineraryId').value||uid(),trip_id:state.currentTripId,date:$('#itDate').value,time:$('#itTime').value,place:$('#itPlace').value.trim(),stay:$('#itStay').value.trim(),transport:$('#itTransport').value.trim(),note:$('#itNote').value.trim()};if(state.cloud){await cloudUpsert('itineraries',row);await loadCloud();}else{const i=state.itineraries.findIndex(x=>x.id===row.id);if(i>=0)state.itineraries[i]=row;else state.itineraries.push(row);persist();renderItinerary();}toast('行程已儲存');}
   async function saveExpense(){const participants=$$('#participantChecks input:checked').map(x=>x.value);if(!participants.length){toast('至少選一位分帳成員');return false}const row={id:$('#expenseId').value||uid(),trip_id:state.currentTripId,item:$('#exItem').value.trim(),amount:Number($('#exAmount').value),payer:$('#exPayer').value,participants,note:$('#exNote').value.trim()};if(state.cloud){await cloudUpsert('expenses',row);await loadCloud();}else{const i=state.expenses.findIndex(x=>x.id===row.id);if(i>=0)state.expenses[i]=row;else state.expenses.unshift(row);persist();renderExpenses();}toast('支出已儲存');return true;}
@@ -342,7 +363,7 @@ body{background:#fffaf7}
       <label>同行朋友 <small>用逗號分開</small><input id="tripPeople" placeholder="小花, 阿明" /></label>
       <label>封面照片<input id="tripCoverInput" type="file" accept="image/*" /></label>
       <label>備註<textarea id="tripNote" rows="3" placeholder="住宿、提醒、期待清單…"></textarea></label>
-      <div class="modal-actions"><button type="button" class="ghost" data-close>取消</button><button class="primary" value="default">儲存旅程</button></div>
+      <div class="modal-actions"><button type="button" class="ghost" data-close>取消</button><button class="primary" type="submit">儲存旅程</button></div>
     </form>
   </div>
 
@@ -355,7 +376,7 @@ body{background:#fffaf7}
       <label>住宿地點<input id="itStay" placeholder="例如：民宿名稱" /></label>
       <label>交通<input id="itTransport" placeholder="例如：機車 / 船 / 計程車" /></label>
       <label>備註<textarea id="itNote" rows="3" placeholder="集合位置、票券、餐廳…"></textarea></label>
-      <div class="modal-actions"><button type="button" class="ghost" data-close>取消</button><button class="primary" value="default">儲存行程</button></div>
+      <div class="modal-actions"><button type="button" class="ghost" data-close>取消</button><button class="primary" type="submit">儲存行程</button></div>
     </form>
   </div>
 
@@ -367,7 +388,7 @@ body{background:#fffaf7}
       <div class="two-col"><label>金額<input id="exAmount" type="number" min="0" step="1" required /></label><label>誰付錢<select id="exPayer" required></select></label></div>
       <fieldset><legend>這筆費用要分給誰</legend><div id="participantChecks" class="checks"></div></fieldset>
       <label>備註<textarea id="exNote" rows="2"></textarea></label>
-      <div class="modal-actions"><button type="button" class="ghost" data-close>取消</button><button class="primary" value="default">儲存支出</button></div>
+      <div class="modal-actions"><button type="button" class="ghost" data-close>取消</button><button class="primary" type="submit">儲存支出</button></div>
     </form>
   </div>
 
