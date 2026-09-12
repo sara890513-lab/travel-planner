@@ -34,7 +34,8 @@
 
 </style>
 <script>window.TRAVEL_SUPABASE={url:"",anonKey:""};</script>
-<script defer>
+<script>
+document.addEventListener('DOMContentLoaded',()=>{
 (() => {
   const $ = s => document.querySelector(s);
   const $$ = s => [...document.querySelectorAll(s)];
@@ -48,6 +49,8 @@
   const LS='cute-travel-planner-v1';
 
   function toast(msg){ const t=$('#toast'); t.textContent=msg; t.classList.add('show'); setTimeout(()=>t.classList.remove('show'),1800); }
+  function openModal(target){ const m=typeof target==='string'?$(target):target; if(!m)return; m.classList.add('open'); document.body.style.overflow='hidden'; }
+  function closeModal(target){ const m=typeof target==='string'?$(target):target; if(!m)return; m.classList.remove('open'); if(!document.querySelector('.modal.open'))document.body.style.overflow=''; }
   function localLoad(){ const raw=localStorage.getItem(LS); if(raw){ try{Object.assign(state,JSON.parse(raw)); state.supabase=null; state.user=null; state.cloud=false;}catch{} } render(); }
   function localSave(){ const out={trips:state.trips,itineraries:state.itineraries,expenses:state.expenses,photos:state.photos,currentTripId:state.currentTripId}; localStorage.setItem(LS,JSON.stringify(out)); }
   function persist(){ if(!state.cloud) localSave(); }
@@ -169,10 +172,10 @@
     const rows=state.photos.filter(x=>x.trip_id===state.currentTripId);const g=$('#photoGallery');g.innerHTML='';if(!rows.length){g.innerHTML='<div class="empty-card" style="grid-column:1/-1"><div class="empty-illu">📸</div><h3>這本旅遊計畫書還沒有照片</h3><p>點「放照片」把旅途回憶存進來。</p></div>';return} rows.forEach(x=>{const d=document.createElement('figure');d.className='photo-card';d.innerHTML=`<img src="${esc(x.public_url||x.data_url||'')}" alt="旅程照片"><button aria-label="刪除照片">✕</button>${x.caption?`<figcaption class="photo-caption">${esc(x.caption)}</figcaption>`:''}`;d.querySelector('button').onclick=()=>removePhoto(x);g.appendChild(d);});
   }
 
-  function openTripDialog(t=null){ $('#tripDialogTitle').textContent=t?'編輯旅程':'新增旅程'; $('#tripId').value=t?.id||'';$('#tripName').value=t?.name||'';$('#tripStart').value=t?.start_date||'';$('#tripEnd').value=t?.end_date||'';$('#tripLocation').value=t?.location||'';$('#tripPeople').value=peopleOf(t).join(', ');$('#tripNote').value=t?.note||'';$('#tripCoverInput').value='';$('#tripDialog').showModal(); }
-  function openItineraryDialog(x=null){$('#itineraryId').value=x?.id||'';$('#itDate').value=x?.date||currentTrip()?.start_date||'';$('#itTime').value=x?.time?.slice(0,5)||'';$('#itPlace').value=x?.place||'';$('#itStay').value=x?.stay||'';$('#itTransport').value=x?.transport||'';$('#itNote').value=x?.note||'';$('#itineraryDialog').showModal();}
+  function openTripDialog(t=null){ $('#tripDialogTitle').textContent=t?'編輯旅程':'新增旅程'; $('#tripId').value=t?.id||'';$('#tripName').value=t?.name||'';$('#tripStart').value=t?.start_date||'';$('#tripEnd').value=t?.end_date||'';$('#tripLocation').value=t?.location||'';$('#tripPeople').value=peopleOf(t).join(', ');$('#tripNote').value=t?.note||'';$('#tripCoverInput').value='';openModal('#tripDialog'); }
+  function openItineraryDialog(x=null){$('#itineraryId').value=x?.id||'';$('#itDate').value=x?.date||currentTrip()?.start_date||'';$('#itTime').value=x?.time?.slice(0,5)||'';$('#itPlace').value=x?.place||'';$('#itStay').value=x?.stay||'';$('#itTransport').value=x?.transport||'';$('#itNote').value=x?.note||'';openModal('#itineraryDialog');}
   function fillExpensePeople(){const people=peopleOf(currentTrip());$('#exPayer').innerHTML=people.map(p=>`<option>${esc(p)}</option>`).join('');$('#participantChecks').innerHTML=people.map(p=>`<label><input type="checkbox" value="${esc(p)}" checked> ${esc(p)}</label>`).join('');}
-  function openExpenseDialog(x=null){fillExpensePeople();$('#expenseId').value=x?.id||'';$('#exItem').value=x?.item||'';$('#exAmount').value=x?.amount||'';$('#exPayer').value=x?.payer||peopleOf(currentTrip())[0]||'';$('#exNote').value=x?.note||''; if(x) $$('#participantChecks input').forEach(c=>c.checked=(x.participants||[]).includes(c.value));$('#expenseDialog').showModal();}
+  function openExpenseDialog(x=null){fillExpensePeople();$('#expenseId').value=x?.id||'';$('#exItem').value=x?.item||'';$('#exAmount').value=x?.amount||'';$('#exPayer').value=x?.payer||peopleOf(currentTrip())[0]||'';$('#exNote').value=x?.note||''; if(x) $$('#participantChecks input').forEach(c=>c.checked=(x.participants||[]).includes(c.value));openModal('#expenseDialog');}
 
   async function saveTrip(){
     const id=$('#tripId').value||uid();let cover=state.trips.find(t=>t.id===id)?.cover_url||'';const file=$('#tripCoverInput').files[0];if(file){if(state.cloud){cover=await uploadPhotoFile(file,id,true);}else cover=await dataURL(file);}
@@ -192,19 +195,20 @@
   }
   async function removePhoto(x){if(!confirm('刪除這張照片嗎？'))return;if(state.cloud){if(x.storage_path)await state.supabase.storage.from('trip-photos').remove([x.storage_path]);await cloudDelete('travel_photos',x.id);await loadCloud();}else{state.photos=state.photos.filter(p=>p.id!==x.id);persist();renderPhotos();}}
 
-  document.addEventListener('click',e=>{const a=e.target.closest('[data-action]');if(a){const action=a.dataset.action;if(action==='home'||action==='trip-list')setView('home');if(action==='new-trip')openTripDialog();if(action==='settings')$('#settingsDialog').showModal();}const close=e.target.closest('[data-close]');if(close)close.closest('dialog').close();});
+  document.addEventListener('click',e=>{const a=e.target.closest('[data-action]');if(a){const action=a.dataset.action;if(action==='home'||action==='trip-list')setView('home');if(action==='new-trip')openTripDialog();if(action==='settings')openModal('#settingsDialog');}const close=e.target.closest('[data-close]');if(close)closeModal(close.closest('.modal'));});
   $$('.tab').forEach(b=>b.onclick=()=>setTab(b.dataset.tab));
   $('#editTripBtn').onclick=()=>openTripDialog(currentTrip());$('#addItineraryBtn').onclick=()=>openItineraryDialog();$('#exportImageBtn').onclick=()=>exportItinerary('image');$('#exportPdfBtn').onclick=()=>exportItinerary('pdf');$('#addExpenseBtn').onclick=()=>{if(!peopleOf(currentTrip()).length){toast('請先在旅程中加入同行朋友');return}openExpenseDialog();};
-  $('#tripForm').addEventListener('submit',async e=>{e.preventDefault();try{await saveTrip();$('#tripDialog').close();}catch(err){console.error(err);toast('儲存失敗');}});
-  $('#itineraryForm').addEventListener('submit',async e=>{e.preventDefault();try{await saveItinerary();$('#itineraryDialog').close();}catch(err){console.error(err);toast('儲存失敗');}});
-  $('#expenseForm').addEventListener('submit',async e=>{e.preventDefault();try{if(await saveExpense())$('#expenseDialog').close();}catch(err){console.error(err);toast('儲存失敗');}});
+  $('#tripForm').addEventListener('submit',async e=>{e.preventDefault();try{await saveTrip();closeModal('#tripDialog');}catch(err){console.error(err);toast('儲存失敗');}});
+  $('#itineraryForm').addEventListener('submit',async e=>{e.preventDefault();try{await saveItinerary();closeModal('#itineraryDialog');}catch(err){console.error(err);toast('儲存失敗');}});
+  $('#expenseForm').addEventListener('submit',async e=>{e.preventDefault();try{if(await saveExpense())closeModal('#expenseDialog');}catch(err){console.error(err);toast('儲存失敗');}});
   $('#photoInput').addEventListener('change',async e=>{await addPhotos([...e.target.files]);e.target.value='';});
-  $('#authBtn').onclick=async()=>{if(state.user){if(confirm('要登出雲端嗎？'))await state.supabase.auth.signOut();}else $('#authDialog').showModal();};
+  $('#authBtn').onclick=async()=>{if(state.user){if(confirm('要登出雲端嗎？'))await state.supabase.auth.signOut();}else openModal('#authDialog');};
   $('#signUpBtn').onclick=async()=>{if(!state.supabase){toast('請先填 supabase-config.js');return}const {error}=await state.supabase.auth.signUp({email:$('#authEmail').value,password:$('#authPassword').value});if(error)toast(error.message);else toast('註冊完成，若有驗證信請先驗證');};
-  $('#signInBtn').onclick=async()=>{if(!state.supabase){toast('請先填 supabase-config.js');return}const {error}=await state.supabase.auth.signInWithPassword({email:$('#authEmail').value,password:$('#authPassword').value});if(error)toast(error.message);else{$('#authDialog').close();toast('登入成功，開始雲端同步');}};
+  $('#signInBtn').onclick=async()=>{if(!state.supabase){toast('請先填 supabase-config.js');return}const {error}=await state.supabase.auth.signInWithPassword({email:$('#authEmail').value,password:$('#authPassword').value});if(error)toast(error.message);else{closeModal('#authDialog');toast('登入成功，開始雲端同步');}};
 
   localLoad(); initCloud();
 })();
+});
 
 </script>
 
@@ -214,6 +218,14 @@ body{background:#fffaf7}
 .hero-wrap{max-width:1312px;padding:0 12px}.hero-img{border-radius:24px;max-height:none;aspect-ratio:1292/303;object-fit:cover;box-shadow:none}
 .content-section{max-width:1312px;padding-top:26px}.section-head h1{font-weight:800;letter-spacing:.5px}.trip-card{border-radius:20px;box-shadow:0 7px 20px rgba(74,60,54,.06)}
 @media(max-width:900px){.topbar{margin:0;padding-top:10px}.hero-wrap{padding:0 8px}.hero-img{border-radius:18px}.content-section{padding-top:20px}.brand small{display:none}}
+</style>
+
+<style>
+/* iPhone / iPad 相容版彈窗：不依賴 <dialog>.showModal() */
+.modal{display:none!important;position:fixed!important;inset:0!important;z-index:1000!important;width:auto!important;max-height:none!important;background:rgba(38,53,80,.38)!important;padding:12px!important;border-radius:0!important;align-items:center!important;justify-content:center!important;overflow:auto!important}
+.modal.open{display:flex!important}
+.modal>.modal-card{width:min(620px,100%);max-height:88vh;margin:auto;background:#fff}
+.modal::backdrop{display:none!important}
 </style>
 </head>
 <body>
@@ -320,8 +332,8 @@ body{background:#fffaf7}
 
   <div id="exportSheet" class="export-sheet" aria-hidden="true"></div>
 
-  <dialog id="tripDialog" class="modal">
-    <form id="tripForm" method="dialog" class="modal-card">
+  <div id="tripDialog" class="modal" role="dialog" aria-modal="true">
+    <form id="tripForm" class="modal-card">
       <div class="modal-head"><h2 id="tripDialogTitle">新增旅程</h2><button type="button" class="icon-btn" data-close>✕</button></div>
       <input type="hidden" id="tripId" />
       <label>旅程名稱<input id="tripName" required placeholder="例如：蘭嶼三天兩夜" /></label>
@@ -332,10 +344,10 @@ body{background:#fffaf7}
       <label>備註<textarea id="tripNote" rows="3" placeholder="住宿、提醒、期待清單…"></textarea></label>
       <div class="modal-actions"><button type="button" class="ghost" data-close>取消</button><button class="primary" value="default">儲存旅程</button></div>
     </form>
-  </dialog>
+  </div>
 
-  <dialog id="itineraryDialog" class="modal">
-    <form id="itineraryForm" method="dialog" class="modal-card">
+  <div id="itineraryDialog" class="modal" role="dialog" aria-modal="true">
+    <form id="itineraryForm" class="modal-card">
       <div class="modal-head"><h2>新增行程</h2><button type="button" class="icon-btn" data-close>✕</button></div>
       <input type="hidden" id="itineraryId" />
       <div class="two-col"><label>日期<input id="itDate" type="date" required /></label><label>時間<input id="itTime" type="time" required /></label></div>
@@ -345,10 +357,10 @@ body{background:#fffaf7}
       <label>備註<textarea id="itNote" rows="3" placeholder="集合位置、票券、餐廳…"></textarea></label>
       <div class="modal-actions"><button type="button" class="ghost" data-close>取消</button><button class="primary" value="default">儲存行程</button></div>
     </form>
-  </dialog>
+  </div>
 
-  <dialog id="expenseDialog" class="modal">
-    <form id="expenseForm" method="dialog" class="modal-card">
+  <div id="expenseDialog" class="modal" role="dialog" aria-modal="true">
+    <form id="expenseForm" class="modal-card">
       <div class="modal-head"><h2>新增支出</h2><button type="button" class="icon-btn" data-close>✕</button></div>
       <input type="hidden" id="expenseId" />
       <label>項目<input id="exItem" required placeholder="例如：晚餐、住宿、船票" /></label>
@@ -357,10 +369,10 @@ body{background:#fffaf7}
       <label>備註<textarea id="exNote" rows="2"></textarea></label>
       <div class="modal-actions"><button type="button" class="ghost" data-close>取消</button><button class="primary" value="default">儲存支出</button></div>
     </form>
-  </dialog>
+  </div>
 
-  <dialog id="authDialog" class="modal">
-    <form id="authForm" method="dialog" class="modal-card">
+  <div id="authDialog" class="modal" role="dialog" aria-modal="true">
+    <form id="authForm" class="modal-card">
       <div class="modal-head"><h2>☁️ 雲端同步</h2><button type="button" class="icon-btn" data-close>✕</button></div>
       <p class="helper">用同一個 Email 登入手機、平板、電腦，就會看到同一份旅遊計畫與照片。</p>
       <label>Email<input id="authEmail" type="email" required placeholder="you@example.com" /></label>
@@ -368,18 +380,18 @@ body{background:#fffaf7}
       <div class="modal-actions split"><button type="button" class="ghost" id="signUpBtn">註冊</button><button class="primary" id="signInBtn" type="button">登入</button></div>
       <div id="cloudStatus" class="cloud-status"></div>
     </form>
-  </dialog>
+  </div>
 
-  <dialog id="settingsDialog" class="modal">
-    <form method="dialog" class="modal-card">
+  <div id="settingsDialog" class="modal" role="dialog" aria-modal="true">
+    <form class="modal-card">
       <div class="modal-head"><h2>設定</h2><button type="button" class="icon-btn" data-close>✕</button></div>
       <div class="settings-box">
         <strong>跨裝置共用</strong>
         <p>這一版已做好 Supabase 雲端同步結構。把 <code>supabase-config.js</code> 填好並執行附上的 <code>schema.sql</code>，即可用同一帳號同步旅程、行程、分帳與照片。</p>
       </div>
       <div class="settings-box"><strong>目前模式</strong><p id="modeText">本機模式</p></div>
-      <div class="modal-actions"><button class="primary" value="default">完成</button></div>
+      <div class="modal-actions"><button type="button" class="primary" data-close>完成</button></div>
     </form>
-  </dialog>
+  </div>
 </body>
 </html>
