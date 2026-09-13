@@ -453,6 +453,16 @@ document.addEventListener('DOMContentLoaded',()=>{
     toast('交通資訊已儲存');
   }
 
+
+  // v2.5: expose accommodation / transport actions to toolbar hooks
+  window.openStayDialog = openStayDialog;
+  window.saveStayInfo = saveStayInfo;
+  window.openTransportDialog = openTransportDialog;
+  window.saveTransportInfo = saveTransportInfo;
+  window.transportStore = transportStore;
+  window.saveTripObject = saveTripObject;
+  window.renderMajorTransports = renderMajorTransports;
+
   function renderItinerary(){
     const list=$('#itineraryList');
     const rows=state.itineraries.filter(x=>x.trip_id===state.currentTripId)
@@ -684,7 +694,7 @@ body{background:#fffaf7}
   <header class="topbar">
     <button class="brand" data-action="home" aria-label="回首頁">
       <span class="brand-icon">🗺️</span>
-      <span><strong>我的旅遊計畫</strong><small>TRAVEL PLANNER · v2.4</small></span>
+      <span><strong>我的旅遊計畫</strong><small>TRAVEL PLANNER · v2.5</small></span>
       <span class="heart">♥</span>
     </button>
     <nav class="nav" aria-label="主選單">
@@ -1195,11 +1205,11 @@ document.addEventListener('click', function(e){
 <script id="stay-v21-hooks">
 document.addEventListener('DOMContentLoaded',function(){
   const edit=document.getElementById('editStayBtn');
-  if(edit) edit.addEventListener('click',function(){ if(typeof openStayDialog==='function') openStayDialog(); });
+  if(edit) edit.addEventListener('click',function(){ if(typeof window.openStayDialog==='function') window.openStayDialog(); });
   const form=document.getElementById('stayForm');
   if(form) form.addEventListener('submit',function(e){
     e.preventDefault();
-    if(typeof saveStayInfo==='function') saveStayInfo();
+    if(typeof window.saveStayInfo==='function') window.saveStayInfo();
   });
 });
 </script>
@@ -1208,28 +1218,28 @@ document.addEventListener('DOMContentLoaded',function(){
 <script id="transport-v22-hooks">
 document.addEventListener('DOMContentLoaded',function(){
   const add=document.getElementById('addTransportBtn');
-  if(add) add.addEventListener('click',function(){ if(typeof openTransportDialog==='function') openTransportDialog(); });
+  if(add) add.addEventListener('click',function(){ if(typeof window.openTransportDialog==='function') window.openTransportDialog(); });
 
   const form=document.getElementById('transportForm');
   if(form) form.addEventListener('submit',function(e){
     e.preventDefault();
-    if(typeof saveTransportInfo==='function') saveTransportInfo();
+    if(typeof window.saveTransportInfo==='function') window.saveTransportInfo();
   });
 
   document.addEventListener('click',function(e){
     const edit=e.target.closest('[data-edit-transport]');
-    if(edit && typeof transportStore==='function'){
-      const r=transportStore().find(x=>x.id===edit.dataset.editTransport);
-      if(r) openTransportDialog(r);
+    if(edit && typeof window.transportStore==='function'){
+      const r=window.transportStore().find(x=>x.id===edit.dataset.editTransport);
+      if(r) window.openTransportDialog(r);
     }
     const del=e.target.closest('[data-del-transport]');
-    if(del && typeof transportStore==='function'){
-      const rows=transportStore();
+    if(del && typeof window.transportStore==='function'){
+      const rows=window.transportStore();
       const i=rows.findIndex(x=>x.id===del.dataset.delTransport);
       if(i>=0 && confirm('確定刪除這筆交通資訊嗎？')){
         rows.splice(i,1);
-        saveTripObject(currentTrip());
-        renderMajorTransports();
+        window.saveTripObject(currentTrip());
+        window.renderMajorTransports();
       }
     }
   });
