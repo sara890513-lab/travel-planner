@@ -268,6 +268,12 @@ html,body{max-width:100%;overflow-x:hidden}
 .food-review-fields:not(.hidden){display:block!important}
 @media(max-width:620px){.subplace-add-actions button{flex:1 1 45%}}
 
+
+.time-select-wrap{display:grid;grid-template-columns:minmax(90px,1fr) auto minmax(90px,1fr);gap:8px;align-items:center;margin-top:6px}
+.time-select-wrap select{width:100%;min-height:48px;padding:10px 12px;border:1px solid #e7dde0;border-radius:14px;background:#fff;font:inherit}
+.time-select-wrap span{text-align:center;font-weight:800;font-size:20px}
+@media(max-width:620px){.time-select-wrap{grid-template-columns:1fr auto 1fr}}
+
 </style>
 <script>window.TRAVEL_SUPABASE={url:"",anonKey:""};</script>
 <script>
@@ -456,8 +462,10 @@ document.addEventListener('DOMContentLoaded',()=>{
     $('#stayName').value=t.stay_name||'';
     $('#stayAddress').value=t.stay_address||'';
     $('#stayLandmark').value=t.stay_landmark||'';
-    $('#stayCheckin').value=t.stay_checkin||'';
-    $('#stayCheckout').value=t.stay_checkout||'';
+    fillTimeSelects('stayCheckinHour','stayCheckinMinute',t.stay_checkin||'');
+    fillTimeSelects('stayCheckoutHour','stayCheckoutMinute',t.stay_checkout||'');
+    syncHiddenTime('stayCheckin','stayCheckinHour','stayCheckinMinute');
+    syncHiddenTime('stayCheckout','stayCheckoutHour','stayCheckoutMinute');
     $('#stayNote').value=t.stay_note||'';
     openModal('#stayDialog');
   }
@@ -466,8 +474,8 @@ document.addEventListener('DOMContentLoaded',()=>{
     t.stay_name=$('#stayName').value.trim();
     t.stay_address=$('#stayAddress').value.trim();
     t.stay_landmark=$('#stayLandmark').value.trim();
-    t.stay_checkin=$('#stayCheckin').value;
-    t.stay_checkout=$('#stayCheckout').value;
+    t.stay_checkin=timeFromSelects('stayCheckinHour','stayCheckinMinute');
+    t.stay_checkout=timeFromSelects('stayCheckoutHour','stayCheckoutMinute');
     t.stay_note=$('#stayNote').value.trim();
     t.updated_at=new Date().toISOString();
     if(state.cloud){
@@ -533,8 +541,10 @@ document.addEventListener('DOMContentLoaded',()=>{
     $('#transportMode').value=r?.mode||'船';
     $('#transportFrom').value=r?.from||'';
     $('#transportTo').value=r?.to||'';
-    $('#transportDepart').value=r?.depart||'';
-    $('#transportArrive').value=r?.arrive||'';
+    setDateTimeSelects('transportDepart',r?.depart||'');
+    setDateTimeSelects('transportArrive',r?.arrive||'');
+    $('#transportDepart').value=dateTimeFromSelects('transportDepart');
+    $('#transportArrive').value=dateTimeFromSelects('transportArrive');
     $('#transportRef').value=r?.ref||'';
     $('#transportLandmark').value=r?.landmark||'';
     $('#transportNote').value=r?.note||'';
@@ -548,8 +558,8 @@ document.addEventListener('DOMContentLoaded',()=>{
       mode:$('#transportMode').value,
       from:$('#transportFrom').value.trim(),
       to:$('#transportTo').value.trim(),
-      depart:$('#transportDepart').value,
-      arrive:$('#transportArrive').value,
+      depart:dateTimeFromSelects('transportDepart'),
+      arrive:dateTimeFromSelects('transportArrive'),
       ref:$('#transportRef').value.trim(),
       landmark:$('#transportLandmark').value.trim(),
       note:$('#transportNote').value.trim()
@@ -757,6 +767,40 @@ document.addEventListener('DOMContentLoaded',()=>{
     const rows=state.photos.filter(x=>x.trip_id===state.currentTripId);const g=$('#photoGallery');g.innerHTML='';if(!rows.length){g.innerHTML='<div class="empty-card" style="grid-column:1/-1"><div class="empty-illu">📸</div><h3>這本旅遊計畫書還沒有照片</h3><p>點「放照片」把旅途回憶存進來。</p></div>';return} rows.forEach(x=>{const d=document.createElement('figure');d.className='photo-card';d.innerHTML=`<img src="${esc(x.public_url||x.data_url||'')}" alt="旅程照片"><button aria-label="刪除照片">✕</button>${x.caption?`<figcaption class="photo-caption">${esc(x.caption)}</figcaption>`:''}`;d.querySelector('button').onclick=()=>removePhoto(x);g.appendChild(d);});
   }
 
+
+  function fillTimeSelects(hourId, minuteId, value=''){
+    const h=document.getElementById(hourId), m=document.getElementById(minuteId);
+    if(!h||!m)return;
+    h.innerHTML='<option value="">時</option>'+Array.from({length:24},(_,i)=>`<option value="${String(i).padStart(2,'0')}">${String(i).padStart(2,'0')}</option>`).join('');
+    m.innerHTML='<option value="">分</option>'+Array.from({length:60},(_,i)=>`<option value="${String(i).padStart(2,'0')}">${String(i).padStart(2,'0')}</option>`).join('');
+    if(value && /^\d{2}:\d{2}/.test(value)){
+      h.value=value.slice(0,2); m.value=value.slice(3,5);
+    }
+  }
+  function timeFromSelects(hourId, minuteId){
+    const h=document.getElementById(hourId)?.value||'';
+    const m=document.getElementById(minuteId)?.value||'';
+    return h&&m ? `${h}:${m}` : '';
+  }
+  function syncHiddenTime(hiddenId,hourId,minuteId){
+    const el=document.getElementById(hiddenId); if(el)el.value=timeFromSelects(hourId,minuteId);
+  }
+  function setDateTimeSelects(prefix,value=''){
+    const date=document.getElementById(prefix+'Date');
+    let d='',t='';
+    if(value){
+      const parts=String(value).split('T');
+      d=parts[0]||''; t=(parts[1]||'').slice(0,5);
+    }
+    if(date)date.value=d;
+    fillTimeSelects(prefix+'Hour',prefix+'Minute',t);
+  }
+  function dateTimeFromSelects(prefix){
+    const d=document.getElementById(prefix+'Date')?.value||'';
+    const t=timeFromSelects(prefix+'Hour',prefix+'Minute');
+    return d&&t ? `${d}T${t}` : (d||'');
+  }
+
   function openTripDialog(t=null){ $('#tripDialogTitle').textContent=t?'編輯旅程':'新增旅程'; $('#tripId').value=t?.id||'';$('#tripName').value=t?.name||'';$('#tripStart').value=t?.start_date||'';$('#tripEnd').value=t?.end_date||'';$('#tripLocation').value=t?.location||'';$('#tripPeople').value=peopleOf(t).join(', ');$('#tripNote').value=t?.note||'';$('#tripCoverInput').value='';openModal('#tripDialog'); }
   function fillParentSpotOptions(selected=''){
     const sel=$('#itParentSpot'); if(!sel)return;
@@ -778,7 +822,7 @@ document.addEventListener('DOMContentLoaded',()=>{
     $$('#itRatingStars button').forEach(b=>b.textContent=Number(b.dataset.rating)<=n?'★':'☆');
   }
   function openItineraryDialog(x=null){
-    $('#itineraryId').value=x?.id||'';$('#itDate').value=x?.date||currentTrip()?.start_date||'';$('#itTime').value=x?.time?.slice(0,5)||'';
+    $('#itineraryId').value=x?.id||'';$('#itDate').value=x?.date||currentTrip()?.start_date||'';fillTimeSelects('itHour','itMinute',x?.time?.slice(0,5)||'');syncHiddenTime('itTime','itHour','itMinute');
     $('#itType').value=x?.type||'spot';fillParentSpotOptions(x?.parent_spot_id||'');$('#itParentSpot').value=x?.parent_spot_id||'';$('#itPlace').value=x?.place||'';$('#itTransport').value=x?.transport||'';$('#itStation').value=x?.station||'';
     $('#itReview').value=x?.review||'';paintRating(x?.rating||0);$('#itNote').value=x?.note||'';updateFoodFields();openModal('#itineraryDialog');
   }
@@ -786,7 +830,7 @@ document.addEventListener('DOMContentLoaded',()=>{
   function openChildItineraryDialog(parent,type){
     openItineraryDialog(null);
     $('#itDate').value=parent?.date||currentTrip()?.start_date||'';
-    $('#itTime').value=parent?.time?.slice(0,5)||'';
+    fillTimeSelects('itHour','itMinute',parent?.time?.slice(0,5)||'');syncHiddenTime('itTime','itHour','itMinute');
     $('#itType').value=type||'food';
     fillParentSpotOptions(parent?.id||'');
     $('#itParentSpot').value=parent?.id||'';
@@ -808,7 +852,7 @@ document.addEventListener('DOMContentLoaded',()=>{
     const oldTrip=state.trips.find(t=>t.id===id)||{};const row={...oldTrip,id,name:$('#tripName').value.trim(),start_date:$('#tripStart').value||null,end_date:$('#tripEnd').value||null,location:$('#tripLocation').value.trim(),people:$('#tripPeople').value.split(',').map(x=>x.trim()).filter(Boolean),note:$('#tripNote').value.trim(),cover_url:cover,updated_at:new Date().toISOString()}; if(!row.name)return;
     if(state.cloud){await cloudUpsert('trips',row);await loadCloud();} else {const i=state.trips.findIndex(t=>t.id===id); if(i>=0)state.trips[i]=row;else state.trips.unshift(row);renderTrips();const saved=persist();if(!saved)toast('旅程已新增；此瀏覽器暫時無法永久保存');} if(storageAvailable||state.cloud)toast('旅程已儲存 ♡');
   }
-  async function saveItinerary(){const row={id:$('#itineraryId').value||uid(),trip_id:state.currentTripId,date:$('#itDate').value,time:$('#itTime').value,type:$('#itType').value||'spot',parent_spot_id:($('#itType').value==='spot'?'':($('#itParentSpot').value||'')),place:$('#itPlace').value.trim(),transport:$('#itTransport').value.trim(),station:$('#itStation').value.trim(),rating:Number($('#itRating').value||0),review:$('#itReview').value.trim(),note:$('#itNote').value.trim()};if(state.cloud){await cloudUpsert('itineraries',row);await loadCloud();}else{const i=state.itineraries.findIndex(x=>x.id===row.id);if(i>=0)state.itineraries[i]=row;else state.itineraries.push(row);persist();renderItinerary();renderQuickItinerary();}toast('行程已儲存');}
+  async function saveItinerary(){const row={id:$('#itineraryId').value||uid(),trip_id:state.currentTripId,date:$('#itDate').value,time:timeFromSelects('itHour','itMinute'),type:$('#itType').value||'spot',parent_spot_id:($('#itType').value==='spot'?'':($('#itParentSpot').value||'')),place:$('#itPlace').value.trim(),transport:$('#itTransport').value.trim(),station:$('#itStation').value.trim(),rating:Number($('#itRating').value||0),review:$('#itReview').value.trim(),note:$('#itNote').value.trim()};if(state.cloud){await cloudUpsert('itineraries',row);await loadCloud();}else{const i=state.itineraries.findIndex(x=>x.id===row.id);if(i>=0)state.itineraries[i]=row;else state.itineraries.push(row);persist();renderItinerary();renderQuickItinerary();}toast('行程已儲存');}
   async function saveExpense(){const participants=$$('#participantChecks input:checked').map(x=>x.value);if(!participants.length){toast('至少選一位分帳成員');return false}const row={id:$('#expenseId').value||uid(),trip_id:state.currentTripId,item:$('#exItem').value.trim(),amount:Number($('#exAmount').value),payer:$('#exPayer').value,participants,note:$('#exNote').value.trim()};if(state.cloud){await cloudUpsert('expenses',row);await loadCloud();}else{const i=state.expenses.findIndex(x=>x.id===row.id);if(i>=0)state.expenses[i]=row;else state.expenses.unshift(row);persist();renderExpenses();}toast('支出已儲存');return true;}
   async function removeRecord(table,id){if(!confirm('確定要刪除嗎？'))return;if(state.cloud){await cloudDelete(table,id);await loadCloud();}else{state[table]=state[table].filter(x=>x.id!==id);persist();renderTrip();}toast('已刪除');}
 
@@ -931,7 +975,7 @@ body{background:#fffaf7}
   <header class="topbar">
     <button class="brand" data-action="home" aria-label="回首頁">
       <span class="brand-icon">🗺️</span>
-      <span><strong>我的旅遊計畫</strong><small>TRAVEL PLANNER · v3.6</small></span>
+      <span><strong>我的旅遊計畫</strong><small>TRAVEL PLANNER · v3.7</small></span>
       <span class="heart">♥</span>
     </button>
     <nav class="nav" aria-label="主選單">
@@ -1176,7 +1220,12 @@ body{background:#fffaf7}
     <form id="itineraryForm" class="modal-card">
       <div class="modal-head"><h2>新增行程／美食／小店</h2><button type="button" class="icon-btn" data-close>✕</button></div>
       <input type="hidden" id="itineraryId" />
-      <div class="two-col"><label>日期<input id="itDate" type="date" required /></label><label>時間<input id="itTime" type="time" required /></label></div>
+      <div class="two-col"><label>日期<input id="itDate" type="date" required /></label><label>時間
+  <div class="time-select-wrap">
+    <select id="itHour"></select><span>:</span><select id="itMinute"></select>
+  </div>
+  <input id="itTime" type="hidden" />
+</label></div>
       <label>類型
         <select id="itType">
           <option value="spot">📍 景點</option>
@@ -1222,8 +1271,14 @@ body{background:#fffaf7}
       </label>
       <label>地標／附近位置<input id="stayLandmark" placeholder="例如：椰油國小旁、走路 3 分鐘到港口" /></label>
       <div class="two-col">
-        <label>入住時間<input id="stayCheckin" type="time" /></label>
-        <label>退房時間<input id="stayCheckout" type="time" /></label>
+        <label>入住時間
+          <div class="time-select-wrap"><select id="stayCheckinHour"></select><span>:</span><select id="stayCheckinMinute"></select></div>
+          <input id="stayCheckin" type="hidden" />
+        </label>
+        <label>退房時間
+          <div class="time-select-wrap"><select id="stayCheckoutHour"></select><span>:</span><select id="stayCheckoutMinute"></select></div>
+          <input id="stayCheckout" type="hidden" />
+        </label>
       </div>
       <label>備註／注意事項<textarea id="stayNote" rows="4" placeholder="例如：15:00 後入住、11:00 前退房、先打電話給民宿、行李可寄放…"></textarea></label>
       <div class="modal-actions">
@@ -1249,8 +1304,16 @@ body{background:#fffaf7}
         <label>目的地<input id="transportTo" placeholder="例如：蘭嶼開元港" /></label>
       </div>
       <div class="two-col">
-        <label>出發時間<input id="transportDepart" type="datetime-local" /></label>
-        <label>抵達時間<input id="transportArrive" type="datetime-local" /></label>
+        <label>出發時間
+          <input id="transportDepartDate" type="date" />
+          <div class="time-select-wrap"><select id="transportDepartHour"></select><span>:</span><select id="transportDepartMinute"></select></div>
+          <input id="transportDepart" type="hidden" />
+        </label>
+        <label>抵達時間
+          <input id="transportArriveDate" type="date" />
+          <div class="time-select-wrap"><select id="transportArriveHour"></select><span>:</span><select id="transportArriveMinute"></select></div>
+          <input id="transportArrive" type="hidden" />
+        </label>
       </div>
       <label>班次／訂位／車牌<input id="transportRef" placeholder="例如：船班 07:30、訂位代號、車牌" /></label>
       <label>集合地標<input id="transportLandmark" placeholder="例如：後壁湖遊艇港報到處" /></label>
@@ -1853,6 +1916,32 @@ document.addEventListener('click', async function(e){
     return;
   }
 }, true);
+</script>
+
+
+<script id="v37-time-select-fix">
+document.addEventListener('DOMContentLoaded',function(){
+  const syncPairs=[
+    ['itTime','itHour','itMinute'],
+    ['stayCheckin','stayCheckinHour','stayCheckinMinute'],
+    ['stayCheckout','stayCheckoutHour','stayCheckoutMinute']
+  ];
+  syncPairs.forEach(([hidden,h,m])=>{
+    [h,m].forEach(id=>{
+      const el=document.getElementById(id);
+      if(el)el.addEventListener('change',()=>syncHiddenTime(hidden,h,m));
+    });
+  });
+  ['transportDepart','transportArrive'].forEach(prefix=>{
+    ['Date','Hour','Minute'].forEach(suf=>{
+      const el=document.getElementById(prefix+suf);
+      if(el)el.addEventListener('change',()=>{
+        const hidden=document.getElementById(prefix);
+        if(hidden)hidden.value=dateTimeFromSelects(prefix);
+      });
+    });
+  });
+});
 </script>
 
 </body>
