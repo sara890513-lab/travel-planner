@@ -54,6 +54,28 @@
 .archived-split-card h4{margin:0 0 8px}.archived-split-card p{margin:4px 0;color:#6f6571}
 @media(max-width:650px){.archive-box{grid-template-columns:1fr}.archive-note{grid-column:1}}
 
+
+/* v2.0 快速分帳版面 */
+#quickSplitView{max-width:1180px;margin:0 auto;padding:28px 22px 70px}
+#quickSplitView .panel{background:#fff;border:1px solid #efe5e1;border-radius:26px;padding:clamp(18px,3vw,30px);box-shadow:0 10px 30px rgba(68,55,54,.06)}
+#quickSplitView .quick-grid{grid-template-columns:repeat(2,minmax(0,1fr));align-items:start}
+#quickSplitView .quick-grid label,#quickSplitView .quick-people-field{min-width:0}
+#quickSplitView .quick-grid input,#quickSplitView .quick-grid select{
+  width:100%;min-height:48px;padding:11px 13px;border:1px solid #e7dde0;border-radius:14px;background:#fff;color:var(--ink)
+}
+.quick-people-field{display:flex;flex-direction:column;gap:7px}
+.quick-field-title{font-weight:700}
+.quick-people-checks{display:flex;flex-wrap:wrap;gap:8px;min-height:48px;padding:8px;border:1px solid #e7dde0;border-radius:14px;background:#fff}
+.quick-person-check{display:inline-flex;align-items:center;gap:6px;padding:7px 10px;border-radius:999px;background:#f7f6fa;font-weight:600;cursor:pointer}
+.quick-person-check input{width:auto!important;min-height:auto!important;margin:0}
+#qPeopleHint{color:#918898}
+#quickSplitView .quick-columns{grid-template-columns:minmax(0,1.1fr) minmax(0,.9fr)}
+@media(max-width:820px){
+  #quickSplitView{padding:18px 12px 55px}
+  #quickSplitView .quick-grid,#quickSplitView .quick-columns{grid-template-columns:1fr}
+  #quickSplitView .panel-head{align-items:flex-start;flex-direction:column}
+}
+
 </style>
 <script>window.TRAVEL_SUPABASE={url:"",anonKey:""};</script>
 <script>
@@ -348,14 +370,14 @@ body{background:#fffaf7}
   <header class="topbar">
     <button class="brand" data-action="home" aria-label="回首頁">
       <span class="brand-icon">🗺️</span>
-      <span><strong>我的旅遊計畫</strong><small>TRAVEL PLANNER · v1.9</small></span>
+      <span><strong>我的旅遊計畫</strong><small>TRAVEL PLANNER · v2.0</small></span>
       <span class="heart">♥</span>
     </button>
     <nav class="nav" aria-label="主選單">
       <button class="nav-btn active" data-action="home"><span>🏠</span>首頁</button>
       <button class="nav-btn" data-action="quick-split"><span>💸</span>快速分帳</button>
       <button class="nav-btn" data-action="new-trip"><span>➕</span>新增旅程</button>
-      <button class="nav-btn" data-action="settings"><span>⚙️</span>設定</button>
+      
     </nav>
     <button id="authBtn" class="auth-btn">登入雲端</button>
   </header>
@@ -404,11 +426,15 @@ body{background:#fffaf7}
             <input id="qAmount" type="number" min="0" step="1" placeholder="例如：1200">
           </label>
           <label>誰付錢
-            <input id="qPayer" type="text" placeholder="例如：小花">
+            <select id="qPayer">
+              <option value="">選擇付款的人</option>
+            </select>
           </label>
-          <label>一起分的人
-            <input id="qPeople" type="text" placeholder="例如：小花, 阿明, 小美">
-          </label>
+          <div class="quick-people-field">
+            <span class="quick-field-title">一起分的人</span>
+            <div id="qPeopleChecks" class="quick-people-checks"></div>
+            <small id="qPeopleHint">會顯示你在旅程中已經輸入的同行朋友。</small>
+          </div>
         </div>
 
         <button class="primary" type="button" id="qSave">儲存這筆分帳</button>
@@ -569,6 +595,44 @@ try{quickSplit=JSON.parse(localStorage.getItem(QUICK_SPLIT_KEY)||'[]')||[]}catch
 
 function qEsc(s){return String(s??'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]))}
 function saveQuickSplit(){try{localStorage.setItem(QUICK_SPLIT_KEY,JSON.stringify(quickSplit))}catch(e){} renderQuickSplit()}
+
+function getQuickKnownPeople(){
+  const names=[];
+  const add=n=>{n=String(n||'').trim(); if(n && !names.includes(n)) names.push(n)};
+  try{
+    if(window.state && Array.isArray(state.trips)){
+      state.trips.forEach(t=>{
+        const ps=Array.isArray(t.people)?t.people:
+          String(t.people||'').split(/[,，]/);
+        ps.forEach(add);
+      });
+    }
+  }catch(e){}
+  quickSplit.forEach(r=>{
+    add(r.payer);
+    (r.people||[]).forEach(add);
+  });
+  return names;
+}
+function fillQuickPeople(){
+  const payer=document.getElementById('qPayer');
+  const checks=document.getElementById('qPeopleChecks');
+  const hint=document.getElementById('qPeopleHint');
+  if(!payer||!checks)return;
+  const oldPayer=payer.value;
+  const selected=[...checks.querySelectorAll('input:checked')].map(x=>x.value);
+  const people=getQuickKnownPeople();
+  payer.innerHTML='<option value="">選擇付款的人</option>'+
+    people.map(p=>`<option value="${qEsc(p)}">${qEsc(p)}</option>`).join('');
+  if(people.includes(oldPayer)) payer.value=oldPayer;
+  checks.innerHTML=people.length
+    ? people.map(p=>`<label class="quick-person-check"><input type="checkbox" value="${qEsc(p)}" ${selected.includes(p)?'checked':''}> ${qEsc(p)}</label>`).join('')
+    : '<span class="quick-empty" style="width:100%;padding:10px">目前還沒有朋友名單</span>';
+  if(hint) hint.textContent=people.length
+    ? '直接勾選要一起分這筆費用的人。'
+    : '請先在「新增旅程」的同行朋友中輸入名字。';
+}
+
 function renderQuickSplit(){
   const box=document.getElementById('qRecords'), settle=document.getElementById('qSettlement');
   if(!box||!settle)return;
@@ -600,29 +664,44 @@ function renderQuickSplit(){
   settle.innerHTML=transfers.length?transfers.map(t=>`<div class="quick-settle">💰 ${qEsc(t[0])} 要給 ${qEsc(t[1])} <strong>$${Math.round(t[2]).toLocaleString()}</strong></div>`).join(''):'<div class="quick-settle">✨ 已經平帳，不需要互相付款</div>';
 }
 function openQuickSplit(){
-  document.querySelectorAll('.view').forEach(v=>v.style.display='none');
-  const q=document.getElementById('quickSplitView'); if(q)q.style.display='';
-  renderQuickSplit(); window.scrollTo({top:0,behavior:'smooth'});
+  document.querySelectorAll('.view').forEach(v=>{
+    v.classList.remove('active');
+    v.style.removeProperty('display');
+  });
+  const q=document.getElementById('quickSplitView');
+  if(q)q.classList.add('active');
+  fillQuickPeople();
+  renderQuickSplit();
+  window.scrollTo({top:0,behavior:'smooth'});
 }
 document.addEventListener('click',e=>{
   const txt=(e.target.textContent||'').trim();
-  if((txt.includes('快速分帳') || e.target.closest('[data-action="quick-split"]')) && (e.target.closest('button')||e.target.closest('a'))){e.preventDefault();openQuickSplit()}
+  if((txt.includes('快速分帳') || e.target.closest('[data-action="quick-split"]')) && (e.target.closest('button')||e.target.closest('a'))){
+    e.preventDefault();
+    document.querySelectorAll('.nav-btn').forEach(b=>b.classList.toggle('active',b.dataset.action==='quick-split'));
+    openQuickSplit();
+  }
   const del=e.target.closest('[data-qdel]');
   if(del){quickSplit.splice(Number(del.dataset.qdel),1);saveQuickSplit()}
 });
 document.addEventListener('DOMContentLoaded',()=>{
+  fillQuickPeople();
   renderQuickSplit();
   const save=document.getElementById('qSave');
   if(save)save.onclick=()=>{
     const item=document.getElementById('qItem').value.trim();
     const amount=Number(document.getElementById('qAmount').value);
-    const payer=document.getElementById('qPayer').value.trim();
-    let people=document.getElementById('qPeople').value.split(/[,，]/).map(x=>x.trim()).filter(Boolean);
+    const payer=document.getElementById('qPayer').value;
+    let people=[...document.querySelectorAll('#qPeopleChecks input:checked')].map(x=>x.value);
     if(!item||!amount||!payer){alert('請填寫項目、金額和誰付錢');return}
-    if(!people.length)people=[payer];
+    if(!people.length){alert('請至少選擇一位一起分的人');return}
     quickSplit.unshift({item,amount,payer,people,created_at:new Date().toISOString()});
-    ['qItem','qAmount','qPayer','qPeople'].forEach(id=>document.getElementById(id).value='');
+    document.getElementById('qItem').value='';
+    document.getElementById('qAmount').value='';
+    document.getElementById('qPayer').value='';
+    document.querySelectorAll('#qPeopleChecks input').forEach(x=>x.checked=false);
     saveQuickSplit();
+    fillQuickPeople();
   };
   const add=document.getElementById('quickAddExpense');
   if(add)add.onclick=()=>document.getElementById('qItem')?.focus();
@@ -685,60 +764,19 @@ document.addEventListener('DOMContentLoaded',()=>{
 
 </script>
 
-<script id="nav-hotfix-v19">
-(function(){
-  function showMainView(name){
-    document.querySelectorAll('.view').forEach(function(v){
-      v.classList.remove('active');
-      v.style.display='none';
-    });
-    var target=document.getElementById(name+'View');
-    if(target){
-      target.style.display='';
-      target.classList.add('active');
-    }
-    document.querySelectorAll('.nav-btn').forEach(function(b){
-      var a=b.getAttribute('data-action');
-      var active=(name==='home' && a==='home') || (name==='quickSplit' && a==='quick-split');
-      b.classList.toggle('active',active);
-    });
-    if(name==='home' && typeof renderTrips==='function') renderTrips();
-    if(name==='quickSplit'){
-      if(typeof renderQuickSplit==='function') renderQuickSplit();
-      if(typeof refreshQuickTripSelect==='function') refreshQuickTripSelect();
-    }
-    window.scrollTo(0,0);
+
+
+
+<script id="v20-stability">
+document.addEventListener('click', function(e){
+  const a=e.target.closest('[data-action]');
+  if(!a)return;
+  const action=a.dataset.action;
+  if(action==='home'){
+    document.querySelectorAll('.view').forEach(v=>v.style.removeProperty('display'));
+    document.querySelectorAll('.nav-btn').forEach(b=>b.classList.toggle('active',b.dataset.action==='home'));
   }
-
-  document.addEventListener('click',function(e){
-    var btn=e.target.closest('[data-action]');
-    if(!btn) return;
-    var action=btn.getAttribute('data-action');
-
-    if(action==='home'){
-      e.preventDefault(); e.stopImmediatePropagation();
-      showMainView('home');
-      return;
-    }
-    if(action==='quick-split'){
-      e.preventDefault(); e.stopImmediatePropagation();
-      showMainView('quickSplit');
-      return;
-    }
-    if(action==='new-trip'){
-      e.preventDefault(); e.stopImmediatePropagation();
-      if(typeof openTripDialog==='function') openTripDialog();
-      return;
-    }
-    if(action==='settings'){
-      e.preventDefault(); e.stopImmediatePropagation();
-      if(typeof openModal==='function') openModal('#settingsDialog');
-      return;
-    }
-  }, true);
-
-  window.showMainView=showMainView;
-})();
+}, false);
 </script>
 
 </body>
