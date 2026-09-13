@@ -171,6 +171,16 @@ html,body{max-width:100%;overflow-x:hidden}
   .trip-actions .trip-delete-btn{flex-basis:100%}
 }
 
+
+.maps-picker-row{display:grid;grid-template-columns:minmax(0,1fr) auto auto;gap:8px;align-items:center}
+.maps-btn{white-space:nowrap;padding:10px 12px!important}
+.maps-help{display:block;margin-top:6px;color:#8b8187;line-height:1.5}
+.stay-info-line a{color:#326fa8;text-decoration:underline;text-underline-offset:2px}
+@media(max-width:700px){
+  .maps-picker-row{grid-template-columns:1fr}
+  .maps-btn{width:100%}
+}
+
 </style>
 <script>window.TRAVEL_SUPABASE={url:"",anonKey:""};</script>
 <script>
@@ -328,16 +338,18 @@ document.addEventListener('DOMContentLoaded',()=>{
   function renderStayTop(){
     const box=$('#stayTopContent'); const t=currentTrip(); if(!box||!t)return;
     const name=t.stay_name||'';
+    const address=t.stay_address||'';
     const landmark=t.stay_landmark||'';
     const checkin=t.stay_checkin||'';
     const checkout=t.stay_checkout||'';
     const note=t.stay_note||'';
-    if(!name&&!landmark&&!checkin&&!checkout&&!note){
+    if(!name&&!address&&!landmark&&!checkin&&!checkout&&!note){
       box.innerHTML='<p class="helper" style="margin:10px 0 0">尚未新增住宿資訊。</p>';
       return;
     }
     box.innerHTML=`<div class="stay-top-grid">
       ${name?`<p class="stay-info-line"><strong>🏨 住宿：</strong>${esc(name)}</p>`:''}
+      ${address?`<p class="stay-info-line"><strong>🗺️ 地址：</strong><a href="https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(address)}" target="_blank" rel="noopener">${esc(address)}</a></p>`:''}
       ${landmark?`<p class="stay-info-line"><strong>📍 地標：</strong>${esc(landmark)}</p>`:''}
       ${checkin?`<p class="stay-info-line"><strong>🕒 入住：</strong>${esc(checkin)}</p>`:''}
       ${checkout?`<p class="stay-info-line"><strong>🧳 退房：</strong>${esc(checkout)}</p>`:''}
@@ -347,6 +359,7 @@ document.addEventListener('DOMContentLoaded',()=>{
   function openStayDialog(){
     const t=currentTrip(); if(!t)return;
     $('#stayName').value=t.stay_name||'';
+    $('#stayAddress').value=t.stay_address||'';
     $('#stayLandmark').value=t.stay_landmark||'';
     $('#stayCheckin').value=t.stay_checkin||'';
     $('#stayCheckout').value=t.stay_checkout||'';
@@ -356,6 +369,7 @@ document.addEventListener('DOMContentLoaded',()=>{
   async function saveStayInfo(){
     const t=currentTrip(); if(!t)return;
     t.stay_name=$('#stayName').value.trim();
+    t.stay_address=$('#stayAddress').value.trim();
     t.stay_landmark=$('#stayLandmark').value.trim();
     t.stay_checkin=$('#stayCheckin').value;
     t.stay_checkout=$('#stayCheckout').value;
@@ -489,14 +503,14 @@ document.addEventListener('DOMContentLoaded',()=>{
       d.onclick=()=>removeRecord('itineraries',x.id);
       list.appendChild(item);
 
-      if(idx<rows.length-1 && (x.transit_mode||x.transit_duration||x.transit_note)){
-        const next=rows[idx+1];
+      if(x.transit_mode||x.transit_duration||x.transit_note){
+        const next=rows[idx+1]||null;
         const tr=document.createElement('div');
         tr.className='timeline-transit';
         tr.innerHTML=`<span>⬇️</span>
           <strong>${esc(x.transit_mode||'前往下一站')}</strong>
           ${x.transit_duration?`<span>・約 ${esc(x.transit_duration)}</span>`:''}
-          <span>${esc(x.place)} → ${esc(next.place)}</span>
+          ${next?`<span>${esc(x.place)} → ${esc(next.place)}</span>`:`<span>${esc(x.place)} → 下一站待新增</span>`}
           ${x.transit_note?`<span>・${esc(x.transit_note)}</span>`:''}`;
         list.appendChild(tr);
       }
@@ -694,7 +708,7 @@ body{background:#fffaf7}
   <header class="topbar">
     <button class="brand" data-action="home" aria-label="回首頁">
       <span class="brand-icon">🗺️</span>
-      <span><strong>我的旅遊計畫</strong><small>TRAVEL PLANNER · v2.5</small></span>
+      <span><strong>我的旅遊計畫</strong><small>TRAVEL PLANNER · v2.6</small></span>
       <span class="heart">♥</span>
     </button>
     <nav class="nav" aria-label="主選單">
@@ -903,6 +917,14 @@ body{background:#fffaf7}
     <form id="stayForm" class="modal-card">
       <div class="modal-head"><h2>🏠 住宿資訊</h2><button type="button" class="icon-btn" data-close>✕</button></div>
       <label>住宿地點<input id="stayName" placeholder="例如：蘭嶼某某民宿" /></label>
+      <label>住宿地址
+        <div class="maps-picker-row">
+          <input id="stayAddress" placeholder="可用 Google 地圖搜尋後貼上地址" />
+          <button type="button" class="ghost maps-btn" id="openStayGoogleMaps">🗺️ Google 地圖選擇</button>
+          <button type="button" class="ghost maps-btn" id="pasteStayAddress">📋 貼上地址</button>
+        </div>
+        <small class="maps-help">會開啟 Google 地圖；選好住宿後，把地址複製回來按「貼上地址」。</small>
+      </label>
       <label>地標／附近位置<input id="stayLandmark" placeholder="例如：椰油國小旁、走路 3 分鐘到港口" /></label>
       <div class="two-col">
         <label>入住時間<input id="stayCheckin" type="time" /></label>
@@ -1241,6 +1263,37 @@ document.addEventListener('DOMContentLoaded',function(){
         window.saveTripObject(currentTrip());
         window.renderMajorTransports();
       }
+    }
+  });
+});
+</script>
+
+
+<script id="maps-v26-hooks">
+document.addEventListener('DOMContentLoaded',function(){
+  const openBtn=document.getElementById('openStayGoogleMaps');
+  if(openBtn) openBtn.addEventListener('click',function(){
+    const q=(document.getElementById('stayName')?.value||'').trim() ||
+            (document.getElementById('stayAddress')?.value||'').trim() ||
+            (document.getElementById('tripLocation')?.value||'').trim();
+    const url='https://www.google.com/maps/search/?api=1&query='+encodeURIComponent(q||'住宿');
+    window.open(url,'_blank');
+  });
+
+  const pasteBtn=document.getElementById('pasteStayAddress');
+  if(pasteBtn) pasteBtn.addEventListener('click',async function(){
+    const input=document.getElementById('stayAddress');
+    try{
+      const txt=await navigator.clipboard.readText();
+      if(txt){
+        input.value=txt.trim();
+        input.focus();
+      }else{
+        alert('剪貼簿目前沒有地址。');
+      }
+    }catch(e){
+      input.focus();
+      alert('Safari 沒有允許自動讀取剪貼簿，請長按地址欄位選「貼上」。');
     }
   });
 });
