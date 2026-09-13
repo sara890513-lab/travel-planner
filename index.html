@@ -283,6 +283,11 @@ html,body{max-width:100%;overflow-x:hidden}
 .trip-lock-badge{display:inline-flex;width:max-content;align-items:center;background:#f4f1ff;color:#68578f;border:1px solid #e1d9f4;border-radius:999px;padding:5px 9px;font-size:12px;font-weight:800;margin-bottom:7px}
 .is-password-protected{outline:1px solid rgba(116,91,154,.08)}
 
+
+.sync-status-chip{display:inline-flex;align-items:center;justify-content:center;white-space:nowrap;font-size:12px;font-weight:800;color:#9a6b56;background:#fff4e9;border:1px solid #f0dccb;border-radius:999px;padding:7px 10px}
+.sync-status-chip.ok{color:#3f8068;background:#edf9f4;border-color:#ccebdd}
+@media(max-width:700px){.sync-status-chip{font-size:10px;padding:5px 7px}}
+
 </style>
 <script>window.TRAVEL_SUPABASE={url:"https://lfvzobfvotcehkkjkgdc.supabase.co",anonKey:"sb_publishable_iwDwCSXNjpVLJyl16mKDyw_NcFqrAoW"};</script>
 <script>
@@ -311,7 +316,7 @@ document.addEventListener('DOMContentLoaded',()=>{
       storageAvailable=false;
       console.warn('localStorage unavailable; using memory mode',err);
     }
-    render();
+    if(typeof renderTrips==='function') renderTrips();
   }
   function localSave(){
     if(!storageAvailable) return false;
@@ -380,7 +385,13 @@ document.addEventListener('DOMContentLoaded',()=>{
     if(typeof renderQuickSplit==='function')renderQuickSplit();
     if(typeof refreshQuickTripSelect==='function')refreshQuickTripSelect(state.currentTripId||'');
     if(typeof renderArchivedSplitSummary==='function')renderArchivedSplitSummary();
-    render();
+
+    // Cloud data has arrived: repaint the screen immediately.
+    if(typeof renderTrips==='function')renderTrips();
+    const tripView=document.getElementById('tripView');
+    if(tripView?.classList.contains('active') && state.currentTripId && typeof renderTrip==='function'){
+      renderTrip();
+    }
   }
 
   async function saveCloudSnapshot(showToast=false){
@@ -396,6 +407,7 @@ document.addEventListener('DOMContentLoaded',()=>{
       state.cloud=true;
       cloudLastLoadedAt=Date.now();
       updateAuthUI();
+      if(typeof renderTrips==='function')renderTrips();
       if(showToast)toast('☁️ 已同步到雲端');
       return true;
     }catch(err){
@@ -456,13 +468,18 @@ document.addEventListener('DOMContentLoaded',()=>{
   }
 
   function updateAuthUI(){
-    if($('#authBtn')) $('#authBtn').textContent=state.cloud?'☁️ 已同步':'☁️ 重新同步';
+    if($('#authBtn')) $('#authBtn').textContent=state.cloud?'☁️ 立即同步':'☁️ 重新連線';
     if($('#modeText')) $('#modeText').textContent=state.cloud?'☁️ Supabase 雲端共用中':'本機模式（等待雲端連線）';
     if($('#cloudStatus')) $('#cloudStatus').textContent=state.cloud?'手機、iPad、電腦會共用同一份資料':'目前未連上雲端';
+    const chip=$('#syncStatusChip');
+    if(chip){
+      chip.textContent=state.cloud?'☁️ 雲端已連線':'⚠️ 尚未連線';
+      chip.classList.toggle('ok',!!state.cloud);
+    }
   }
 
   async function loadCloud(){
-    if(!state.supabase)return;
+    if(!state.supabase)return false;
     try{
       const {data,error}=await state.supabase
         .from('travel_data')
@@ -476,10 +493,13 @@ document.addEventListener('DOMContentLoaded',()=>{
       }
       state.cloud=true;
       updateAuthUI();
+      if(typeof renderTrips==='function')renderTrips();
+      return true;
     }catch(err){
       console.error('cloud load failed',err);
       state.cloud=false;
       updateAuthUI();
+      return false;
     }
   }
 
@@ -1263,11 +1283,19 @@ document.addEventListener('DOMContentLoaded',()=>{
   $('#itineraryForm').addEventListener('submit',async e=>{e.preventDefault();try{await saveItinerary();closeModal('#itineraryDialog');}catch(err){console.error(err);toast('儲存失敗');}});
   $('#expenseForm').addEventListener('submit',async e=>{e.preventDefault();try{if(await saveExpense())closeModal('#expenseDialog');}catch(err){console.error(err);toast('儲存失敗');}});
   $('#photoInput').addEventListener('change',async e=>{await addPhotos([...e.target.files]);e.target.value='';});
-  $('#authBtn').onclick=async()=>{ if(window.forceTravelCloudSync) await window.forceTravelCloudSync(); };
+  $('#authBtn').onclick=async()=>{
+    if(window.forceTravelCloudSync){
+      await window.forceTravelCloudSync();
+      if(window.forceTravelCloudPull)await window.forceTravelCloudPull();
+    }
+  };
   $('#signUpBtn').onclick=()=>toast('目前已改成自動雲端同步，不需要註冊');
   $('#signInBtn').onclick=()=>toast('目前已改成自動雲端同步，不需要登入');
 
-  localLoad(); initCloud();
+  try{ localLoad(); }catch(e){ console.warn('local startup render failed',e); }
+  initCloud().then(()=>{
+    if(typeof renderTrips==='function')renderTrips();
+  });
 })();
 });
 
@@ -1294,7 +1322,7 @@ body{background:#fffaf7}
   <header class="topbar">
     <button class="brand" data-action="home" aria-label="回首頁">
       <span class="brand-icon">🗺️</span>
-      <span><strong>我的旅遊計畫</strong><small>TRAVEL PLANNER · v4.1 分帳成員修正版</small></span>
+      <span><strong>我的旅遊計畫</strong><small>TRAVEL PLANNER · v4.2 跨設備同步修正版</small></span>
       <span class="heart">♥</span>
     </button>
     <nav class="nav" aria-label="主選單">
@@ -2306,9 +2334,24 @@ document.addEventListener('DOMContentLoaded',function(){
 </script>
 
 
-<script id="v38-cloud-autopull">
-window.addEventListener('focus',()=>{ try{ if(window.state?.supabase && window.forceTravelCloudPull) window.forceTravelCloudPull(); }catch(e){} });
-document.addEventListener('visibilitychange',()=>{ if(!document.hidden){ try{ if(window.state?.supabase && window.forceTravelCloudPull) window.forceTravelCloudPull(); }catch(e){} } });
+<script id="v42-cloud-autopull">
+(function(){
+  let pulling=false;
+  async function pullLatest(){
+    if(pulling || document.hidden)return;
+    try{
+      if(window.state?.supabase && window.forceTravelCloudPull){
+        pulling=true;
+        await window.forceTravelCloudPull();
+      }
+    }catch(e){ console.warn('auto cloud pull failed',e); }
+    finally{ pulling=false; }
+  }
+  window.addEventListener('focus',pullLatest);
+  document.addEventListener('visibilitychange',()=>{ if(!document.hidden)pullLatest(); });
+  window.addEventListener('online',pullLatest);
+  setInterval(pullLatest,12000);
+})();
 </script>
 
 
