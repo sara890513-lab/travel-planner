@@ -348,7 +348,7 @@ body{background:#fffaf7}
   <header class="topbar">
     <button class="brand" data-action="home" aria-label="回首頁">
       <span class="brand-icon">🗺️</span>
-      <span><strong>我的旅遊計畫</strong><small>TRAVEL PLANNER · v1.6</small></span>
+      <span><strong>我的旅遊計畫</strong><small>TRAVEL PLANNER · v1.9</small></span>
       <span class="heart">♥</span>
     </button>
     <nav class="nav" aria-label="主選單">
@@ -382,6 +382,58 @@ body{background:#fffaf7}
         </div>
       </section>
       <footer class="cute-footer">旅行不是逃離生活，而是讓生活更值得 ♡　✈︎</footer>
+    </section>
+
+
+    <section id="quickSplitView" class="view" style="display:none">
+      <div class="panel">
+        <div class="panel-head">
+          <div>
+            <p class="eyebrow">QUICK SPLIT</p>
+            <h2>💸 快速分帳</h2>
+            <p class="muted">直接記錄誰付了什麼，下面會自動算出最後誰要給誰多少錢。</p>
+          </div>
+          <button type="button" class="secondary" id="quickAddExpense">＋ 記一筆</button>
+        </div>
+
+        <div class="quick-grid">
+          <label>項目
+            <input id="qItem" type="text" placeholder="例如：晚餐、船票、住宿">
+          </label>
+          <label>金額
+            <input id="qAmount" type="number" min="0" step="1" placeholder="例如：1200">
+          </label>
+          <label>誰付錢
+            <input id="qPayer" type="text" placeholder="例如：小花">
+          </label>
+          <label>一起分的人
+            <input id="qPeople" type="text" placeholder="例如：小花, 阿明, 小美">
+          </label>
+        </div>
+
+        <button class="primary" type="button" id="qSave">儲存這筆分帳</button>
+
+        <div class="quick-columns">
+          <div>
+            <h3>🧾 分帳紀錄</h3>
+            <div id="qRecords"><div class="quick-empty">還沒有分帳紀錄</div></div>
+          </div>
+          <div>
+            <h3>✨ 最後結算</h3>
+            <div id="qSettlement"><div class="quick-empty">新增支出後，這裡會自動顯示「誰要給誰多少錢」。</div></div>
+
+            <div class="archive-box">
+              <label>📒 歸入旅程
+                <select id="qTripSelect">
+                  <option value="">選擇要歸入的旅程</option>
+                </select>
+              </label>
+              <button class="primary" type="button" id="qArchive">歸入旅程</button>
+              <p class="archive-note">歸入後，該旅程會保留這次快速分帳的總結。</p>
+            </div>
+          </div>
+        </div>
+      </div>
     </section>
 
     <section id="tripView" class="view">
@@ -632,5 +684,62 @@ document.addEventListener('DOMContentLoaded',()=>{
 });
 
 </script>
+
+<script id="nav-hotfix-v19">
+(function(){
+  function showMainView(name){
+    document.querySelectorAll('.view').forEach(function(v){
+      v.classList.remove('active');
+      v.style.display='none';
+    });
+    var target=document.getElementById(name+'View');
+    if(target){
+      target.style.display='';
+      target.classList.add('active');
+    }
+    document.querySelectorAll('.nav-btn').forEach(function(b){
+      var a=b.getAttribute('data-action');
+      var active=(name==='home' && a==='home') || (name==='quickSplit' && a==='quick-split');
+      b.classList.toggle('active',active);
+    });
+    if(name==='home' && typeof renderTrips==='function') renderTrips();
+    if(name==='quickSplit'){
+      if(typeof renderQuickSplit==='function') renderQuickSplit();
+      if(typeof refreshQuickTripSelect==='function') refreshQuickTripSelect();
+    }
+    window.scrollTo(0,0);
+  }
+
+  document.addEventListener('click',function(e){
+    var btn=e.target.closest('[data-action]');
+    if(!btn) return;
+    var action=btn.getAttribute('data-action');
+
+    if(action==='home'){
+      e.preventDefault(); e.stopImmediatePropagation();
+      showMainView('home');
+      return;
+    }
+    if(action==='quick-split'){
+      e.preventDefault(); e.stopImmediatePropagation();
+      showMainView('quickSplit');
+      return;
+    }
+    if(action==='new-trip'){
+      e.preventDefault(); e.stopImmediatePropagation();
+      if(typeof openTripDialog==='function') openTripDialog();
+      return;
+    }
+    if(action==='settings'){
+      e.preventDefault(); e.stopImmediatePropagation();
+      if(typeof openModal==='function') openModal('#settingsDialog');
+      return;
+    }
+  }, true);
+
+  window.showMainView=showMainView;
+})();
+</script>
+
 </body>
 </html>
