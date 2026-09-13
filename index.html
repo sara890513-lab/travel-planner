@@ -184,6 +184,30 @@ html,body{max-width:100%;overflow-x:hidden}
 
 .it-transport-line{margin-top:8px!important;font-weight:700;color:#4d6780!important;background:#f3f8fd;padding:8px 10px;border-radius:12px}
 .timeline-transit{font-size:15px}
+
+.it-station-line{margin-top:8px!important;color:#566773!important;font-weight:600}
+
+.memo-head{margin:8px 0 18px}.memo-list{max-width:760px;margin:0 auto;padding:8px 4px 80px}
+.memo-date{font-size:28px;font-weight:900;margin:30px 0 12px;padding-top:8px;border-top:1px solid #eee}
+.memo-date:first-child{margin-top:5px;border-top:0}
+.memo-item{display:grid;grid-template-columns:72px 1fr;gap:14px;padding:15px 4px;border-bottom:1px solid #eee}
+.memo-time{font-size:16px;font-weight:800;color:#777;padding-top:3px}
+.memo-body{font-size:18px;line-height:1.65}.memo-body strong{font-size:21px;color:#30343b}
+.memo-stars,.food-stars{letter-spacing:3px;color:#d99b2b;font-size:20px;margin-top:4px}
+.memo-review,.food-review{margin-top:5px;color:#555}.memo-note{color:#777;margin-top:3px}
+.memo-empty{text-align:center;padding:60px 15px;color:#999}
+.rating-stars{display:flex;gap:4px;margin-top:8px}
+.rating-stars button{border:0;background:transparent;font-size:34px;line-height:1;color:#d99b2b;padding:2px;cursor:pointer}
+.food-review-fields{padding:12px;border-radius:16px;background:#fffaf0;margin:8px 0}
+@media(max-width:620px){
+ .memo-list{padding-left:4px;padding-right:4px}.memo-item{grid-template-columns:55px 1fr;gap:9px}
+ .memo-date{font-size:25px}.memo-body{font-size:17px}.memo-body strong{font-size:19px}
+}
+
+
+.quick-memo-hero{width:100%;display:flex;align-items:center;gap:14px;text-align:left;border:1px solid #d9e8f2;background:#f3f9fd;border-radius:20px;padding:16px 18px;margin:0 0 18px;cursor:pointer;color:#334b5c;box-shadow:0 5px 16px rgba(60,90,110,.06)}
+.quick-memo-icon{font-size:30px}.quick-memo-hero strong{display:block;font-size:18px}.quick-memo-hero small{display:block;margin-top:3px;color:#71808b;font-size:13px}.quick-memo-arrow{margin-left:auto;font-size:32px;color:#8aa6b8}
+@media(max-width:620px){.quick-memo-hero{padding:14px;border-radius:16px}.quick-memo-hero small{font-size:12px}}
 </style>
 <script>window.TRAVEL_SUPABASE={url:"",anonKey:""};</script>
 <script>
@@ -229,7 +253,7 @@ document.addEventListener('DOMContentLoaded',()=>{
   function persist(){ if(!state.cloud) return localSave(); return true; }
 
   function setView(name){ $$('.view').forEach(v=>v.classList.remove('active')); $(`#${name}View`).classList.add('active'); if(name==='home') renderTrips(); }
-  function setTab(name){ $$('.tab').forEach(b=>b.classList.toggle('active',b.dataset.tab===name)); $$('.tab-panel').forEach(p=>p.classList.remove('active')); $(`#${name}Tab`).classList.add('active'); }
+  function setTab(name){ $$('.tab').forEach(b=>b.classList.toggle('active',b.dataset.tab===name)); $$('.tab-panel').forEach(p=>p.classList.remove('active')); $(`#${name}Tab`).classList.add('active'); if(name==='quickview')renderQuickItinerary(); }
 
   function currentTrip(){ return state.trips.find(t=>t.id===state.currentTripId); }
   function peopleOf(trip){ const p=Array.isArray(trip?.people)?trip.people:[]; return [...new Set(p.map(x=>x.trim()).filter(Boolean))]; }
@@ -333,7 +357,7 @@ document.addEventListener('DOMContentLoaded',()=>{
     }
   }
 
-  function openTrip(id,tab='itinerary'){ state.currentTripId=id; persist(); renderTrip(); setView('trip'); setTab(tab); window.scrollTo({top:0,behavior:'smooth'}); }
+  function openTrip(id,tab='itinerary'){ state.currentTripId=id; persist(); renderTrip(); if(typeof renderQuickItinerary==='function')renderQuickItinerary(); setView('trip'); setTab(tab); window.scrollTo({top:0,behavior:'smooth'}); }
   function renderTrip(){
     const t=currentTrip(); if(!t){setView('home');return} $('#tripTitle').textContent=t.name; $('#tripMeta').textContent=`${t.start_date||''}${t.end_date?` ～ ${t.end_date}`:''}　📍 ${t.location||'未設定'}　👥 ${peopleOf(t).join('、')||'尚未加入朋友'}`; renderStayTop(); renderMajorTransports(); renderItinerary(); renderExpenses(); renderPhotos();
   }
@@ -498,8 +522,10 @@ document.addEventListener('DOMContentLoaded',()=>{
       item.innerHTML=`<div class="timeline-time">${dateLabel}${esc(x.time?.slice(0,5)||'')}</div>
         <div class="timeline-card">
           <div class="mini-actions"><button title="編輯">✏️</button><button title="刪除">🗑️</button></div>
-          <h3>📍 ${esc(x.place)}</h3>
-          ${x.transport?`<p class="it-transport-line">🚌 前往下一站：${esc(x.transport)}</p>`:''}
+          <h3>${x.type==='food'?'🍜':x.type==='shop'?'🛍️':'📍'} ${esc(x.place)}</h3>
+          ${x.station?`<p class="it-station-line">🚉 站名：${esc(x.station)}</p>`:''}
+          ${x.type==='food'&&x.rating?`<p class="food-stars">${'★'.repeat(Number(x.rating))}${'☆'.repeat(5-Number(x.rating))}</p>`:''}
+          ${x.type==='food'&&x.review?`<p class="food-review">💬 ${esc(x.review)}</p>`:''}
           ${x.note?`<p>📝 ${esc(x.note)}</p>`:''}
         </div>`;
       const [e,d]=item.querySelectorAll('.mini-actions button');
@@ -513,15 +539,35 @@ document.addEventListener('DOMContentLoaded',()=>{
         const tr=document.createElement('div');
         tr.className='timeline-transit';
         tr.innerHTML=`<span>⬇️</span>
-          <strong>🚌 ${esc(transitText||'前往下一站')}</strong>
-          ${x.transit_duration?`<span>・約 ${esc(x.transit_duration)}</span>`:''}
-          ${next?`<span>${esc(x.place)} → ${esc(next.place)}</span>`:`<span>${esc(x.place)} → 下一站待新增</span>`}
-          ${x.transit_note?`<span>・${esc(x.transit_note)}</span>`:''}`;
+          <strong>🚌 ${esc(transitText||'前往下一站')}</strong>`;
         list.appendChild(tr);
       }
     });
   }
 
+
+
+  function renderQuickItinerary(){
+    const box=$('#quickItineraryList'); if(!box)return;
+    const rows=state.itineraries.filter(x=>x.trip_id===state.currentTripId)
+      .sort((a,b)=>`${a.date} ${a.time}`.localeCompare(`${b.date} ${b.time}`));
+    if(!rows.length){box.innerHTML='<div class="memo-empty">還沒有行程，先到「行程表」新增 ♡</div>';return;}
+    let last='';
+    box.innerHTML=rows.map(x=>{
+      const date=x.date!==last?`<div class="memo-date">${esc((x.date||'').replaceAll('-','/'))}</div>`:''; last=x.date;
+      const icon=x.type==='food'?'🍜':x.type==='shop'?'🛍️':'📍';
+      const stars=x.type==='food'&&x.rating?`<div class="memo-stars">${'★'.repeat(Number(x.rating))}${'☆'.repeat(5-Number(x.rating))}</div>`:'';
+      const review=x.type==='food'&&x.review?`<div class="memo-review">💬 ${esc(x.review)}</div>`:'';
+      return `${date}<article class="memo-item">
+        <div class="memo-time">${esc(x.time?.slice(0,5)||'')}</div>
+        <div class="memo-body"><strong>${icon} ${esc(x.place)}</strong>
+          ${x.station?`<div>🚉 ${esc(x.station)}</div>`:''}
+          ${stars}${review}
+          ${x.note?`<div class="memo-note">📝 ${esc(x.note)}</div>`:''}
+        </div>
+      </article>`;
+    }).join('');
+  }
 
   function safeFilename(name){
     return String(name||'旅遊行程').replace(/[\/:*?"<>|]/g,'_').trim() || '旅遊行程';
@@ -535,7 +581,7 @@ document.addEventListener('DOMContentLoaded',()=>{
     let last='';
     const body=rows.map(x=>{
       const day=x.date!==last?`<div class="export-day">🗓️ ${esc(fmtDate(x.date))}</div>`:''; last=x.date;
-      return `${day}<div class="export-row"><div class="export-time">${esc(x.time?.slice(0,5)||'')}</div><div class="export-card"><h3>📍 ${esc(x.place)}</h3>${x.stay?`<p>🏠 住宿：${esc(x.stay)}</p>`:''}${x.transport?`<p>🚌 交通：${esc(x.transport)}</p>`:''}${x.note?`<p>📝 ${esc(x.note)}</p>`:''}</div></div>`;
+      return `${day}<div class="export-row"><div class="export-time">${esc(x.time?.slice(0,5)||'')}</div><div class="export-card"><h3>📍 ${esc(x.place)}</h3>${x.station?`<p>🚉 站名：${esc(x.station)}</p>`:''}${x.stay?`<p>🏠 住宿：${esc(x.stay)}</p>`:''}${x.transport?`<p>🚌 交通：${esc(x.transport)}</p>`:''}${x.note?`<p>📝 ${esc(x.note)}</p>`:''}</div></div>`;
     }).join('');
     sheet.innerHTML=`<div class="export-head"><div class="export-kicker">TRAVEL ITINERARY</div><h1>${esc(t.name)}</h1><p>🗓️ ${esc(t.start_date||'')} ${t.end_date?`～ ${esc(t.end_date)}`:''}</p><p>📍 ${esc(t.location||'未設定')}　👥 ${esc(peopleOf(t).join('、')||'')}</p></div>${body}<div class="export-foot">我的旅遊計畫 · Travel Planner ♡</div>`;
     return sheet;
@@ -581,7 +627,19 @@ document.addEventListener('DOMContentLoaded',()=>{
   }
 
   function openTripDialog(t=null){ $('#tripDialogTitle').textContent=t?'編輯旅程':'新增旅程'; $('#tripId').value=t?.id||'';$('#tripName').value=t?.name||'';$('#tripStart').value=t?.start_date||'';$('#tripEnd').value=t?.end_date||'';$('#tripLocation').value=t?.location||'';$('#tripPeople').value=peopleOf(t).join(', ');$('#tripNote').value=t?.note||'';$('#tripCoverInput').value='';openModal('#tripDialog'); }
-  function openItineraryDialog(x=null){$('#itineraryId').value=x?.id||'';$('#itDate').value=x?.date||currentTrip()?.start_date||'';$('#itTime').value=x?.time?.slice(0,5)||'';$('#itPlace').value=x?.place||'';$('#itTransport').value=x?.transport||'';$('#itNote').value=x?.note||'';openModal('#itineraryDialog');}
+  function updateFoodFields(){
+    const food=$('#itType')?.value==='food';
+    $('#foodReviewFields')?.classList.toggle('hidden',!food);
+  }
+  function paintRating(n){
+    n=Number(n||0); $('#itRating').value=n;
+    $$('#itRatingStars button').forEach(b=>b.textContent=Number(b.dataset.rating)<=n?'★':'☆');
+  }
+  function openItineraryDialog(x=null){
+    $('#itineraryId').value=x?.id||'';$('#itDate').value=x?.date||currentTrip()?.start_date||'';$('#itTime').value=x?.time?.slice(0,5)||'';
+    $('#itType').value=x?.type||'spot';$('#itPlace').value=x?.place||'';$('#itTransport').value=x?.transport||'';$('#itStation').value=x?.station||'';
+    $('#itReview').value=x?.review||'';paintRating(x?.rating||0);$('#itNote').value=x?.note||'';updateFoodFields();openModal('#itineraryDialog');
+  }
   function fillExpensePeople(){const people=peopleOf(currentTrip());$('#exPayer').innerHTML=people.map(p=>`<option>${esc(p)}</option>`).join('');$('#participantChecks').innerHTML=people.map(p=>`<label><input type="checkbox" value="${esc(p)}" checked> ${esc(p)}</label>`).join('');}
   function openExpenseDialog(x=null){fillExpensePeople();$('#expenseId').value=x?.id||'';$('#exItem').value=x?.item||'';$('#exAmount').value=x?.amount||'';$('#exPayer').value=x?.payer||peopleOf(currentTrip())[0]||'';$('#exNote').value=x?.note||''; if(x) $$('#participantChecks input').forEach(c=>c.checked=(x.participants||[]).includes(c.value));openModal('#expenseDialog');}
 
@@ -590,7 +648,7 @@ document.addEventListener('DOMContentLoaded',()=>{
     const oldTrip=state.trips.find(t=>t.id===id)||{};const row={...oldTrip,id,name:$('#tripName').value.trim(),start_date:$('#tripStart').value||null,end_date:$('#tripEnd').value||null,location:$('#tripLocation').value.trim(),people:$('#tripPeople').value.split(',').map(x=>x.trim()).filter(Boolean),note:$('#tripNote').value.trim(),cover_url:cover,updated_at:new Date().toISOString()}; if(!row.name)return;
     if(state.cloud){await cloudUpsert('trips',row);await loadCloud();} else {const i=state.trips.findIndex(t=>t.id===id); if(i>=0)state.trips[i]=row;else state.trips.unshift(row);renderTrips();const saved=persist();if(!saved)toast('旅程已新增；此瀏覽器暫時無法永久保存');} if(storageAvailable||state.cloud)toast('旅程已儲存 ♡');
   }
-  async function saveItinerary(){const row={id:$('#itineraryId').value||uid(),trip_id:state.currentTripId,date:$('#itDate').value,time:$('#itTime').value,place:$('#itPlace').value.trim(),transport:$('#itTransport').value.trim(),note:$('#itNote').value.trim()};if(state.cloud){await cloudUpsert('itineraries',row);await loadCloud();}else{const i=state.itineraries.findIndex(x=>x.id===row.id);if(i>=0)state.itineraries[i]=row;else state.itineraries.push(row);persist();renderItinerary();}toast('行程已儲存');}
+  async function saveItinerary(){const row={id:$('#itineraryId').value||uid(),trip_id:state.currentTripId,date:$('#itDate').value,time:$('#itTime').value,type:$('#itType').value||'spot',place:$('#itPlace').value.trim(),transport:$('#itTransport').value.trim(),station:$('#itStation').value.trim(),rating:Number($('#itRating').value||0),review:$('#itReview').value.trim(),note:$('#itNote').value.trim()};if(state.cloud){await cloudUpsert('itineraries',row);await loadCloud();}else{const i=state.itineraries.findIndex(x=>x.id===row.id);if(i>=0)state.itineraries[i]=row;else state.itineraries.push(row);persist();renderItinerary();renderQuickItinerary();}toast('行程已儲存');}
   async function saveExpense(){const participants=$$('#participantChecks input:checked').map(x=>x.value);if(!participants.length){toast('至少選一位分帳成員');return false}const row={id:$('#expenseId').value||uid(),trip_id:state.currentTripId,item:$('#exItem').value.trim(),amount:Number($('#exAmount').value),payer:$('#exPayer').value,participants,note:$('#exNote').value.trim()};if(state.cloud){await cloudUpsert('expenses',row);await loadCloud();}else{const i=state.expenses.findIndex(x=>x.id===row.id);if(i>=0)state.expenses[i]=row;else state.expenses.unshift(row);persist();renderExpenses();}toast('支出已儲存');return true;}
   async function removeRecord(table,id){if(!confirm('確定要刪除嗎？'))return;if(state.cloud){await cloudDelete(table,id);await loadCloud();}else{state[table]=state[table].filter(x=>x.id!==id);persist();renderTrip();}toast('已刪除');}
 
@@ -713,7 +771,7 @@ body{background:#fffaf7}
   <header class="topbar">
     <button class="brand" data-action="home" aria-label="回首頁">
       <span class="brand-icon">🗺️</span>
-      <span><strong>我的旅遊計畫</strong><small>TRAVEL PLANNER · v2.7</small></span>
+      <span><strong>我的旅遊計畫</strong><small>TRAVEL PLANNER · v3.0</small></span>
       <span class="heart">♥</span>
     </button>
     <nav class="nav" aria-label="主選單">
@@ -820,11 +878,17 @@ body{background:#fffaf7}
 
       <div class="tabs" role="tablist">
         <button class="tab active" data-tab="itinerary">🗓️ 行程表</button>
+        <button class="tab" data-tab="quickview">📱 行程快捷</button>
         <button class="tab" data-tab="expenses">💰 旅程分帳</button>
         <button class="tab" data-tab="photos">📷 旅程相簿</button>
       </div>
 
       <section id="itineraryTab" class="tab-panel active">
+        <button type="button" id="openQuickMemoBtn" class="quick-memo-hero">
+          <span class="quick-memo-icon">📱</span>
+          <span><strong>行程快捷</strong><small>旅行時點這裡，像備忘錄一樣上下滑行程</small></span>
+          <span class="quick-memo-arrow">›</span>
+        </button>
         <div id="stayTopCard" class="stay-top-card">
           <div class="stay-top-head">
             <div>
@@ -857,6 +921,14 @@ body{background:#fffaf7}
         </div>
         <div id="archivedSplitSummary" class="archived-split-summary"></div>
 <div id="itineraryList" class="timeline"></div>
+      </section>
+
+
+      <section id="quickviewTab" class="tab-panel">
+        <div class="memo-head">
+          <div><p class="eyebrow">TRIP MEMO</p><h2>📱 行程快捷</h2><p>旅行中直接上下滑，快速看今天要去哪裡。</p></div>
+        </div>
+        <div id="quickItineraryList" class="memo-list"></div>
       </section>
 
       <section id="expensesTab" class="tab-panel">
@@ -907,12 +979,29 @@ body{background:#fffaf7}
 
   <div id="itineraryDialog" class="modal" role="dialog" aria-modal="true">
     <form id="itineraryForm" class="modal-card">
-      <div class="modal-head"><h2>新增行程</h2><button type="button" class="icon-btn" data-close>✕</button></div>
+      <div class="modal-head"><h2>新增行程／美食／小店</h2><button type="button" class="icon-btn" data-close>✕</button></div>
       <input type="hidden" id="itineraryId" />
       <div class="two-col"><label>日期<input id="itDate" type="date" required /></label><label>時間<input id="itTime" type="time" required /></label></div>
-      <label>旅遊地點<input id="itPlace" required placeholder="例如：青青草原" /></label>
+      <label>類型
+        <select id="itType">
+          <option value="spot">📍 景點</option>
+          <option value="food">🍜 美食</option>
+          <option value="shop">🛍️ 小店</option>
+        </select>
+      </label>
+      <label>地點／店名<input id="itPlace" required placeholder="例如：青青草原、Egg Drop、樂天百貨" /></label>
       <label>交通<input id="itTransport" placeholder="例如：機車 / 船 / 計程車" /></label>
-      <label>備註<textarea id="itNote" rows="3" placeholder="集合位置、票券、餐廳…"></textarea></label>
+      <label>🚉 這個地點的站名<input id="itStation" placeholder="例如：西門站（沒有可留白）" /></label>
+      <div id="foodReviewFields" class="food-review-fields hidden">
+        <label>⭐ 五星評分
+          <div id="itRatingStars" class="rating-stars" aria-label="五星評分">
+            <button type="button" data-rating="1">☆</button><button type="button" data-rating="2">☆</button><button type="button" data-rating="3">☆</button><button type="button" data-rating="4">☆</button><button type="button" data-rating="5">☆</button>
+          </div>
+          <input type="hidden" id="itRating" value="0" />
+        </label>
+        <label>💬 評語<textarea id="itReview" rows="3" placeholder="例如：醬蟹很新鮮、份量剛好，下次會再來 ♡"></textarea></label>
+      </div>
+      <label>備註<textarea id="itNote" rows="3" placeholder="集合位置、票券、想買的東西、注意事項…"></textarea></label>
       <div class="modal-actions"><button type="button" class="ghost" data-close>取消</button><button class="primary" type="submit">儲存行程</button></div>
     </form>
   </div>
@@ -1300,6 +1389,30 @@ document.addEventListener('DOMContentLoaded',function(){
       input.focus();
       alert('Safari 沒有允許自動讀取剪貼簿，請長按地址欄位選「貼上」。');
     }
+  });
+});
+</script>
+
+
+<script id="memo-v29-hooks">
+document.addEventListener('DOMContentLoaded',function(){
+  const type=document.getElementById('itType');
+  if(type) type.addEventListener('change',function(){
+    const f=document.getElementById('foodReviewFields');
+    if(f) f.classList.toggle('hidden',this.value!=='food');
+  });
+  const quickBtn=document.getElementById('openQuickMemoBtn');
+  if(quickBtn) quickBtn.addEventListener('click',function(){
+    if(typeof setTab==='function') setTab('quickview');
+    if(typeof renderQuickItinerary==='function') renderQuickItinerary();
+    window.scrollTo({top:0,behavior:'smooth'});
+  });
+  document.querySelectorAll('#itRatingStars button').forEach(function(b){
+    b.addEventListener('click',function(){
+      const n=Number(this.dataset.rating||0);
+      const input=document.getElementById('itRating'); if(input)input.value=n;
+      document.querySelectorAll('#itRatingStars button').forEach(x=>x.textContent=Number(x.dataset.rating)<=n?'★':'☆');
+    });
   });
 });
 </script>
