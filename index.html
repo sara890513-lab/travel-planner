@@ -274,6 +274,15 @@ html,body{max-width:100%;overflow-x:hidden}
 .time-select-wrap span{text-align:center;font-weight:800;font-size:20px}
 @media(max-width:620px){.time-select-wrap{grid-template-columns:1fr auto 1fr}}
 
+
+.trip-password-box{background:#fff8f2;border:1px solid #f0dfd2;border-radius:17px;padding:13px 14px}
+.remove-password-row{display:flex!important;grid-template-columns:auto 1fr!important;align-items:center!important;gap:8px!important;margin-top:8px;color:#a45159}
+.remove-password-row input{width:auto!important}
+.password-card{width:min(460px,100%)!important}
+.password-error{color:#b93d48;background:#fff0f1;border-radius:12px;padding:9px 11px;margin:0}
+.trip-lock-badge{display:inline-flex;width:max-content;align-items:center;background:#f4f1ff;color:#68578f;border:1px solid #e1d9f4;border-radius:999px;padding:5px 9px;font-size:12px;font-weight:800;margin-bottom:7px}
+.is-password-protected{outline:1px solid rgba(116,91,154,.08)}
+
 </style>
 <script>window.TRAVEL_SUPABASE={url:"https://lfvzobfvotcehkkjkgdc.supabase.co",anonKey:"sb_publishable_iwDwCSXNjpVLJyl16mKDyw_NcFqrAoW"};</script>
 <script>
@@ -333,6 +342,7 @@ document.addEventListener('DOMContentLoaded',()=>{
       },
       quickSplit:(typeof quickSplit!=='undefined'?quickSplit:[]),
       quickPeople:(typeof quickPeople!=='undefined'?quickPeople:[]),
+      quickHiddenPeople:(typeof quickHiddenPeople!=='undefined'?quickHiddenPeople:[]),
       quickArchives:(typeof quickArchives!=='undefined'?quickArchives:[])
     };
   }
@@ -354,6 +364,10 @@ document.addEventListener('DOMContentLoaded',()=>{
       if(typeof quickPeople!=='undefined' && Array.isArray(payload.quickPeople)){
         quickPeople.splice(0,quickPeople.length,...payload.quickPeople);
         localStorage.setItem('travel_quick_people_v1',JSON.stringify(quickPeople));
+      }
+      if(typeof quickHiddenPeople!=='undefined' && Array.isArray(payload.quickHiddenPeople)){
+        quickHiddenPeople.splice(0,quickHiddenPeople.length,...payload.quickHiddenPeople);
+        localStorage.setItem('travel_quick_hidden_people_v1',JSON.stringify(quickHiddenPeople));
       }
       if(typeof quickArchives!=='undefined' && Array.isArray(payload.quickArchives)){
         quickArchives.splice(0,quickArchives.length,...payload.quickArchives);
@@ -487,6 +501,78 @@ document.addEventListener('DOMContentLoaded',()=>{
     await saveCloudSnapshot(false);
   }
 
+
+  function renderTrips(){
+    const grid=$('#tripGrid');
+    const empty=$('#emptyTrips');
+    if(!grid || !empty)return;
+
+    const trips=Array.isArray(state.trips)?state.trips:[];
+    empty.classList.toggle('hidden',trips.length>0);
+
+    if(!trips.length){
+      grid.innerHTML='';
+      return;
+    }
+
+    const fallbackCover=`data:image/svg+xml;charset=UTF-8,${encodeURIComponent(
+      '<svg xmlns="http://www.w3.org/2000/svg" width="600" height="420"><defs><linearGradient id="g" x1="0" x2="1"><stop stop-color="#dff3ff"/><stop offset="1" stop-color="#ffe8e2"/></linearGradient></defs><rect width="100%" height="100%" fill="url(#g)"/><text x="50%" y="48%" text-anchor="middle" font-size="70">✈️</text><text x="50%" y="68%" text-anchor="middle" font-size="28" fill="#607086">TRAVEL</text></svg>'
+    )}`;
+
+    grid.innerHTML=trips.map(t=>{
+      const people=peopleOf(t);
+      const cover=t.cover_url||fallbackCover;
+      const locked=!!t.password_hash;
+      const lockText=locked?(unlockedTripIds.has(t.id)?'🔓 已解鎖':'🔒 密碼保護'):'';
+      return `<article class="trip-card${locked?' is-password-protected':''}" data-trip-id="${esc(t.id)}">
+        <img class="trip-card-cover" src="${esc(cover)}" alt="${esc(t.name||'旅程')}" />
+        <div class="trip-card-body">
+          ${locked?`<span class="trip-lock-badge">${lockText}</span>`:''}
+          <h3>${esc(t.name||'未命名旅程')}</h3>
+          <div class="trip-info">
+            <div>🗓️ ${esc(t.start_date||'未設定')} ～ ${esc(t.end_date||'未設定')}</div>
+            <div>📍 ${esc(t.location||'未設定')}</div>
+            <div>👥 ${people.length} 人${people.length?`・${esc(people.join('、'))}`:''}</div>
+          </div>
+          <div class="trip-actions">
+            <button type="button" class="it-btn" data-trip-open="${esc(t.id)}">📑 查看行程</button>
+            <button type="button" class="money-btn" data-trip-money="${esc(t.id)}">＄ 快速分帳</button>
+          </div>
+          <div class="trip-actions" style="margin-top:8px">
+            <button type="button" class="ghost trip-edit-home" data-trip-edit="${esc(t.id)}">✏️ 編輯旅程</button>
+            <button type="button" class="ghost trip-delete-home" data-trip-delete="${esc(t.id)}">🗑️ 刪除旅程</button>
+          </div>
+        </div>
+      </article>`;
+    }).join('');
+
+    grid.querySelectorAll('[data-trip-open]').forEach(btn=>{
+      btn.onclick=()=>openTrip(btn.dataset.tripOpen,'itinerary');
+    });
+    grid.querySelectorAll('[data-trip-money]').forEach(btn=>{
+      btn.onclick=async()=>{
+        const id=btn.dataset.tripMoney;
+        const t=state.trips.find(x=>x.id===id);
+        if(!(await ensureTripUnlocked(t)))return;
+        state.currentTripId=id;
+        persist();
+        if(typeof openTrip==='function') await openTrip(id,'expenses');
+      };
+    });
+    grid.querySelectorAll('[data-trip-edit]').forEach(btn=>{
+      btn.onclick=async()=>{
+        const t=state.trips.find(x=>x.id===btn.dataset.tripEdit);
+        if(!(await ensureTripUnlocked(t)))return;
+        openTripDialog(t);
+      };
+    });
+    grid.querySelectorAll('[data-trip-delete]').forEach(btn=>{
+      btn.onclick=()=>deleteTrip(btn.dataset.tripDelete);
+    });
+
+    decorateLockedTrips();
+  }
+
   function setView(name){ $$('.view').forEach(v=>v.classList.remove('active')); $(`#${name}View`).classList.add('active'); if(name==='home') renderTrips(); }
   function setTab(name){ $$('.tab').forEach(b=>b.classList.toggle('active',b.dataset.tab===name)); $$('.tab-panel').forEach(p=>p.classList.remove('active')); $(`#${name}Tab`).classList.add('active'); if(name==='quickview')renderQuickItinerary(); }
 
@@ -497,6 +583,7 @@ document.addEventListener('DOMContentLoaded',()=>{
   async function deleteTrip(id){
     const t=state.trips.find(x=>x.id===id);
     if(!t)return;
+    if(!(await ensureTripUnlocked(t)))return;
     const ok=confirm(`確定要刪除「${t.name}」嗎？\n\n這會一起刪除這個旅程的行程、分帳與照片紀錄。`);
     if(!ok)return;
 
@@ -547,7 +634,13 @@ document.addEventListener('DOMContentLoaded',()=>{
     }
   }
 
-  function openTrip(id,tab='itinerary'){ state.currentTripId=id; persist(); renderTrip(); if(typeof renderQuickItinerary==='function')renderQuickItinerary(); setView('trip'); setTab(tab); window.scrollTo({top:0,behavior:'smooth'}); }
+  async function openTrip(id,tab='itinerary'){
+    const t=state.trips.find(x=>x.id===id);
+    if(!(await ensureTripUnlocked(t)))return;
+    state.currentTripId=id; persist(); renderTrip();
+    if(typeof renderQuickItinerary==='function')renderQuickItinerary();
+    setView('trip'); setTab(tab); window.scrollTo({top:0,behavior:'smooth'});
+  }
   function renderTrip(){
     const t=currentTrip(); if(!t){setView('home');return} $('#tripTitle').textContent=t.name; $('#tripMeta').textContent=`${t.start_date||''}${t.end_date?` ～ ${t.end_date}`:''}　📍 ${t.location||'未設定'}　👥 ${peopleOf(t).join('、')||'尚未加入朋友'}`; renderStayTop(); renderMajorTransports(); renderItinerary(); renderExpenses(); renderPhotos();
   }
@@ -917,7 +1010,100 @@ document.addEventListener('DOMContentLoaded',()=>{
     return d&&t ? `${d}T${t}` : (d||'');
   }
 
-  function openTripDialog(t=null){ $('#tripDialogTitle').textContent=t?'編輯旅程':'新增旅程'; $('#tripId').value=t?.id||'';$('#tripName').value=t?.name||'';$('#tripStart').value=t?.start_date||'';$('#tripEnd').value=t?.end_date||'';$('#tripLocation').value=t?.location||'';$('#tripPeople').value=peopleOf(t).join(', ');$('#tripNote').value=t?.note||'';$('#tripCoverInput').value='';openModal('#tripDialog'); }
+
+  const unlockedTripIds=new Set();
+  let passwordResolve=null;
+  let passwordTrip=null;
+
+  async function hashTripPassword(text){
+    text=String(text||'');
+    if(!text)return '';
+    const bytes=new TextEncoder().encode(text);
+    const digest=await crypto.subtle.digest('SHA-256',bytes);
+    return [...new Uint8Array(digest)].map(b=>b.toString(16).padStart(2,'0')).join('');
+  }
+
+  function tripHasPassword(t){ return !!(t?.password_hash); }
+
+  async function ensureTripUnlocked(t){
+    if(!t || !tripHasPassword(t))return true;
+    if(unlockedTripIds.has(t.id))return true;
+    passwordTrip=t;
+    $('#tripPasswordTripName').textContent=`「${t.name}」需要密碼才能開啟。`;
+    $('#tripUnlockPassword').value='';
+    $('#tripPasswordError').classList.add('hidden');
+    openModal('#tripPasswordDialog');
+    setTimeout(()=>$('#tripUnlockPassword')?.focus(),80);
+    return await new Promise(resolve=>{passwordResolve=resolve;});
+  }
+
+  window.ensureTripUnlocked=ensureTripUnlocked;
+
+  function finishPasswordUnlock(ok){
+    closeModal('#tripPasswordDialog');
+    if(passwordResolve){const r=passwordResolve;passwordResolve=null;r(!!ok);}
+    passwordTrip=null;
+  }
+
+  async function submitTripPassword(){
+    if(!passwordTrip)return finishPasswordUnlock(false);
+    const entered=$('#tripUnlockPassword').value||'';
+    const h=await hashTripPassword(entered);
+    if(h===passwordTrip.password_hash){
+      unlockedTripIds.add(passwordTrip.id);
+      $('#tripPasswordError').classList.add('hidden');
+      finishPasswordUnlock(true);
+    }else{
+      $('#tripPasswordError').classList.remove('hidden');
+      $('#tripUnlockPassword').select();
+    }
+  }
+
+  function decorateLockedTrips(){
+    document.querySelectorAll('#tripGrid .trip-card').forEach(card=>{
+      const title=card.querySelector('h3')?.textContent?.trim()||'';
+      const t=state.trips.find(x=>x.name===title);
+      const body=card.querySelector('.trip-card-body')||card;
+      let badge=card.querySelector('.trip-lock-badge');
+      if(t?.password_hash){
+        if(!badge){
+          badge=document.createElement('span');
+          badge.className='trip-lock-badge';
+          body.prepend(badge);
+        }
+        badge.textContent=unlockedTripIds.has(t.id)?'🔓 已解鎖':'🔒 密碼保護';
+        card.classList.add('is-password-protected');
+      }else{
+        badge?.remove();
+        card.classList.remove('is-password-protected');
+      }
+    });
+  }
+  const lockObserver=new MutationObserver(()=>decorateLockedTrips());
+  document.addEventListener('DOMContentLoaded',()=>{
+    const g=document.getElementById('tripGrid');
+    if(g)lockObserver.observe(g,{childList:true,subtree:true});
+    decorateLockedTrips();
+  });
+
+  function openTripDialog(t=null){
+    $('#tripDialogTitle').textContent=t?'編輯旅程':'新增旅程';
+    $('#tripId').value=t?.id||'';
+    $('#tripName').value=t?.name||'';
+    $('#tripStart').value=t?.start_date||'';
+    $('#tripEnd').value=t?.end_date||'';
+    $('#tripLocation').value=t?.location||'';
+    $('#tripPeople').value=peopleOf(t).join(', ');
+    $('#tripNote').value=t?.note||'';
+    $('#tripCoverInput').value='';
+    $('#tripPassword').value='';
+    $('#removeTripPassword').checked=false;
+    $('#removeTripPasswordWrap').classList.toggle('hidden',!t?.password_hash);
+    $('#tripPasswordHint').textContent=t?.password_hash
+      ? '目前已有密碼。若要更換，直接輸入新密碼；若不更動請留白。'
+      : '設定後，其他裝置進入這個旅程時也需要輸入密碼。';
+    openModal('#tripDialog');
+  }
   function fillParentSpotOptions(selected=''){
     const sel=$('#itParentSpot'); if(!sel)return;
     const rows=state.itineraries
@@ -993,7 +1179,18 @@ document.addEventListener('DOMContentLoaded',()=>{
 
       const existingId = $('#tripId')?.value || '';
       const id = existingId || ('trip-' + Date.now() + '-' + Math.random().toString(36).slice(2,8));
-      let cover = state.trips.find(t=>t.id===id)?.cover_url || '';
+      const existingTrip = state.trips.find(t=>t.id===id);
+      let cover = existingTrip?.cover_url || '';
+      let passwordHash = existingTrip?.password_hash || '';
+      const newPassword = ($('#tripPassword')?.value || '').trim();
+      const removePassword = !!$('#removeTripPassword')?.checked;
+      if(removePassword){
+        passwordHash='';
+        unlockedTripIds.delete(id);
+      }else if(newPassword){
+        passwordHash=await hashTripPassword(newPassword);
+        unlockedTripIds.add(id);
+      }
 
       const file = $('#tripCoverInput')?.files?.[0];
       if(file){
@@ -1013,6 +1210,7 @@ document.addEventListener('DOMContentLoaded',()=>{
         people: ($('#tripPeople')?.value || '').split(',').map(x=>x.trim()).filter(Boolean),
         note: ($('#tripNote')?.value || '').trim(),
         cover_url: cover,
+        password_hash: passwordHash,
         updated_at: new Date().toISOString()
       };
 
@@ -1052,6 +1250,11 @@ document.addEventListener('DOMContentLoaded',()=>{
   window.saveTripDirect = saveTripDirect;
 
   document.addEventListener('click',e=>{const a=e.target.closest('[data-action]');if(a){const action=a.dataset.action;if(action==='home'||action==='trip-list')setView('home');if(action==='new-trip')openTripDialog();if(action==='settings')openModal('#settingsDialog');}const close=e.target.closest('[data-close]');if(close)closeModal(close.closest('.modal'));});
+
+  $('#tripPasswordForm').addEventListener('submit',async e=>{e.preventDefault();await submitTripPassword();});
+  $('#tripPasswordCancel').onclick=()=>finishPasswordUnlock(false);
+  $('#tripPasswordCancelX').onclick=()=>finishPasswordUnlock(false);
+
   const saveTripBtn = $('#saveTripBtn');
   if(saveTripBtn) saveTripBtn.addEventListener('click', saveTripDirect);
 
@@ -1091,7 +1294,7 @@ body{background:#fffaf7}
   <header class="topbar">
     <button class="brand" data-action="home" aria-label="回首頁">
       <span class="brand-icon">🗺️</span>
-      <span><strong>我的旅遊計畫</strong><small>TRAVEL PLANNER · v3.8 雲端共用</small></span>
+      <span><strong>我的旅遊計畫</strong><small>TRAVEL PLANNER · v4.1 分帳成員修正版</small></span>
       <span class="heart">♥</span>
     </button>
     <nav class="nav" aria-label="主選單">
@@ -1326,9 +1529,34 @@ body{background:#fffaf7}
       <div class="two-col"><label>開始日期<input id="tripStart" type="date" /></label><label>結束日期<input id="tripEnd" type="date" /></label></div>
       <label>旅遊地點<input id="tripLocation" placeholder="例如：蘭嶼" /></label>
       <label>同行朋友 <small>用逗號分開</small><input id="tripPeople" placeholder="小花, 阿明" /></label>
+      <div class="trip-password-box">
+        <label>🔐 旅程密碼
+          <input id="tripPassword" type="password" autocomplete="new-password" placeholder="可自行設定；不設定就不用密碼" />
+        </label>
+        <small id="tripPasswordHint">設定後，其他裝置進入這個旅程時也需要輸入密碼。</small>
+        <label id="removeTripPasswordWrap" class="remove-password-row hidden">
+          <input id="removeTripPassword" type="checkbox" /> 移除目前密碼
+        </label>
+      </div>
       <label>封面照片<input id="tripCoverInput" type="file" accept="image/*" /></label>
       <label>備註<textarea id="tripNote" rows="3" placeholder="住宿、提醒、期待清單…"></textarea></label>
       <div class="modal-actions"><button type="button" class="ghost" data-close>取消</button><button class="primary" type="button" id="saveTripBtn">儲存旅程</button></div>
+    </form>
+  </div>
+
+
+  <div id="tripPasswordDialog" class="modal" role="dialog" aria-modal="true">
+    <form id="tripPasswordForm" class="modal-card password-card">
+      <div class="modal-head"><h2>🔐 此旅程有密碼</h2><button type="button" class="icon-btn" id="tripPasswordCancelX">✕</button></div>
+      <p id="tripPasswordTripName" class="helper"></p>
+      <label>輸入旅程密碼
+        <input id="tripUnlockPassword" type="password" autocomplete="current-password" placeholder="請輸入密碼" />
+      </label>
+      <p id="tripPasswordError" class="password-error hidden">密碼不正確，請再試一次。</p>
+      <div class="modal-actions">
+        <button type="button" class="ghost" id="tripPasswordCancel">取消</button>
+        <button type="submit" class="primary">解鎖旅程</button>
+      </div>
     </form>
   </div>
 
@@ -1487,22 +1715,38 @@ function saveQuickSplit(){try{localStorage.setItem(QUICK_SPLIT_KEY,JSON.stringif
 
 
 const QUICK_PEOPLE_KEY='travel_quick_people_v1';
+const QUICK_HIDDEN_PEOPLE_KEY='travel_quick_hidden_people_v1';
 let quickPeople=[];
+let quickHiddenPeople=[];
 try{quickPeople=JSON.parse(localStorage.getItem(QUICK_PEOPLE_KEY)||'[]')||[]}catch(e){quickPeople=[]}
+try{quickHiddenPeople=JSON.parse(localStorage.getItem(QUICK_HIDDEN_PEOPLE_KEY)||'[]')||[]}catch(e){quickHiddenPeople=[]}
 function saveQuickPeople(){
-  try{localStorage.setItem(QUICK_PEOPLE_KEY,JSON.stringify(quickPeople))}catch(e){}
+  try{
+    localStorage.setItem(QUICK_PEOPLE_KEY,JSON.stringify(quickPeople));
+    localStorage.setItem(QUICK_HIDDEN_PEOPLE_KEY,JSON.stringify(quickHiddenPeople));
+  }catch(e){}
   if(window.queueCloudSave)window.queueCloudSave();
 }
 function addQuickPerson(name){
   name=String(name||'').trim();
   if(!name)return false;
+  quickHiddenPeople=quickHiddenPeople.filter(x=>x!==name);
   if(!quickPeople.includes(name)) quickPeople.push(name);
   saveQuickPeople();
   fillQuickPeople();
   return true;
 }
 function removeQuickPerson(name){
+  name=String(name||'').trim();
   quickPeople=quickPeople.filter(x=>x!==name);
+  if(name && !quickHiddenPeople.includes(name)) quickHiddenPeople.push(name);
+
+  const payer=document.getElementById('qPayer');
+  if(payer && payer.value===name) payer.value='';
+  document.querySelectorAll('#qPeopleChecks input').forEach(x=>{
+    if(x.value===name)x.checked=false;
+  });
+
   saveQuickPeople();
   fillQuickPeople();
 }
@@ -1524,7 +1768,7 @@ function getQuickKnownPeople(){
     add(r.payer);
     (r.people||[]).forEach(add);
   });
-  return names;
+  return names.filter(n=>!quickHiddenPeople.includes(n));
 }
 function fillQuickPeople(){
   const payer=document.getElementById('qPayer');
@@ -1671,7 +1915,7 @@ document.addEventListener('click',e=>{
     e.preventDefault();
     e.stopPropagation();
     const name=personRemove.dataset.qpersonRemove;
-    if(confirm(`要從快速分帳名單移除「${name}」嗎？`)) removeQuickPerson(name);
+    if(confirm(`要移除「${name}」嗎？\n\n移除後，他會從「誰付錢」和「一起分的人」選單消失；舊的分帳紀錄會保留。`)) removeQuickPerson(name);
     return;
   }
   const edit=e.target.closest('[data-qedit]');
@@ -2065,6 +2309,26 @@ document.addEventListener('DOMContentLoaded',function(){
 <script id="v38-cloud-autopull">
 window.addEventListener('focus',()=>{ try{ if(window.state?.supabase && window.forceTravelCloudPull) window.forceTravelCloudPull(); }catch(e){} });
 document.addEventListener('visibilitychange',()=>{ if(!document.hidden){ try{ if(window.state?.supabase && window.forceTravelCloudPull) window.forceTravelCloudPull(); }catch(e){} } });
+</script>
+
+
+<script id="v39-home-lock-gate">
+document.addEventListener('click',async function(e){
+  const btn=e.target.closest('#tripGrid .money-btn');
+  if(!btn)return;
+  const card=btn.closest('.trip-card');
+  const title=card?.querySelector('h3')?.textContent?.trim()||'';
+  const t=window.state?.trips?.find(x=>x.name===title);
+  if(!t?.password_hash)return;
+  if(typeof window.ensureTripUnlocked!=='function')return;
+  if(window.__tripGatePass===t.id){window.__tripGatePass='';return;}
+  e.preventDefault();e.stopImmediatePropagation();
+  const ok=await window.ensureTripUnlocked(t);
+  if(ok){
+    window.__tripGatePass=t.id;
+    btn.click();
+  }
+},true);
 </script>
 
 </body>
