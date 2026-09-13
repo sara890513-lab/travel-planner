@@ -258,6 +258,16 @@ html,body{max-width:100%;overflow-x:hidden}
 .fx-preview{font-weight:900;font-size:18px;color:#315c7d;white-space:nowrap}
 @media(max-width:700px){.fx-rate-card{grid-template-columns:1fr}.fx-preview{font-size:17px}}
 
+
+.subplace-add-actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px}
+.subplace-add-actions button{border:1px solid #eadfd9;background:#fff7f1;border-radius:12px;padding:8px 11px;font-weight:700;cursor:pointer;color:#705e58}
+.subplace-add-actions .add-food-child{background:#fff8e8;border-color:#f0dfae}
+.subplace-add-actions .add-shop-child{background:#fff1f6;border-color:#efd6df}
+.food-review-title{font-weight:900;font-size:16px;margin-bottom:10px;color:#5d5052}
+.multiline-note{white-space:pre-wrap!important;word-break:break-word}
+.food-review-fields:not(.hidden){display:block!important}
+@media(max-width:620px){.subplace-add-actions button{flex:1 1 45%}}
+
 </style>
 <script>window.TRAVEL_SUPABASE={url:"",anonKey:""};</script>
 <script>
@@ -595,13 +605,22 @@ document.addEventListener('DOMContentLoaded',()=>{
           <h3>${icon} ${esc(x.place)}</h3>
           ${x.station?`<p class="it-station-line">🚉 站名：${esc(x.station)}</p>`:''}
           ${x.type==='food'&&x.rating?`<p class="food-stars">${'★'.repeat(Number(x.rating))}${'☆'.repeat(5-Number(x.rating))}</p>`:''}
-          ${x.type==='food'&&x.review?`<p class="food-review">💬 ${esc(x.review)}</p>`:''}
-          ${x.note?`<p>📝 ${esc(x.note)}</p>`:''}
+          ${x.type==='food'&&x.review?`<p class="food-review multiline-note">💬 ${esc(x.review)}</p>`:''}
+          ${x.note?`<p class="multiline-note">📝 ${esc(x.note)}</p>`:''}
+          ${x.type==='spot'?`<div class="subplace-add-actions">
+            <button type="button" class="add-food-child">＋ 🍜 加入美食</button>
+            <button type="button" class="add-shop-child">＋ 🛍️ 加入小店</button>
+          </div>`:''}
           <div class="subplace-list"></div>
         </div>`;
       const [e,d]=item.querySelectorAll('.mini-actions button');
       e.onclick=()=>openItineraryDialog(x);
       d.onclick=()=>removeRecord('itineraries',x.id);
+
+      const addFood=item.querySelector('.add-food-child');
+      if(addFood) addFood.onclick=()=>openChildItineraryDialog(x,'food');
+      const addShop=item.querySelector('.add-shop-child');
+      if(addShop) addShop.onclick=()=>openChildItineraryDialog(x,'shop');
 
       const sub=item.querySelector('.subplace-list');
       const kids=(childrenByParent[x.id]||[]).sort((a,b)=>`${a.date} ${a.time}`.localeCompare(`${b.date} ${b.time}`));
@@ -609,12 +628,12 @@ document.addEventListener('DOMContentLoaded',()=>{
         sub.innerHTML=kids.map(k=>{
           const kicon=k.type==='food'?'🍜':'🛍️';
           const stars=k.type==='food'&&k.rating?`<span class="sub-stars">${'★'.repeat(Number(k.rating))}${'☆'.repeat(5-Number(k.rating))}</span>`:'';
-          const review=k.type==='food'&&k.review?`<div class="sub-review">💬 ${esc(k.review)}</div>`:'';
+          const review=k.type==='food'&&k.review?`<div class="sub-review multiline-note">💬 ${esc(k.review)}</div>`:'';
           return `<div class="subplace-card" data-sub-id="${esc(k.id)}">
             <div class="subplace-main"><strong>${kicon} ${esc(k.place)}</strong>
               ${k.station?`<span>🚉 ${esc(k.station)}</span>`:''}
               ${stars}${review}
-              ${k.note?`<div class="sub-note">📝 ${esc(k.note)}</div>`:''}
+              ${k.note?`<div class="sub-note multiline-note">📝 ${esc(k.note)}</div>`:''}
             </div>
             <div class="subplace-actions"><button type="button" data-sub-edit="${esc(k.id)}">✏️</button><button type="button" data-sub-del="${esc(k.id)}">🗑️</button></div>
           </div>`;
@@ -661,19 +680,19 @@ document.addEventListener('DOMContentLoaded',()=>{
       const date=x.date!==last?`<div class="memo-date">${esc((x.date||'').replaceAll('-','/'))}</div>`:''; last=x.date;
       const icon=x.type==='food'?'🍜':x.type==='shop'?'🛍️':'📍';
       const stars=x.type==='food'&&x.rating?`<div class="memo-stars">${'★'.repeat(Number(x.rating))}${'☆'.repeat(5-Number(x.rating))}</div>`:'';
-      const review=x.type==='food'&&x.review?`<div class="memo-review">💬 ${esc(x.review)}</div>`:'';
+      const review=x.type==='food'&&x.review?`<div class="memo-review multiline-note">💬 ${esc(x.review)}</div>`:'';
       const kids=(childrenByParent[x.id]||[]).map(k=>{
         const ki=k.type==='food'?'🍜':'🛍️';
         const ks=k.type==='food'&&k.rating?`<span class="memo-sub-stars">${'★'.repeat(Number(k.rating))}${'☆'.repeat(5-Number(k.rating))}</span>`:'';
-        const kr=k.type==='food'&&k.review?`<div class="memo-review">💬 ${esc(k.review)}</div>`:'';
-        return `<div class="memo-subitem"><strong>${ki} ${esc(k.place)}</strong>${k.station?`<span>🚉 ${esc(k.station)}</span>`:''}${ks}${kr}${k.note?`<div class="memo-note">📝 ${esc(k.note)}</div>`:''}</div>`;
+        const kr=k.type==='food'&&k.review?`<div class="memo-review multiline-note">💬 ${esc(k.review)}</div>`:'';
+        return `<div class="memo-subitem"><strong>${ki} ${esc(k.place)}</strong>${k.station?`<span>🚉 ${esc(k.station)}</span>`:''}${ks}${kr}${k.note?`<div class="memo-note multiline-note">📝 ${esc(k.note)}</div>`:''}</div>`;
       }).join('');
       return `${date}<article class="memo-item">
         <div class="memo-time">${esc(x.time?.slice(0,5)||'')}</div>
         <div class="memo-body"><strong>${icon} ${esc(x.place)}</strong>
           ${x.station?`<div>🚉 ${esc(x.station)}</div>`:''}
           ${stars}${review}
-          ${x.note?`<div class="memo-note">📝 ${esc(x.note)}</div>`:''}
+          ${x.note?`<div class="memo-note multiline-note">📝 ${esc(x.note)}</div>`:''}
           ${kids?`<div class="memo-sublist">${kids}</div>`:''}
         </div>
       </article>`;
@@ -763,6 +782,24 @@ document.addEventListener('DOMContentLoaded',()=>{
     $('#itType').value=x?.type||'spot';fillParentSpotOptions(x?.parent_spot_id||'');$('#itParentSpot').value=x?.parent_spot_id||'';$('#itPlace').value=x?.place||'';$('#itTransport').value=x?.transport||'';$('#itStation').value=x?.station||'';
     $('#itReview').value=x?.review||'';paintRating(x?.rating||0);$('#itNote').value=x?.note||'';updateFoodFields();openModal('#itineraryDialog');
   }
+
+  function openChildItineraryDialog(parent,type){
+    openItineraryDialog(null);
+    $('#itDate').value=parent?.date||currentTrip()?.start_date||'';
+    $('#itTime').value=parent?.time?.slice(0,5)||'';
+    $('#itType').value=type||'food';
+    fillParentSpotOptions(parent?.id||'');
+    $('#itParentSpot').value=parent?.id||'';
+    $('#itPlace').value='';
+    $('#itTransport').value='';
+    $('#itStation').value=parent?.station||'';
+    $('#itNote').value='';
+    $('#itReview').value='';
+    paintRating(0);
+    updateFoodFields();
+    $('#itPlace')?.focus();
+  }
+
   function fillExpensePeople(){const people=peopleOf(currentTrip());$('#exPayer').innerHTML=people.map(p=>`<option>${esc(p)}</option>`).join('');$('#participantChecks').innerHTML=people.map(p=>`<label><input type="checkbox" value="${esc(p)}" checked> ${esc(p)}</label>`).join('');}
   function openExpenseDialog(x=null){fillExpensePeople();$('#expenseId').value=x?.id||'';$('#exItem').value=x?.item||'';$('#exAmount').value=x?.amount||'';$('#exPayer').value=x?.payer||peopleOf(currentTrip())[0]||'';$('#exNote').value=x?.note||''; if(x) $$('#participantChecks input').forEach(c=>c.checked=(x.participants||[]).includes(c.value));openModal('#expenseDialog');}
 
@@ -894,7 +931,7 @@ body{background:#fffaf7}
   <header class="topbar">
     <button class="brand" data-action="home" aria-label="回首頁">
       <span class="brand-icon">🗺️</span>
-      <span><strong>我的旅遊計畫</strong><small>TRAVEL PLANNER · v3.5</small></span>
+      <span><strong>我的旅遊計畫</strong><small>TRAVEL PLANNER · v3.6</small></span>
       <span class="heart">♥</span>
     </button>
     <nav class="nav" aria-label="主選單">
@@ -1151,12 +1188,12 @@ body{background:#fffaf7}
         <select id="itParentSpot">
           <option value="">不歸類／獨立顯示</option>
         </select>
-        <small>例如：把「水刺醬蟹」放在「明洞」下面。</small>
+        <small>選擇它屬於哪一個大景點。也可以直接在大景點卡片按「＋加入美食／小店」。</small>
       </label>
       <label>地點／店名<input id="itPlace" required placeholder="例如：青青草原、Egg Drop、樂天百貨" /></label>
       <label>交通<input id="itTransport" placeholder="例如：機車 / 船 / 計程車" /></label>
       <label>🚉 這個地點的站名<input id="itStation" placeholder="例如：西門站（沒有可留白）" /></label>
-      <div id="foodReviewFields" class="food-review-fields hidden">
+      <div id="foodReviewFields" class="food-review-fields hidden"><div class="food-review-title">🍜 美食評價</div>
         <label>⭐ 五星評分
           <div id="itRatingStars" class="rating-stars" aria-label="五星評分">
             <button type="button" data-rating="1">☆</button><button type="button" data-rating="2">☆</button><button type="button" data-rating="3">☆</button><button type="button" data-rating="4">☆</button><button type="button" data-rating="5">☆</button>
