@@ -76,6 +76,77 @@
   #quickSplitView .panel-head{align-items:flex-start;flex-direction:column}
 }
 
+
+/* v2.1：iPad / 手機表單尺寸修正 */
+html,body{max-width:100%;overflow-x:hidden}
+.modal{padding:12px;box-sizing:border-box;overflow:hidden}
+.modal-card{
+  width:min(720px,calc(100vw - 24px))!important;
+  max-width:calc(100vw - 24px)!important;
+  max-height:calc(100dvh - 24px)!important;
+  overflow-y:auto!important;
+  overflow-x:hidden!important;
+  box-sizing:border-box!important;
+  overscroll-behavior:contain;
+  -webkit-overflow-scrolling:touch;
+}
+.modal-card *{box-sizing:border-box;max-width:100%}
+.modal-card input,.modal-card textarea,.modal-card select{width:100%;min-width:0}
+.modal-card .two-col{grid-template-columns:repeat(2,minmax(0,1fr))}
+@media(max-width:620px){
+  .modal{padding:8px}
+  .modal-card{
+    width:calc(100vw - 16px)!important;
+    max-width:calc(100vw - 16px)!important;
+    max-height:calc(100dvh - 16px)!important;
+    border-radius:20px!important;
+    padding:18px!important;
+  }
+  .modal-card .two-col{grid-template-columns:1fr}
+}
+.stay-top-card{
+  background:#fff9f2;border:1px solid #f1dfc9;border-radius:22px;
+  padding:18px 20px;margin:14px 0 20px;
+}
+.stay-top-head{display:flex;justify-content:space-between;align-items:flex-start;gap:12px}
+.stay-top-head h3{margin:0 0 5px}
+.stay-top-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px 18px;margin-top:12px}
+.stay-info-line{margin:0;color:#665e63}
+.stay-note{grid-column:1/-1;background:#fff;border-radius:14px;padding:11px 13px}
+@media(max-width:700px){.stay-top-grid{grid-template-columns:1fr}.stay-note{grid-column:1}}
+
+
+/* v2.2 交通資訊 */
+.transport-top-card{
+  background:#f8fbff;border:1px solid #dfeaf5;border-radius:22px;
+  padding:18px 20px;margin:0 0 20px;
+}
+.transport-list{display:grid;gap:10px;margin-top:12px}
+.transport-card{
+  background:#fff;border:1px solid #e5edf5;border-radius:16px;padding:14px 16px;
+  display:flex;justify-content:space-between;gap:14px;align-items:flex-start
+}
+.transport-card-main{min-width:0}
+.transport-card h4{margin:0 0 6px}
+.transport-meta{display:flex;flex-wrap:wrap;gap:8px 14px;color:#675f66;font-size:14px}
+.transport-note{margin:8px 0 0;color:#786f75}
+.transport-card-actions{display:flex;gap:6px;flex-shrink:0}
+.transport-card-actions button{border:0;background:#f6f7f9;border-radius:10px;padding:7px 9px;cursor:pointer}
+.transit-next-box{
+  background:#f8fbff;border:1px solid #dfeaf5;border-radius:18px;padding:14px 15px
+}
+.transit-next-box h3{margin:0 0 10px;font-size:16px}
+.timeline-transit{
+  margin:8px 0 8px 118px;padding:10px 14px;border-radius:16px;
+  background:#f8fbff;border:1px dashed #cfdceb;color:#4f5963;
+  display:flex;align-items:center;gap:8px;flex-wrap:wrap
+}
+.timeline-transit strong{color:#313b45}
+@media(max-width:700px){
+  .transport-card{flex-direction:column}
+  .timeline-transit{margin-left:0}
+}
+
 </style>
 <script>window.TRAVEL_SUPABASE={url:"",anonKey:""};</script>
 <script>
@@ -171,12 +242,175 @@ document.addEventListener('DOMContentLoaded',()=>{
   }
   function openTrip(id,tab='itinerary'){ state.currentTripId=id; persist(); renderTrip(); setView('trip'); setTab(tab); window.scrollTo({top:0,behavior:'smooth'}); }
   function renderTrip(){
-    const t=currentTrip(); if(!t){setView('home');return} $('#tripTitle').textContent=t.name; $('#tripMeta').textContent=`${t.start_date||''}${t.end_date?` ～ ${t.end_date}`:''}　📍 ${t.location||'未設定'}　👥 ${peopleOf(t).join('、')||'尚未加入朋友'}`; renderItinerary(); renderExpenses(); renderPhotos();
+    const t=currentTrip(); if(!t){setView('home');return} $('#tripTitle').textContent=t.name; $('#tripMeta').textContent=`${t.start_date||''}${t.end_date?` ～ ${t.end_date}`:''}　📍 ${t.location||'未設定'}　👥 ${peopleOf(t).join('、')||'尚未加入朋友'}`; renderStayTop(); renderMajorTransports(); renderItinerary(); renderExpenses(); renderPhotos();
   }
+
+  function renderStayTop(){
+    const box=$('#stayTopContent'); const t=currentTrip(); if(!box||!t)return;
+    const name=t.stay_name||'';
+    const landmark=t.stay_landmark||'';
+    const checkin=t.stay_checkin||'';
+    const checkout=t.stay_checkout||'';
+    const note=t.stay_note||'';
+    if(!name&&!landmark&&!checkin&&!checkout&&!note){
+      box.innerHTML='<p class="helper" style="margin:10px 0 0">尚未新增住宿資訊。</p>';
+      return;
+    }
+    box.innerHTML=`<div class="stay-top-grid">
+      ${name?`<p class="stay-info-line"><strong>🏨 住宿：</strong>${esc(name)}</p>`:''}
+      ${landmark?`<p class="stay-info-line"><strong>📍 地標：</strong>${esc(landmark)}</p>`:''}
+      ${checkin?`<p class="stay-info-line"><strong>🕒 入住：</strong>${esc(checkin)}</p>`:''}
+      ${checkout?`<p class="stay-info-line"><strong>🧳 退房：</strong>${esc(checkout)}</p>`:''}
+      ${note?`<p class="stay-info-line stay-note"><strong>📝 備註：</strong>${esc(note)}</p>`:''}
+    </div>`;
+  }
+  function openStayDialog(){
+    const t=currentTrip(); if(!t)return;
+    $('#stayName').value=t.stay_name||'';
+    $('#stayLandmark').value=t.stay_landmark||'';
+    $('#stayCheckin').value=t.stay_checkin||'';
+    $('#stayCheckout').value=t.stay_checkout||'';
+    $('#stayNote').value=t.stay_note||'';
+    openModal('#stayDialog');
+  }
+  async function saveStayInfo(){
+    const t=currentTrip(); if(!t)return;
+    t.stay_name=$('#stayName').value.trim();
+    t.stay_landmark=$('#stayLandmark').value.trim();
+    t.stay_checkin=$('#stayCheckin').value;
+    t.stay_checkout=$('#stayCheckout').value;
+    t.stay_note=$('#stayNote').value.trim();
+    t.updated_at=new Date().toISOString();
+    if(state.cloud){
+      try{
+        await cloudUpsert('trips',t);
+        await loadCloud();
+      }catch(e){
+        toast('住宿資訊已保留在目前裝置');
+        persist();
+      }
+    }else{
+      persist();
+    }
+    renderStayTop();
+    closeModal('#stayDialog');
+    toast('住宿資訊已儲存');
+  }
+
+
+  function transportStore(){
+    const t=currentTrip(); if(!t)return [];
+    if(!Array.isArray(t.major_transports)) t.major_transports=[];
+    return t.major_transports;
+  }
+  function saveTripObject(t){
+    if(state.cloud){
+      cloudUpsert('trips',t).then(()=>loadCloud()).catch(()=>{persist();});
+    }else persist();
+  }
+  function fmtDT(v){
+    if(!v)return '';
+    try{
+      const d=new Date(v);
+      return d.toLocaleString('zh-TW',{month:'numeric',day:'numeric',hour:'2-digit',minute:'2-digit'});
+    }catch(e){return v}
+  }
+  function renderMajorTransports(){
+    const box=$('#transportTopList'); if(!box)return;
+    const rows=transportStore();
+    if(!rows.length){
+      box.innerHTML='<p class="helper" style="margin:0">尚未新增重要交通資訊。</p>';
+      return;
+    }
+    box.innerHTML=rows.map(r=>`<div class="transport-card" data-id="${esc(r.id)}">
+      <div class="transport-card-main">
+        <h4>${esc(r.mode||'交通')}｜${esc(r.from||'')} ${r.to?'→ '+esc(r.to):''}</h4>
+        <div class="transport-meta">
+          ${r.depart?`<span>🕒 出發 ${esc(fmtDT(r.depart))}</span>`:''}
+          ${r.arrive?`<span>🏁 抵達 ${esc(fmtDT(r.arrive))}</span>`:''}
+          ${r.ref?`<span>🎫 ${esc(r.ref)}</span>`:''}
+          ${r.landmark?`<span>📍 ${esc(r.landmark)}</span>`:''}
+        </div>
+        ${r.note?`<p class="transport-note">📝 ${esc(r.note)}</p>`:''}
+      </div>
+      <div class="transport-card-actions">
+        <button type="button" data-edit-transport="${esc(r.id)}">✏️</button>
+        <button type="button" data-del-transport="${esc(r.id)}">🗑️</button>
+      </div>
+    </div>`).join('');
+  }
+  function openTransportDialog(r=null){
+    $('#transportEditId').value=r?.id||'';
+    $('#transportMode').value=r?.mode||'船';
+    $('#transportFrom').value=r?.from||'';
+    $('#transportTo').value=r?.to||'';
+    $('#transportDepart').value=r?.depart||'';
+    $('#transportArrive').value=r?.arrive||'';
+    $('#transportRef').value=r?.ref||'';
+    $('#transportLandmark').value=r?.landmark||'';
+    $('#transportNote').value=r?.note||'';
+    openModal('#transportDialog');
+  }
+  function saveTransportInfo(){
+    const rows=transportStore();
+    const id=$('#transportEditId').value||uid();
+    const row={
+      id,
+      mode:$('#transportMode').value,
+      from:$('#transportFrom').value.trim(),
+      to:$('#transportTo').value.trim(),
+      depart:$('#transportDepart').value,
+      arrive:$('#transportArrive').value,
+      ref:$('#transportRef').value.trim(),
+      landmark:$('#transportLandmark').value.trim(),
+      note:$('#transportNote').value.trim()
+    };
+    const i=rows.findIndex(x=>x.id===id);
+    if(i>=0)rows[i]=row; else rows.push(row);
+    saveTripObject(currentTrip());
+    renderMajorTransports();
+    closeModal('#transportDialog');
+    toast('交通資訊已儲存');
+  }
+
   function renderItinerary(){
-    const list=$('#itineraryList'); const rows=state.itineraries.filter(x=>x.trip_id===state.currentTripId).sort((a,b)=>`${a.date} ${a.time}`.localeCompare(`${b.date} ${b.time}`)); list.innerHTML='';
-    if(!rows.length){list.innerHTML='<div class="empty-card"><div class="empty-illu">🗓️</div><h3>還沒有行程</h3><p>新增第一個時間點吧！</p></div>';return}
-    let lastDate=''; rows.forEach(x=>{const item=document.createElement('div');item.className='timeline-item';const dateLabel=x.date!==lastDate?`<small>${fmtDate(x.date)}</small><br>`:'';lastDate=x.date;item.innerHTML=`<div class="timeline-time">${dateLabel}${esc(x.time?.slice(0,5)||'')}</div><div class="timeline-card"><div class="mini-actions"><button title="編輯">✏️</button><button title="刪除">🗑️</button></div><h3>📍 ${esc(x.place)}</h3>${x.stay?`<p>🏠 住宿：${esc(x.stay)}</p>`:''}${x.transport?`<p>🚌 交通：${esc(x.transport)}</p>`:''}${x.note?`<p>📝 ${esc(x.note)}</p>`:''}</div>`;const [e,d]=item.querySelectorAll('.mini-actions button');e.onclick=()=>openItineraryDialog(x);d.onclick=()=>removeRecord('itineraries',x.id);list.appendChild(item);});
+    const list=$('#itineraryList');
+    const rows=state.itineraries.filter(x=>x.trip_id===state.currentTripId)
+      .sort((a,b)=>`${a.date} ${a.time}`.localeCompare(`${b.date} ${b.time}`));
+    list.innerHTML='';
+    if(!rows.length){
+      list.innerHTML='<div class="empty-card"><div class="empty-illu">🗓️</div><h3>還沒有行程</h3><p>新增第一個時間點吧！</p></div>';
+      return;
+    }
+    let lastDate='';
+    rows.forEach((x,idx)=>{
+      const item=document.createElement('div');
+      item.className='timeline-item';
+      const dateLabel=x.date!==lastDate?`<small>${fmtDate(x.date)}</small><br>`:'';
+      lastDate=x.date;
+      item.innerHTML=`<div class="timeline-time">${dateLabel}${esc(x.time?.slice(0,5)||'')}</div>
+        <div class="timeline-card">
+          <div class="mini-actions"><button title="編輯">✏️</button><button title="刪除">🗑️</button></div>
+          <h3>📍 ${esc(x.place)}</h3>
+          ${x.note?`<p>📝 ${esc(x.note)}</p>`:''}
+        </div>`;
+      const [e,d]=item.querySelectorAll('.mini-actions button');
+      e.onclick=()=>openItineraryDialog(x);
+      d.onclick=()=>removeRecord('itineraries',x.id);
+      list.appendChild(item);
+
+      if(idx<rows.length-1 && (x.transit_mode||x.transit_duration||x.transit_note)){
+        const next=rows[idx+1];
+        const tr=document.createElement('div');
+        tr.className='timeline-transit';
+        tr.innerHTML=`<span>⬇️</span>
+          <strong>${esc(x.transit_mode||'前往下一站')}</strong>
+          ${x.transit_duration?`<span>・約 ${esc(x.transit_duration)}</span>`:''}
+          <span>${esc(x.place)} → ${esc(next.place)}</span>
+          ${x.transit_note?`<span>・${esc(x.transit_note)}</span>`:''}`;
+        list.appendChild(tr);
+      }
+    });
   }
 
 
@@ -238,16 +472,16 @@ document.addEventListener('DOMContentLoaded',()=>{
   }
 
   function openTripDialog(t=null){ $('#tripDialogTitle').textContent=t?'編輯旅程':'新增旅程'; $('#tripId').value=t?.id||'';$('#tripName').value=t?.name||'';$('#tripStart').value=t?.start_date||'';$('#tripEnd').value=t?.end_date||'';$('#tripLocation').value=t?.location||'';$('#tripPeople').value=peopleOf(t).join(', ');$('#tripNote').value=t?.note||'';$('#tripCoverInput').value='';openModal('#tripDialog'); }
-  function openItineraryDialog(x=null){$('#itineraryId').value=x?.id||'';$('#itDate').value=x?.date||currentTrip()?.start_date||'';$('#itTime').value=x?.time?.slice(0,5)||'';$('#itPlace').value=x?.place||'';$('#itStay').value=x?.stay||'';$('#itTransport').value=x?.transport||'';$('#itNote').value=x?.note||'';openModal('#itineraryDialog');}
+  function openItineraryDialog(x=null){$('#itineraryId').value=x?.id||'';$('#itDate').value=x?.date||currentTrip()?.start_date||'';$('#itTime').value=x?.time?.slice(0,5)||'';$('#itPlace').value=x?.place||'';$('#itTransport').value=x?.transport||'';$('#itNote').value=x?.note||'';openModal('#itineraryDialog');}
   function fillExpensePeople(){const people=peopleOf(currentTrip());$('#exPayer').innerHTML=people.map(p=>`<option>${esc(p)}</option>`).join('');$('#participantChecks').innerHTML=people.map(p=>`<label><input type="checkbox" value="${esc(p)}" checked> ${esc(p)}</label>`).join('');}
   function openExpenseDialog(x=null){fillExpensePeople();$('#expenseId').value=x?.id||'';$('#exItem').value=x?.item||'';$('#exAmount').value=x?.amount||'';$('#exPayer').value=x?.payer||peopleOf(currentTrip())[0]||'';$('#exNote').value=x?.note||''; if(x) $$('#participantChecks input').forEach(c=>c.checked=(x.participants||[]).includes(c.value));openModal('#expenseDialog');}
 
   async function saveTrip(){
     const id=$('#tripId').value||uid();let cover=state.trips.find(t=>t.id===id)?.cover_url||'';const file=$('#tripCoverInput').files[0];if(file){if(state.cloud){cover=await uploadPhotoFile(file,id,true);}else cover=await dataURL(file);}
-    const row={id,name:$('#tripName').value.trim(),start_date:$('#tripStart').value||null,end_date:$('#tripEnd').value||null,location:$('#tripLocation').value.trim(),people:$('#tripPeople').value.split(',').map(x=>x.trim()).filter(Boolean),note:$('#tripNote').value.trim(),cover_url:cover,updated_at:new Date().toISOString()}; if(!row.name)return;
+    const oldTrip=state.trips.find(t=>t.id===id)||{};const row={...oldTrip,id,name:$('#tripName').value.trim(),start_date:$('#tripStart').value||null,end_date:$('#tripEnd').value||null,location:$('#tripLocation').value.trim(),people:$('#tripPeople').value.split(',').map(x=>x.trim()).filter(Boolean),note:$('#tripNote').value.trim(),cover_url:cover,updated_at:new Date().toISOString()}; if(!row.name)return;
     if(state.cloud){await cloudUpsert('trips',row);await loadCloud();} else {const i=state.trips.findIndex(t=>t.id===id); if(i>=0)state.trips[i]=row;else state.trips.unshift(row);renderTrips();const saved=persist();if(!saved)toast('旅程已新增；此瀏覽器暫時無法永久保存');} if(storageAvailable||state.cloud)toast('旅程已儲存 ♡');
   }
-  async function saveItinerary(){const row={id:$('#itineraryId').value||uid(),trip_id:state.currentTripId,date:$('#itDate').value,time:$('#itTime').value,place:$('#itPlace').value.trim(),stay:$('#itStay').value.trim(),transport:$('#itTransport').value.trim(),note:$('#itNote').value.trim()};if(state.cloud){await cloudUpsert('itineraries',row);await loadCloud();}else{const i=state.itineraries.findIndex(x=>x.id===row.id);if(i>=0)state.itineraries[i]=row;else state.itineraries.push(row);persist();renderItinerary();}toast('行程已儲存');}
+  async function saveItinerary(){const row={id:$('#itineraryId').value||uid(),trip_id:state.currentTripId,date:$('#itDate').value,time:$('#itTime').value,place:$('#itPlace').value.trim(),transport:$('#itTransport').value.trim(),note:$('#itNote').value.trim()};if(state.cloud){await cloudUpsert('itineraries',row);await loadCloud();}else{const i=state.itineraries.findIndex(x=>x.id===row.id);if(i>=0)state.itineraries[i]=row;else state.itineraries.push(row);persist();renderItinerary();}toast('行程已儲存');}
   async function saveExpense(){const participants=$$('#participantChecks input:checked').map(x=>x.value);if(!participants.length){toast('至少選一位分帳成員');return false}const row={id:$('#expenseId').value||uid(),trip_id:state.currentTripId,item:$('#exItem').value.trim(),amount:Number($('#exAmount').value),payer:$('#exPayer').value,participants,note:$('#exNote').value.trim()};if(state.cloud){await cloudUpsert('expenses',row);await loadCloud();}else{const i=state.expenses.findIndex(x=>x.id===row.id);if(i>=0)state.expenses[i]=row;else state.expenses.unshift(row);persist();renderExpenses();}toast('支出已儲存');return true;}
   async function removeRecord(table,id){if(!confirm('確定要刪除嗎？'))return;if(state.cloud){await cloudDelete(table,id);await loadCloud();}else{state[table]=state[table].filter(x=>x.id!==id);persist();renderTrip();}toast('已刪除');}
 
@@ -370,7 +604,7 @@ body{background:#fffaf7}
   <header class="topbar">
     <button class="brand" data-action="home" aria-label="回首頁">
       <span class="brand-icon">🗺️</span>
-      <span><strong>我的旅遊計畫</strong><small>TRAVEL PLANNER · v2.0</small></span>
+      <span><strong>我的旅遊計畫</strong><small>TRAVEL PLANNER · v2.2</small></span>
       <span class="heart">♥</span>
     </button>
     <nav class="nav" aria-label="主選單">
@@ -482,6 +716,28 @@ body{background:#fffaf7}
       </div>
 
       <section id="itineraryTab" class="tab-panel active">
+        <div id="stayTopCard" class="stay-top-card">
+          <div class="stay-top-head">
+            <div>
+              <h3>🏠 住宿資訊</h3>
+              <p class="helper">住宿地點、附近地標、入住／退房時間與注意事項</p>
+            </div>
+            <button type="button" class="ghost" id="editStayBtn">✏️ 新增／編輯住宿</button>
+          </div>
+          <div id="stayTopContent"></div>
+        </div>
+
+        <div class="transport-top-card">
+          <div class="stay-top-head">
+            <div>
+              <h3>🚌 重要交通資訊</h3>
+              <p class="helper">船班、飛機、租車、接送等主要交通集中放這裡</p>
+            </div>
+            <button type="button" class="ghost" id="addTransportBtn">＋ 新增交通</button>
+          </div>
+          <div id="transportTopList" class="transport-list"></div>
+        </div>
+
         <div class="panel-head">
           <div><h2>旅遊行程</h2><p>用時間軸安排每天的景點、住宿與交通</p></div>
           <div class="panel-actions">
@@ -546,10 +802,56 @@ body{background:#fffaf7}
       <input type="hidden" id="itineraryId" />
       <div class="two-col"><label>日期<input id="itDate" type="date" required /></label><label>時間<input id="itTime" type="time" required /></label></div>
       <label>旅遊地點<input id="itPlace" required placeholder="例如：青青草原" /></label>
-      <label>住宿地點<input id="itStay" placeholder="例如：民宿名稱" /></label>
       <label>交通<input id="itTransport" placeholder="例如：機車 / 船 / 計程車" /></label>
       <label>備註<textarea id="itNote" rows="3" placeholder="集合位置、票券、餐廳…"></textarea></label>
       <div class="modal-actions"><button type="button" class="ghost" data-close>取消</button><button class="primary" type="submit">儲存行程</button></div>
+    </form>
+  </div>
+
+
+  <div id="stayDialog" class="modal" role="dialog" aria-modal="true">
+    <form id="stayForm" class="modal-card">
+      <div class="modal-head"><h2>🏠 住宿資訊</h2><button type="button" class="icon-btn" data-close>✕</button></div>
+      <label>住宿地點<input id="stayName" placeholder="例如：蘭嶼某某民宿" /></label>
+      <label>地標／附近位置<input id="stayLandmark" placeholder="例如：椰油國小旁、走路 3 分鐘到港口" /></label>
+      <div class="two-col">
+        <label>入住時間<input id="stayCheckin" type="time" /></label>
+        <label>退房時間<input id="stayCheckout" type="time" /></label>
+      </div>
+      <label>備註／注意事項<textarea id="stayNote" rows="4" placeholder="例如：15:00 後入住、11:00 前退房、先打電話給民宿、行李可寄放…"></textarea></label>
+      <div class="modal-actions">
+        <button type="button" class="ghost" data-close>取消</button>
+        <button type="submit" class="primary">儲存住宿資訊</button>
+      </div>
+    </form>
+  </div>
+
+
+  <div id="transportDialog" class="modal" role="dialog" aria-modal="true">
+    <form id="transportForm" class="modal-card">
+      <div class="modal-head"><h2>🚌 重要交通</h2><button type="button" class="icon-btn" data-close>✕</button></div>
+      <input type="hidden" id="transportEditId" />
+      <label>交通方式
+        <select id="transportMode">
+          <option>船</option><option>飛機</option><option>租車</option><option>機車</option>
+          <option>接送</option><option>火車</option><option>公車</option><option>計程車</option><option>其他</option>
+        </select>
+      </label>
+      <div class="two-col">
+        <label>出發地<input id="transportFrom" placeholder="例如：後壁湖碼頭" /></label>
+        <label>目的地<input id="transportTo" placeholder="例如：蘭嶼開元港" /></label>
+      </div>
+      <div class="two-col">
+        <label>出發時間<input id="transportDepart" type="datetime-local" /></label>
+        <label>抵達時間<input id="transportArrive" type="datetime-local" /></label>
+      </div>
+      <label>班次／訂位／車牌<input id="transportRef" placeholder="例如：船班 07:30、訂位代號、車牌" /></label>
+      <label>集合地標<input id="transportLandmark" placeholder="例如：後壁湖遊艇港報到處" /></label>
+      <label>備註／注意事項<textarea id="transportNote" rows="3" placeholder="例如：提前 30 分鐘報到、先吃暈船藥、抵達後聯絡民宿接送"></textarea></label>
+      <div class="modal-actions">
+        <button type="button" class="ghost" data-close>取消</button>
+        <button type="submit" class="primary">儲存交通</button>
+      </div>
     </form>
   </div>
 
@@ -777,6 +1079,51 @@ document.addEventListener('click', function(e){
     document.querySelectorAll('.nav-btn').forEach(b=>b.classList.toggle('active',b.dataset.action==='home'));
   }
 }, false);
+</script>
+
+
+<script id="stay-v21-hooks">
+document.addEventListener('DOMContentLoaded',function(){
+  const edit=document.getElementById('editStayBtn');
+  if(edit) edit.addEventListener('click',function(){ if(typeof openStayDialog==='function') openStayDialog(); });
+  const form=document.getElementById('stayForm');
+  if(form) form.addEventListener('submit',function(e){
+    e.preventDefault();
+    if(typeof saveStayInfo==='function') saveStayInfo();
+  });
+});
+</script>
+
+
+<script id="transport-v22-hooks">
+document.addEventListener('DOMContentLoaded',function(){
+  const add=document.getElementById('addTransportBtn');
+  if(add) add.addEventListener('click',function(){ if(typeof openTransportDialog==='function') openTransportDialog(); });
+
+  const form=document.getElementById('transportForm');
+  if(form) form.addEventListener('submit',function(e){
+    e.preventDefault();
+    if(typeof saveTransportInfo==='function') saveTransportInfo();
+  });
+
+  document.addEventListener('click',function(e){
+    const edit=e.target.closest('[data-edit-transport]');
+    if(edit && typeof transportStore==='function'){
+      const r=transportStore().find(x=>x.id===edit.dataset.editTransport);
+      if(r) openTransportDialog(r);
+    }
+    const del=e.target.closest('[data-del-transport]');
+    if(del && typeof transportStore==='function'){
+      const rows=transportStore();
+      const i=rows.findIndex(x=>x.id===del.dataset.delTransport);
+      if(i>=0 && confirm('確定刪除這筆交通資訊嗎？')){
+        rows.splice(i,1);
+        saveTripObject(currentTrip());
+        renderMajorTransports();
+      }
+    }
+  });
+});
 </script>
 
 </body>
