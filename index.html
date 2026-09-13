@@ -288,6 +288,15 @@ html,body{max-width:100%;overflow-x:hidden}
 .sync-status-chip.ok{color:#3f8068;background:#edf9f4;border-color:#ccebdd}
 @media(max-width:700px){.sync-status-chip{font-size:10px;padding:5px 7px}}
 
+
+.trip-actions-main{display:grid!important;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
+.quick-home-btn{border:0;border-radius:14px;padding:12px 10px;font-weight:800;background:#f1ecff;color:#68578f;cursor:pointer}
+.quick-home-btn:hover{filter:brightness(.98)}
+@media(max-width:700px){
+  .trip-actions-main{grid-template-columns:1fr 1fr!important}
+  .trip-actions-main .money-btn{grid-column:1/-1}
+}
+
 </style>
 <script>window.TRAVEL_SUPABASE={url:"https://lfvzobfvotcehkkjkgdc.supabase.co",anonKey:"sb_publishable_iwDwCSXNjpVLJyl16mKDyw_NcFqrAoW"};</script>
 <script>
@@ -554,8 +563,9 @@ document.addEventListener('DOMContentLoaded',()=>{
             <div>📍 ${esc(t.location||'未設定')}</div>
             <div>👥 ${people.length} 人${people.length?`・${esc(people.join('、'))}`:''}</div>
           </div>
-          <div class="trip-actions">
+          <div class="trip-actions trip-actions-main">
             <button type="button" class="it-btn" data-trip-open="${esc(t.id)}">📑 查看行程</button>
+            <button type="button" class="quick-home-btn" data-trip-quick="${esc(t.id)}">📱 行程快捷</button>
             <button type="button" class="money-btn" data-trip-money="${esc(t.id)}">＄ 快速分帳</button>
           </div>
           <div class="trip-actions" style="margin-top:8px">
@@ -568,6 +578,16 @@ document.addEventListener('DOMContentLoaded',()=>{
 
     grid.querySelectorAll('[data-trip-open]').forEach(btn=>{
       btn.onclick=()=>openTrip(btn.dataset.tripOpen,'itinerary');
+    });
+    grid.querySelectorAll('[data-trip-quick]').forEach(btn=>{
+      btn.onclick=async()=>{
+        const id=btn.dataset.tripQuick;
+        const t=state.trips.find(x=>x.id===id);
+        if(!(await ensureTripUnlocked(t)))return;
+        state.currentTripId=id;
+        persist();
+        await openTrip(id,'quickview');
+      };
     });
     grid.querySelectorAll('[data-trip-money]').forEach(btn=>{
       btn.onclick=async()=>{
@@ -1322,7 +1342,7 @@ body{background:#fffaf7}
   <header class="topbar">
     <button class="brand" data-action="home" aria-label="回首頁">
       <span class="brand-icon">🗺️</span>
-      <span><strong>我的旅遊計畫</strong><small>TRAVEL PLANNER · v4.2 跨設備同步修正版</small></span>
+      <span><strong>我的旅遊計畫</strong><small>TRAVEL PLANNER · v4.3 行程快捷回歸版</small></span>
       <span class="heart">♥</span>
     </button>
     <nav class="nav" aria-label="主選單">
