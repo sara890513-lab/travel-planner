@@ -181,6 +181,9 @@ html,body{max-width:100%;overflow-x:hidden}
   .maps-btn{width:100%}
 }
 
+
+.it-transport-line{margin-top:8px!important;font-weight:700;color:#4d6780!important;background:#f3f8fd;padding:8px 10px;border-radius:12px}
+.timeline-transit{font-size:15px}
 </style>
 <script>window.TRAVEL_SUPABASE={url:"",anonKey:""};</script>
 <script>
@@ -496,6 +499,7 @@ document.addEventListener('DOMContentLoaded',()=>{
         <div class="timeline-card">
           <div class="mini-actions"><button title="編輯">✏️</button><button title="刪除">🗑️</button></div>
           <h3>📍 ${esc(x.place)}</h3>
+          ${x.transport?`<p class="it-transport-line">🚌 前往下一站：${esc(x.transport)}</p>`:''}
           ${x.note?`<p>📝 ${esc(x.note)}</p>`:''}
         </div>`;
       const [e,d]=item.querySelectorAll('.mini-actions button');
@@ -503,12 +507,13 @@ document.addEventListener('DOMContentLoaded',()=>{
       d.onclick=()=>removeRecord('itineraries',x.id);
       list.appendChild(item);
 
-      if(x.transit_mode||x.transit_duration||x.transit_note){
+      const transitText=x.transport||x.transit_mode||'';
+      if(transitText||x.transit_duration||x.transit_note){
         const next=rows[idx+1]||null;
         const tr=document.createElement('div');
         tr.className='timeline-transit';
         tr.innerHTML=`<span>⬇️</span>
-          <strong>${esc(x.transit_mode||'前往下一站')}</strong>
+          <strong>🚌 ${esc(transitText||'前往下一站')}</strong>
           ${x.transit_duration?`<span>・約 ${esc(x.transit_duration)}</span>`:''}
           ${next?`<span>${esc(x.place)} → ${esc(next.place)}</span>`:`<span>${esc(x.place)} → 下一站待新增</span>`}
           ${x.transit_note?`<span>・${esc(x.transit_note)}</span>`:''}`;
@@ -708,7 +713,7 @@ body{background:#fffaf7}
   <header class="topbar">
     <button class="brand" data-action="home" aria-label="回首頁">
       <span class="brand-icon">🗺️</span>
-      <span><strong>我的旅遊計畫</strong><small>TRAVEL PLANNER · v2.6</small></span>
+      <span><strong>我的旅遊計畫</strong><small>TRAVEL PLANNER · v2.7</small></span>
       <span class="heart">♥</span>
     </button>
     <nav class="nav" aria-label="主選單">
