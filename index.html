@@ -32,6 +32,28 @@
 .export-foot{text-align:center;margin-top:34px;color:#9aa2b1;font-size:17px}
 @media(max-width:720px){.panel-actions{width:100%;justify-content:stretch}.panel-actions .export-btn,.panel-actions .primary{flex:1;min-width:120px}}
 
+
+.quick-grid{display:grid;grid-template-columns:minmax(280px,.8fr) minmax(320px,1.2fr);gap:18px}
+.quick-card,.quick-summary{background:#fff;border:1px solid #eee8e8;border-radius:24px;padding:20px;box-shadow:0 8px 24px rgba(55,45,45,.05)}
+.quick-card h3,.quick-summary h3{margin-top:0}
+.quick-record{display:grid;grid-template-columns:1fr auto;gap:10px;padding:14px 0;border-bottom:1px dashed #e8e2e2}
+.quick-record:last-child{border-bottom:0}
+.quick-record small{display:block;color:#8b8496;margin-top:4px}
+.quick-delete{border:0;background:#fff0f2;color:#d45569;border-radius:12px;padding:7px 10px;cursor:pointer}
+.quick-summary{margin-top:18px}
+.quick-settle{padding:12px 14px;margin:8px 0;background:#fff8f2;border-radius:15px;font-weight:700}
+.quick-empty{color:#9a92a2;padding:20px 4px;text-align:center}
+@media(max-width:760px){.quick-grid{grid-template-columns:1fr}.quick-card,.quick-summary{border-radius:18px}}
+
+
+.archive-box{margin-top:18px;padding-top:16px;border-top:1px dashed #e5dddd;display:grid;grid-template-columns:1fr auto;gap:12px;align-items:end}
+.archive-box label{margin:0}.archive-box select{width:100%}
+.archive-note{grid-column:1/-1;margin:0;color:#918898;font-size:13px}
+.archived-split-summary{margin:0 0 18px}
+.archived-split-card{background:#fff7ed;border:1px solid #f4dfc6;border-radius:20px;padding:16px 18px;margin-bottom:12px}
+.archived-split-card h4{margin:0 0 8px}.archived-split-card p{margin:4px 0;color:#6f6571}
+@media(max-width:650px){.archive-box{grid-template-columns:1fr}.archive-note{grid-column:1}}
+
 </style>
 <script>window.TRAVEL_SUPABASE={url:"",anonKey:""};</script>
 <script>
@@ -216,10 +238,82 @@ document.addEventListener('DOMContentLoaded',()=>{
   }
   async function removePhoto(x){if(!confirm('刪除這張照片嗎？'))return;if(state.cloud){if(x.storage_path)await state.supabase.storage.from('trip-photos').remove([x.storage_path]);await cloudDelete('travel_photos',x.id);await loadCloud();}else{state.photos=state.photos.filter(p=>p.id!==x.id);persist();renderPhotos();}}
 
+
+  async function saveTripDirect(){
+    try{
+      const name = ($('#tripName')?.value || '').trim();
+      if(!name){
+        alert('請先輸入旅程名稱');
+        $('#tripName')?.focus();
+        return;
+      }
+
+      const existingId = $('#tripId')?.value || '';
+      const id = existingId || ('trip-' + Date.now() + '-' + Math.random().toString(36).slice(2,8));
+      let cover = state.trips.find(t=>t.id===id)?.cover_url || '';
+
+      const file = $('#tripCoverInput')?.files?.[0];
+      if(file){
+        if(state.cloud){
+          cover = await uploadPhotoFile(file,id,true);
+        }else{
+          try { cover = await dataURL(file); } catch(e) { console.warn('cover read failed', e); }
+        }
+      }
+
+      const row = {
+        id,
+        name,
+        start_date: $('#tripStart')?.value || null,
+        end_date: $('#tripEnd')?.value || null,
+        location: ($('#tripLocation')?.value || '').trim(),
+        people: ($('#tripPeople')?.value || '').split(',').map(x=>x.trim()).filter(Boolean),
+        note: ($('#tripNote')?.value || '').trim(),
+        cover_url: cover,
+        updated_at: new Date().toISOString()
+      };
+
+      if(state.cloud){
+        await cloudUpsert('trips',row);
+        await loadCloud();
+      }else{
+        const i = state.trips.findIndex(t=>t.id===id);
+        if(i>=0) state.trips[i]=row;
+        else state.trips.unshift(row);
+
+        try{
+          localStorage.setItem(LS, JSON.stringify({
+            trips:state.trips,
+            itineraries:state.itineraries,
+            expenses:state.expenses,
+            photos:state.photos,
+            currentTripId:state.currentTripId
+          }));
+          storageAvailable = true;
+        }catch(err){
+          storageAvailable = false;
+          console.warn('localStorage failed, keeping trip in memory',err);
+        }
+
+        renderTrips();
+      }
+
+      closeModal('#tripDialog');
+      setView('home');
+      toast('旅程已新增 ♡');
+    }catch(err){
+      console.error('saveTripDirect failed', err);
+      alert('新增旅程失敗：' + (err?.message || String(err)));
+    }
+  }
+  window.saveTripDirect = saveTripDirect;
+
   document.addEventListener('click',e=>{const a=e.target.closest('[data-action]');if(a){const action=a.dataset.action;if(action==='home'||action==='trip-list')setView('home');if(action==='new-trip')openTripDialog();if(action==='settings')openModal('#settingsDialog');}const close=e.target.closest('[data-close]');if(close)closeModal(close.closest('.modal'));});
+  const saveTripBtn = $('#saveTripBtn');
+  if(saveTripBtn) saveTripBtn.addEventListener('click', saveTripDirect);
+
   $$('.tab').forEach(b=>b.onclick=()=>setTab(b.dataset.tab));
   $('#editTripBtn').onclick=()=>openTripDialog(currentTrip());$('#addItineraryBtn').onclick=()=>openItineraryDialog();$('#exportImageBtn').onclick=()=>exportItinerary('image');$('#exportPdfBtn').onclick=()=>exportItinerary('pdf');$('#addExpenseBtn').onclick=()=>{if(!peopleOf(currentTrip()).length){toast('請先在旅程中加入同行朋友');return}openExpenseDialog();};
-  $('#tripForm').addEventListener('submit',async e=>{e.preventDefault();try{await saveTrip();closeModal('#tripDialog');}catch(err){console.error(err);toast('儲存失敗');}});
   $('#itineraryForm').addEventListener('submit',async e=>{e.preventDefault();try{await saveItinerary();closeModal('#itineraryDialog');}catch(err){console.error(err);toast('儲存失敗');}});
   $('#expenseForm').addEventListener('submit',async e=>{e.preventDefault();try{if(await saveExpense())closeModal('#expenseDialog');}catch(err){console.error(err);toast('儲存失敗');}});
   $('#photoInput').addEventListener('change',async e=>{await addPhotos([...e.target.files]);e.target.value='';});
@@ -254,12 +348,12 @@ body{background:#fffaf7}
   <header class="topbar">
     <button class="brand" data-action="home" aria-label="回首頁">
       <span class="brand-icon">🗺️</span>
-      <span><strong>我的旅遊計畫</strong><small>TRAVEL PLANNER</small></span>
+      <span><strong>我的旅遊計畫</strong><small>TRAVEL PLANNER · v1.6</small></span>
       <span class="heart">♥</span>
     </button>
     <nav class="nav" aria-label="主選單">
       <button class="nav-btn active" data-action="home"><span>🏠</span>首頁</button>
-      <button class="nav-btn" data-action="trip-list"><span>🌐</span>旅程列表</button>
+      <button class="nav-btn" data-action="quick-split"><span>💸</span>快速分帳</button>
       <button class="nav-btn" data-action="new-trip"><span>➕</span>新增旅程</button>
       <button class="nav-btn" data-action="settings"><span>⚙️</span>設定</button>
     </nav>
@@ -318,7 +412,8 @@ body{background:#fffaf7}
             <button class="primary" id="addItineraryBtn">＋ 新增行程</button>
           </div>
         </div>
-        <div id="itineraryList" class="timeline"></div>
+        <div id="archivedSplitSummary" class="archived-split-summary"></div>
+<div id="itineraryList" class="timeline"></div>
       </section>
 
       <section id="expensesTab" class="tab-panel">
@@ -363,7 +458,7 @@ body{background:#fffaf7}
       <label>同行朋友 <small>用逗號分開</small><input id="tripPeople" placeholder="小花, 阿明" /></label>
       <label>封面照片<input id="tripCoverInput" type="file" accept="image/*" /></label>
       <label>備註<textarea id="tripNote" rows="3" placeholder="住宿、提醒、期待清單…"></textarea></label>
-      <div class="modal-actions"><button type="button" class="ghost" data-close>取消</button><button class="primary" type="submit">儲存旅程</button></div>
+      <div class="modal-actions"><button type="button" class="ghost" data-close>取消</button><button class="primary" type="button" id="saveTripBtn">儲存旅程</button></div>
     </form>
   </div>
 
@@ -414,5 +509,128 @@ body{background:#fffaf7}
       <div class="modal-actions"><button type="button" class="primary" data-close>完成</button></div>
     </form>
   </div>
+<script>
+
+const QUICK_SPLIT_KEY='travel_quick_split_v1';
+let quickSplit=[];
+try{quickSplit=JSON.parse(localStorage.getItem(QUICK_SPLIT_KEY)||'[]')||[]}catch(e){quickSplit=[]}
+
+function qEsc(s){return String(s??'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]))}
+function saveQuickSplit(){try{localStorage.setItem(QUICK_SPLIT_KEY,JSON.stringify(quickSplit))}catch(e){} renderQuickSplit()}
+function renderQuickSplit(){
+  const box=document.getElementById('qRecords'), settle=document.getElementById('qSettlement');
+  if(!box||!settle)return;
+  if(!quickSplit.length){
+    box.innerHTML='<div class="quick-empty">還沒有分帳紀錄</div>';
+    settle.innerHTML='<div class="quick-empty">新增支出後，這裡會自動顯示「誰要給誰多少錢」。</div>';
+    return;
+  }
+  box.innerHTML=quickSplit.map((r,i)=>`<div class="quick-record"><div><strong>${qEsc(r.item)} · $${Number(r.amount).toLocaleString()}</strong><small>${qEsc(r.payer)} 付款｜分給：${r.people.map(qEsc).join('、')}</small></div><button class="quick-delete" data-qdel="${i}">刪除</button></div>`).join('');
+  const bal={};
+  quickSplit.forEach(r=>{
+    const people=r.people.length?r.people:[r.payer];
+    people.forEach(p=>{if(!(p in bal))bal[p]=0});
+    if(!(r.payer in bal))bal[r.payer]=0;
+    const share=Number(r.amount)/people.length;
+    people.forEach(p=>bal[p]-=share);
+    bal[r.payer]+=Number(r.amount);
+  });
+  const debtors=Object.entries(bal).filter(([,v])=>v<-.01).map(([n,v])=>[n,-v]);
+  const creditors=Object.entries(bal).filter(([,v])=>v>.01).map(([n,v])=>[n,v]);
+  const transfers=[]; let i=0,j=0;
+  while(i<debtors.length&&j<creditors.length){
+    const amt=Math.min(debtors[i][1],creditors[j][1]);
+    transfers.push([debtors[i][0],creditors[j][0],amt]);
+    debtors[i][1]-=amt; creditors[j][1]-=amt;
+    if(debtors[i][1]<.01)i++;
+    if(creditors[j][1]<.01)j++;
+  }
+  settle.innerHTML=transfers.length?transfers.map(t=>`<div class="quick-settle">💰 ${qEsc(t[0])} 要給 ${qEsc(t[1])} <strong>$${Math.round(t[2]).toLocaleString()}</strong></div>`).join(''):'<div class="quick-settle">✨ 已經平帳，不需要互相付款</div>';
+}
+function openQuickSplit(){
+  document.querySelectorAll('.view').forEach(v=>v.style.display='none');
+  const q=document.getElementById('quickSplitView'); if(q)q.style.display='';
+  renderQuickSplit(); window.scrollTo({top:0,behavior:'smooth'});
+}
+document.addEventListener('click',e=>{
+  const txt=(e.target.textContent||'').trim();
+  if((txt.includes('快速分帳') || e.target.closest('[data-action="quick-split"]')) && (e.target.closest('button')||e.target.closest('a'))){e.preventDefault();openQuickSplit()}
+  const del=e.target.closest('[data-qdel]');
+  if(del){quickSplit.splice(Number(del.dataset.qdel),1);saveQuickSplit()}
+});
+document.addEventListener('DOMContentLoaded',()=>{
+  renderQuickSplit();
+  const save=document.getElementById('qSave');
+  if(save)save.onclick=()=>{
+    const item=document.getElementById('qItem').value.trim();
+    const amount=Number(document.getElementById('qAmount').value);
+    const payer=document.getElementById('qPayer').value.trim();
+    let people=document.getElementById('qPeople').value.split(/[,，]/).map(x=>x.trim()).filter(Boolean);
+    if(!item||!amount||!payer){alert('請填寫項目、金額和誰付錢');return}
+    if(!people.length)people=[payer];
+    quickSplit.unshift({item,amount,payer,people,created_at:new Date().toISOString()});
+    ['qItem','qAmount','qPayer','qPeople'].forEach(id=>document.getElementById(id).value='');
+    saveQuickSplit();
+  };
+  const add=document.getElementById('quickAddExpense');
+  if(add)add.onclick=()=>document.getElementById('qItem')?.focus();
+});
+
+</script>
+<script>
+
+const QUICK_ARCHIVE_KEY='travel_quick_split_archives_v1';
+let quickArchives=[];
+try{quickArchives=JSON.parse(localStorage.getItem(QUICK_ARCHIVE_KEY)||'[]')||[]}catch(e){quickArchives=[]}
+function saveQuickArchives(){try{localStorage.setItem(QUICK_ARCHIVE_KEY,JSON.stringify(quickArchives))}catch(e){}}
+function refreshQuickTripSelect(){
+  const s=document.getElementById('qTripSelect'); if(!s)return;
+  const trips=(window.state&&state.trips)||[];
+  s.innerHTML='<option value="">選擇要歸入的旅程</option>'+trips.map(t=>`<option value="${qEsc(t.id)}">${qEsc(t.name)}</option>`).join('');
+}
+function quickSettlementLines(records){
+  const bal={};
+  records.forEach(r=>{
+    const ps=r.people.length?r.people:[r.payer];
+    ps.forEach(p=>{if(!(p in bal))bal[p]=0});
+    if(!(r.payer in bal))bal[r.payer]=0;
+    const sh=Number(r.amount)/ps.length;
+    ps.forEach(p=>bal[p]-=sh); bal[r.payer]+=Number(r.amount);
+  });
+  const d=Object.entries(bal).filter(([,v])=>v<-.01).map(([n,v])=>[n,-v]);
+  const c=Object.entries(bal).filter(([,v])=>v>.01).map(([n,v])=>[n,v]);
+  let i=0,j=0,out=[];
+  while(i<d.length&&j<c.length){
+    const a=Math.min(d[i][1],c[j][1]); out.push(`${d[i][0]} → ${c[j][0]} $${Math.round(a).toLocaleString()}`);
+    d[i][1]-=a;c[j][1]-=a;if(d[i][1]<.01)i++;if(c[j][1]<.01)j++;
+  }
+  return out;
+}
+function renderArchivedSplitSummary(){
+  const box=document.getElementById('archivedSplitSummary'); if(!box)return;
+  const tripId=(window.state&&state.currentTripId)||'';
+  const rows=quickArchives.filter(a=>a.tripId===tripId);
+  box.innerHTML=rows.map(a=>`<div class="archived-split-card"><h4>💸 分帳總結</h4><p>共 ${a.records.length} 筆支出｜總金額 $${a.records.reduce((s,r)=>s+Number(r.amount),0).toLocaleString()}</p><p>${a.settlements.length?a.settlements.map(qEsc).join('　｜　'):'已平帳'}</p></div>`).join('');
+}
+document.addEventListener('click',e=>{
+  if((e.target.textContent||'').includes('快速分帳')) setTimeout(refreshQuickTripSelect,0);
+});
+document.addEventListener('DOMContentLoaded',()=>{
+  refreshQuickTripSelect();
+  const b=document.getElementById('qArchive');
+  if(b)b.onclick=()=>{
+    const tripId=document.getElementById('qTripSelect')?.value;
+    if(!tripId){alert('請先選擇要歸入的旅程');return}
+    if(!quickSplit.length){alert('目前沒有可以歸入的分帳紀錄');return}
+    const trips=(window.state&&state.trips)||[];
+    const trip=trips.find(t=>t.id===tripId);
+    const archive={id:'qa-'+Date.now(),tripId,tripName:trip?.name||'',records:JSON.parse(JSON.stringify(quickSplit)),settlements:quickSettlementLines(quickSplit),created_at:new Date().toISOString()};
+    quickArchives.unshift(archive); saveQuickArchives();
+    alert(`已歸入「${archive.tripName||'旅程'}」`);
+    renderArchivedSplitSummary();
+  };
+});
+
+</script>
 </body>
 </html>
