@@ -477,6 +477,56 @@ html,body{max-width:100%;overflow-x:hidden}
   .wish-address-grid{grid-template-columns:1fr!important}
 }
 
+
+/* v5.3 願望輸入區重新排版 */
+.global-wish-add-card{
+  max-width:980px;
+  margin:18px auto 20px;
+  padding:24px!important;
+  border-radius:24px!important;
+  background:linear-gradient(180deg,#fffdfd 0%,#fff9f7 100%);
+  border:1px solid #efdfdc!important;
+  box-shadow:0 14px 34px rgba(84,62,68,.07);
+}
+.wish-form-title{
+  display:flex;align-items:center;justify-content:space-between;
+  margin-bottom:18px;padding-bottom:14px;border-bottom:1px solid #f1e5e2;
+}
+.wish-form-title strong{display:block;font-size:20px;color:#38475a;margin-bottom:4px}
+.wish-form-title span{display:block;color:#94888b;font-size:13px}
+.wish-form-grid{
+  display:grid;
+  grid-template-columns:180px minmax(0,1fr);
+  gap:16px 18px;
+}
+.wish-field{margin:0!important;font-weight:800;color:#48505c}
+.wish-field input,.wish-field select,.wish-field textarea{margin-top:7px;width:100%}
+.wish-type-field{grid-column:1}
+.wish-address-field{grid-column:1 / -1}
+.wish-note-field{grid-column:1 / -1}
+.wish-location-input-row{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:10px;align-items:end}
+.wish-location-input-row .google-preview-btn{height:48px;margin-top:7px;padding:0 16px}
+.wish-editor-footer{
+  display:flex;justify-content:space-between;align-items:center;gap:16px;
+  margin-top:18px;padding-top:16px;border-top:1px solid #f1e5e2;
+}
+.wish-editor-footer .google-picker-note{margin:0;max-width:560px}
+.wish-editor-actions{display:flex;gap:10px;justify-content:flex-end;flex:none}
+.wish-editor-actions button{min-width:110px}
+.nav-btn[data-action="quick-split"]{pointer-events:auto!important}
+#quickSplitView.view.active{display:block!important}
+
+@media(max-width:760px){
+  .global-wish-add-card{padding:17px!important;border-radius:20px!important}
+  .wish-form-grid{grid-template-columns:1fr}
+  .wish-type-field,.wish-address-field,.wish-note-field{grid-column:1}
+  .wish-location-input-row{grid-template-columns:1fr}
+  .wish-location-input-row .google-preview-btn{width:100%;margin-top:0}
+  .wish-editor-footer{align-items:stretch;flex-direction:column}
+  .wish-editor-actions{width:100%}
+  .wish-editor-actions button{flex:1}
+}
+
 </style>
 <script>window.TRAVEL_SUPABASE={url:"https://lfvzobfvotcehkkjkgdc.supabase.co",anonKey:"sb_publishable_iwDwCSXNjpVLJyl16mKDyw_NcFqrAoW"};</script>
 <script>
@@ -1908,7 +1958,7 @@ document.addEventListener('DOMContentLoaded',()=>{
   }
   window.saveTripDirect = saveTripDirect;
 
-  document.addEventListener('click',e=>{const a=e.target.closest('[data-action]');if(a){const action=a.dataset.action;if(action==='home'||action==='trip-list')setView('home');if(action==='wishlist')setView('wishlist');if(action==='new-trip')openTripDialog();if(action==='settings')openModal('#settingsDialog');}const close=e.target.closest('[data-close]');if(close)closeModal(close.closest('.modal'));});
+  document.addEventListener('click',e=>{const a=e.target.closest('[data-action]');if(a){const action=a.dataset.action;if(action==='home'||action==='trip-list')setView('home');if(action==='quick-split'){setView('quickSplit');if(typeof renderQuickSplit==='function')renderQuickSplit();if(typeof fillQuickPeople==='function')fillQuickPeople();}if(action==='wishlist')setView('wishlist');if(action==='new-trip')openTripDialog();if(action==='settings')openModal('#settingsDialog');}const close=e.target.closest('[data-close]');if(close)closeModal(close.closest('.modal'));});
 
   $('#tripPasswordForm').addEventListener('submit',async e=>{e.preventDefault();await submitTripPassword();});
   $('#tripPasswordCancel').onclick=()=>finishPasswordUnlock(false);
@@ -1993,7 +2043,7 @@ body{background:#fffaf7}
   <header class="topbar">
     <button class="brand" data-action="home" aria-label="回首頁">
       <span class="brand-icon">🗺️</span>
-      <span><strong>我的旅遊計畫</strong><small>TRAVEL PLANNER · v5.2 願望卡片牆版</small></span>
+      <span><strong>我的旅遊計畫</strong><small>TRAVEL PLANNER · v5.3 願望排版＋快速分帳修正版</small></span>
       <span class="heart">♥</span>
     </button>
     <nav class="nav" aria-label="主選單">
@@ -2060,8 +2110,15 @@ body{background:#fffaf7}
         </div>
 
         <div id="wishlistAddPanel" class="wishlist-add-card global-wish-add-card wish-editor-collapsed">
-          <div class="wishlist-simple-grid">
-            <label>類型
+          <div class="wish-form-title">
+            <div>
+              <strong>💗 收藏一個旅行願望</strong>
+              <span>把想去的店、景點或體驗先收進願望牆</span>
+            </div>
+          </div>
+
+          <div class="wish-form-grid">
+            <label class="wish-field wish-type-field">類型
               <select id="wishType">
                 <option value="place">📍 景點</option>
                 <option value="food">🍴 美食</option>
@@ -2072,31 +2129,34 @@ body{background:#fffaf7}
                 <option value="other">💭 其他</option>
               </select>
             </label>
-            <label>店家／景點名稱
+
+            <label class="wish-field">店家／景點名稱
               <input id="wishName" type="text" placeholder="例如：明洞醬蟹、弘大咖啡廳、富士山" />
             </label>
-            <label>國家／城市
+
+            <label class="wish-field">國家／城市
               <input id="wishCity" type="text" placeholder="例如：韓國・首爾、日本・山梨" />
             </label>
-          </div>
 
-          <div class="wishlist-simple-grid wish-address-grid">
-            <label class="wish-address-label">📍 地址／地點
-              <input id="wishLocation" type="text" placeholder="可填地址、店名或景點名稱" />
+            <label class="wish-field wish-address-field">📍 地址／地點
+              <div class="wish-location-input-row">
+                <input id="wishLocation" type="text" placeholder="地址、店名或景點名稱" />
+                <button type="button" class="ghost google-preview-btn" id="wishGooglePreviewBtn">🗺️ 地圖搜尋</button>
+              </div>
             </label>
-            <button type="button" class="ghost google-preview-btn" id="wishGooglePreviewBtn">🗺️ Google 地圖搜尋</button>
+
+            <label class="wish-field wish-note-field">備註
+              <textarea id="wishNote" rows="4" placeholder="朋友推薦、想吃什麼、必買品、拍照位置…"></textarea>
+            </label>
           </div>
 
-          <label>備註
-            <textarea id="wishNote" rows="3" placeholder="例如：朋友推薦、想吃什麼、必買品、拍照位置…"></textarea>
-          </label>
-
-          <div class="wish-editor-actions">
-            <button type="button" class="primary" id="addWishBtn">＋ 加入願望</button>
-            <button type="button" class="ghost" id="cancelWishAddBtn">取消</button>
+          <div class="wish-editor-footer">
+            <p class="google-picker-note">之後若設定 Google Maps API，可再升級成「地圖選店後自動帶入名稱與地址」。</p>
+            <div class="wish-editor-actions">
+              <button type="button" class="ghost" id="cancelWishAddBtn">取消</button>
+              <button type="button" class="primary" id="addWishBtn">＋ 加入願望</button>
+            </div>
           </div>
-
-          <p class="google-picker-note">📍 目前可直接開 Google 地圖搜尋。之後設定 Google Maps API 金鑰，就能做到選店後自動帶回店名和地址。</p>
         </div>
 
         <div class="wishlist-summary wish-wall-summary">
@@ -3198,6 +3258,22 @@ document.addEventListener('click',async function(e){
     });
   });
 })();
+</script>
+
+
+<script id="v53-quick-split-fix">
+document.addEventListener('DOMContentLoaded',()=>{
+  document.querySelectorAll('[data-action="quick-split"]').forEach(btn=>{
+    btn.onclick=(ev)=>{
+      ev.preventDefault();
+      if(typeof setView==='function')setView('quickSplit');
+      const view=document.getElementById('quickSplitView');
+      if(view){view.style.display='';view.classList.add('active');}
+      if(typeof renderQuickSplit==='function')renderQuickSplit();
+      if(typeof fillQuickPeople==='function')fillQuickPeople();
+    };
+  });
+});
 </script>
 
 </body>
