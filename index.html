@@ -309,6 +309,62 @@ html,body{max-width:100%;overflow-x:hidden}
   border-radius:50%!important;background:#fff0f1!important;color:#b65460!important;
 }
 
+
+.roster-remove-btn{
+  width:auto!important;height:30px!important;padding:0 10px!important;margin-left:6px!important;
+  border-radius:999px!important;background:#ffe8ea!important;color:#b23e4d!important;
+  border:1px solid #f4cbd0!important;font-size:13px!important;font-weight:900!important;
+  -webkit-appearance:none;appearance:none;touch-action:manipulation;
+}
+
+.packing-head{margin-bottom:14px}
+.packing-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+.packing-card{background:#fff;border:1px solid #eadfd9;border-radius:22px;padding:18px;box-shadow:0 10px 28px rgba(80,60,50,.04)}
+.prep-card{background:#fffdf8}
+.packing-card-head{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;margin-bottom:14px}
+.packing-card-head h3{margin:0 0 4px;font-size:20px}
+.packing-card-head p{margin:0;color:#938982;font-size:13px}
+.check-progress{flex:none;background:#eef6ff;color:#52738e;border-radius:999px;padding:7px 10px;font-size:12px;font-weight:900}
+.check-add-row{display:grid;grid-template-columns:1fr auto;gap:8px;margin-bottom:14px}
+.check-add-row input{min-width:0}
+.check-list{display:flex;flex-direction:column;gap:8px}
+.check-item{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:11px 12px;border:1px solid #eee5e0;border-radius:15px;background:#fff}
+.check-main{display:flex!important;grid-template-columns:auto 1fr!important;align-items:center!important;gap:10px!important;margin:0!important;min-width:0;flex:1}
+.check-main input{width:22px!important;height:22px!important;min-width:22px;margin:0!important;accent-color:#ff8d92}
+.check-main span{overflow-wrap:anywhere;line-height:1.45}
+.check-item.done .check-main span{text-decoration:line-through;color:#aaa29e}
+.check-delete{border:0;background:#fff0f1;color:#b54e59;border-radius:999px;padding:7px 10px;font-size:12px;font-weight:900;cursor:pointer}
+.check-empty{padding:24px 12px;text-align:center;color:#aaa09b;border:1px dashed #eadfd9;border-radius:15px;background:#fffaf8}
+@media(max-width:800px){
+  .packing-grid{grid-template-columns:1fr}
+}
+@media(max-width:520px){
+  .check-add-row{grid-template-columns:1fr}
+  .check-add-row .primary{width:100%}
+  .packing-card{padding:14px}
+}
+
+
+.wishlist-head{margin-bottom:14px}
+.wishlist-add-card{background:#fff8fb;border:1px solid #f0dce5;border-radius:22px;padding:18px;margin-bottom:14px}
+.wishlist-add-grid{display:grid;grid-template-columns:220px 1fr;gap:12px}
+.wishlist-add-card textarea{resize:vertical}
+.wishlist-summary{display:flex;align-items:center;gap:10px;margin:8px 0 14px}
+.wishlist-list{display:flex;flex-direction:column;gap:10px}
+.wish-card{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;background:#fff;border:1px solid #eee1e7;border-radius:18px;padding:14px 15px}
+.wish-card.done{background:#fafafa}
+.wish-main{min-width:0;flex:1}
+.wish-check{display:flex!important;grid-template-columns:auto auto 1fr!important;align-items:center!important;gap:10px!important;margin:0!important}
+.wish-check input{width:22px!important;height:22px!important;min-width:22px;margin:0!important;accent-color:#ff8d9e}
+.wish-icon{font-size:22px}
+.wish-check strong{display:block;font-size:16px;line-height:1.4}
+.wish-check small{display:block;color:#9b8f95;margin-top:2px}
+.wish-note{margin:8px 0 0 42px;color:#6f666a;line-height:1.55;white-space:normal}
+.wish-card.done .wish-check strong{text-decoration:line-through;color:#aaa1a6}
+@media(max-width:700px){
+  .wishlist-add-grid{grid-template-columns:1fr}
+}
+
 </style>
 <script>window.TRAVEL_SUPABASE={url:"https://lfvzobfvotcehkkjkgdc.supabase.co",anonKey:"sb_publishable_iwDwCSXNjpVLJyl16mKDyw_NcFqrAoW"};</script>
 <script>
@@ -626,7 +682,14 @@ document.addEventListener('DOMContentLoaded',()=>{
   }
 
   function setView(name){ $$('.view').forEach(v=>v.classList.remove('active')); $(`#${name}View`).classList.add('active'); if(name==='home') renderTrips(); }
-  function setTab(name){ $$('.tab').forEach(b=>b.classList.toggle('active',b.dataset.tab===name)); $$('.tab-panel').forEach(p=>p.classList.remove('active')); $(`#${name}Tab`).classList.add('active'); if(name==='quickview')renderQuickItinerary(); }
+  function setTab(name){
+    $$('.tab').forEach(b=>b.classList.toggle('active',b.dataset.tab===name));
+    $$('.tab-panel').forEach(p=>p.classList.remove('active'));
+    $(`#${name}Tab`).classList.add('active');
+    if(name==='quickview')renderQuickItinerary();
+    if(name==='packing')renderPacking();
+    if(name==='wishlist')renderWishlist();
+  }
 
   function currentTrip(){ return state.trips.find(t=>t.id===state.currentTripId); }
   function peopleOf(trip){ const p=Array.isArray(trip?.people)?trip.people:[]; return [...new Set(p.map(x=>x.trim()).filter(Boolean))]; }
@@ -694,7 +757,198 @@ document.addEventListener('DOMContentLoaded',()=>{
     setView('trip'); setTab(tab); window.scrollTo({top:0,behavior:'smooth'});
   }
   function renderTrip(){
-    const t=currentTrip(); if(!t){setView('home');return} $('#tripTitle').textContent=t.name; $('#tripMeta').textContent=`${t.start_date||''}${t.end_date?` ～ ${t.end_date}`:''}　📍 ${t.location||'未設定'}　👥 ${peopleOf(t).join('、')||'尚未加入朋友'}`; renderStayTop(); renderMajorTransports(); renderItinerary(); renderExpenses(); renderPhotos();
+    const t=currentTrip(); if(!t){setView('home');return} $('#tripTitle').textContent=t.name; $('#tripMeta').textContent=`${t.start_date||''}${t.end_date?` ～ ${t.end_date}`:''}　📍 ${t.location||'未設定'}　👥 ${peopleOf(t).join('、')||'尚未加入朋友'}`; renderStayTop(); renderMajorTransports(); renderItinerary(); renderExpenses(); renderPacking(); renderWishlist(); renderPhotos();
+  }
+
+
+  function ensureTripChecklistArrays(t){
+    if(!t)return;
+    if(!Array.isArray(t.packing_items))t.packing_items=[];
+    if(!Array.isArray(t.prep_items))t.prep_items=[];
+  }
+
+  function checklistEsc(s){return esc(String(s??''));}
+
+  function renderChecklist(kind){
+    const t=currentTrip();
+    if(!t)return;
+    ensureTripChecklistArrays(t);
+
+    const isPacking=kind==='packing';
+    const items=isPacking?t.packing_items:t.prep_items;
+    const list=document.getElementById(isPacking?'packingList':'prepList');
+    const progress=document.getElementById(isPacking?'packingProgress':'prepProgress');
+    if(!list||!progress)return;
+
+    const done=items.filter(x=>x.done).length;
+    progress.textContent=`${done} / ${items.length}`;
+
+    if(!items.length){
+      list.innerHTML=`<div class="check-empty">${isPacking?'還沒有行李項目。把想到要帶的東西一個一個加進來 ♡':'還沒有準備事項。出發前要處理的事情可以放這裡。'}</div>`;
+      return;
+    }
+
+    list.innerHTML=items.map(item=>`
+      <div class="check-item ${item.done?'done':''}" data-check-id="${checklistEsc(item.id)}" data-check-kind="${kind}">
+        <label class="check-main">
+          <input type="checkbox" ${item.done?'checked':''} data-check-toggle="${checklistEsc(item.id)}" data-check-kind="${kind}">
+          <span>${checklistEsc(item.text)}</span>
+        </label>
+        <button type="button" class="check-delete" data-check-delete="${checklistEsc(item.id)}" data-check-kind="${kind}">刪除</button>
+      </div>
+    `).join('');
+  }
+
+  function renderPacking(){
+    renderChecklist('packing');
+    renderChecklist('prep');
+  }
+
+  function addChecklistItem(kind){
+    const t=currentTrip();
+    if(!t)return;
+    ensureTripChecklistArrays(t);
+
+    const input=document.getElementById(kind==='packing'?'packingInput':'prepInput');
+    const text=String(input?.value||'').trim();
+    if(!text)return;
+
+    const item={id:'check-'+Date.now()+'-'+Math.random().toString(36).slice(2,7),text,done:false};
+    if(kind==='packing')t.packing_items.push(item);
+    else t.prep_items.push(item);
+
+    if(input)input.value='';
+    persist();
+    renderPacking();
+    if(input)input.focus();
+  }
+
+  function toggleChecklistItem(kind,id,done){
+    const t=currentTrip();
+    if(!t)return;
+    ensureTripChecklistArrays(t);
+    const items=kind==='packing'?t.packing_items:t.prep_items;
+    const item=items.find(x=>x.id===id);
+    if(!item)return;
+    item.done=!!done;
+    persist();
+    renderPacking();
+  }
+
+  function deleteChecklistItem(kind,id){
+    const t=currentTrip();
+    if(!t)return;
+    ensureTripChecklistArrays(t);
+    const key=kind==='packing'?'packing_items':'prep_items';
+    const item=t[key].find(x=>x.id===id);
+    if(!item)return;
+    if(!confirm(`確定刪除「${item.text}」嗎？`))return;
+    t[key]=t[key].filter(x=>x.id!==id);
+    persist();
+    renderPacking();
+  }
+
+
+  function ensureWishlist(t){
+    if(!t)return;
+    if(!Array.isArray(t.wishlist_items))t.wishlist_items=[];
+  }
+
+  function wishTypeMeta(type){
+    const map={
+      place:['📍','想去的地方'],
+      food:['🍜','想吃的美食'],
+      shop:['🛍️','想逛／想買'],
+      experience:['✨','想做的體驗'],
+      other:['💭','其他願望']
+    };
+    return map[type]||map.other;
+  }
+
+  function renderWishlist(){
+    const t=currentTrip();
+    const list=document.getElementById('wishlistList');
+    const progress=document.getElementById('wishProgress');
+    if(!t||!list||!progress)return;
+    ensureWishlist(t);
+
+    const items=t.wishlist_items;
+    const done=items.filter(x=>x.done).length;
+    progress.textContent=`${done} / ${items.length}`;
+
+    if(!items.length){
+      list.innerHTML='<div class="check-empty">還沒有旅行願望。想到什麼就先放進來，之後慢慢完成 ♡</div>';
+      return;
+    }
+
+    const order={place:1,food:2,shop:3,experience:4,other:5};
+    const sorted=[...items].sort((a,b)=>(order[a.type]||9)-(order[b.type]||9));
+
+    list.innerHTML=sorted.map(item=>{
+      const [icon,label]=wishTypeMeta(item.type);
+      return `<article class="wish-card ${item.done?'done':''}" data-wish-id="${esc(item.id)}">
+        <div class="wish-main">
+          <label class="wish-check">
+            <input type="checkbox" data-wish-toggle="${esc(item.id)}" ${item.done?'checked':''}>
+            <span class="wish-icon">${icon}</span>
+            <span>
+              <strong>${esc(item.text)}</strong>
+              <small>${label}</small>
+            </span>
+          </label>
+          ${item.note?`<p class="wish-note">${esc(item.note).replace(/\n/g,'<br>')}</p>`:''}
+        </div>
+        <button type="button" class="check-delete" data-wish-delete="${esc(item.id)}">刪除</button>
+      </article>`;
+    }).join('');
+  }
+
+  function addWish(){
+    const t=currentTrip();
+    if(!t)return;
+    ensureWishlist(t);
+
+    const type=document.getElementById('wishType')?.value||'other';
+    const text=String(document.getElementById('wishText')?.value||'').trim();
+    const note=String(document.getElementById('wishNote')?.value||'').trim();
+    if(!text){
+      alert('請先輸入願望內容');
+      document.getElementById('wishText')?.focus();
+      return;
+    }
+
+    t.wishlist_items.push({
+      id:'wish-'+Date.now()+'-'+Math.random().toString(36).slice(2,7),
+      type,text,note,done:false
+    });
+    document.getElementById('wishText').value='';
+    document.getElementById('wishNote').value='';
+    persist();
+    renderWishlist();
+    document.getElementById('wishText')?.focus();
+  }
+
+  function toggleWish(id,done){
+    const t=currentTrip();
+    if(!t)return;
+    ensureWishlist(t);
+    const item=t.wishlist_items.find(x=>x.id===id);
+    if(!item)return;
+    item.done=!!done;
+    persist();
+    renderWishlist();
+  }
+
+  function deleteWish(id){
+    const t=currentTrip();
+    if(!t)return;
+    ensureWishlist(t);
+    const item=t.wishlist_items.find(x=>x.id===id);
+    if(!item)return;
+    if(!confirm(`確定刪除「${item.text}」嗎？`))return;
+    t.wishlist_items=t.wishlist_items.filter(x=>x.id!==id);
+    persist();
+    renderWishlist();
   }
 
   function renderStayTop(){
@@ -1254,6 +1508,7 @@ document.addEventListener('DOMContentLoaded',()=>{
       }
 
       const row = {
+        ...(existingTrip || {}),
         id,
         name,
         start_date: $('#tripStart')?.value || null,
@@ -1315,6 +1570,40 @@ document.addEventListener('DOMContentLoaded',()=>{
   $('#itineraryForm').addEventListener('submit',async e=>{e.preventDefault();try{await saveItinerary();closeModal('#itineraryDialog');}catch(err){console.error(err);toast('儲存失敗');}});
   $('#expenseForm').addEventListener('submit',async e=>{e.preventDefault();try{if(await saveExpense())closeModal('#expenseDialog');}catch(err){console.error(err);toast('儲存失敗');}});
   $('#photoInput').addEventListener('change',async e=>{await addPhotos([...e.target.files]);e.target.value='';});
+
+  $('#addPackingBtn')?.addEventListener('click',()=>addChecklistItem('packing'));
+  $('#addPrepBtn')?.addEventListener('click',()=>addChecklistItem('prep'));
+  $('#packingInput')?.addEventListener('keydown',e=>{if(e.key==='Enter'){e.preventDefault();addChecklistItem('packing');}});
+  $('#prepInput')?.addEventListener('keydown',e=>{if(e.key==='Enter'){e.preventDefault();addChecklistItem('prep');}});
+
+  document.addEventListener('change',e=>{
+    const box=e.target.closest?.('[data-check-toggle]');
+    if(!box)return;
+    toggleChecklistItem(box.dataset.checkKind,box.dataset.checkToggle,box.checked);
+  });
+  document.addEventListener('click',e=>{
+    const btn=e.target.closest?.('[data-check-delete]');
+    if(!btn)return;
+    e.preventDefault();
+    deleteChecklistItem(btn.dataset.checkKind,btn.dataset.checkDelete);
+  });
+
+
+  $('#addWishBtn')?.addEventListener('click',addWish);
+  $('#wishText')?.addEventListener('keydown',e=>{
+    if(e.key==='Enter'){e.preventDefault();addWish();}
+  });
+  document.addEventListener('change',e=>{
+    const box=e.target.closest?.('[data-wish-toggle]');
+    if(box)toggleWish(box.dataset.wishToggle,box.checked);
+  });
+  document.addEventListener('click',e=>{
+    const btn=e.target.closest?.('[data-wish-delete]');
+    if(!btn)return;
+    e.preventDefault();
+    deleteWish(btn.dataset.wishDelete);
+  });
+
   $('#authBtn').onclick=async()=>{
     if(window.forceTravelCloudSync){
       await window.forceTravelCloudSync();
@@ -1354,7 +1643,7 @@ body{background:#fffaf7}
   <header class="topbar">
     <button class="brand" data-action="home" aria-label="回首頁">
       <span class="brand-icon">🗺️</span>
-      <span><strong>我的旅遊計畫</strong><small>TRAVEL PLANNER · v4.4 分帳人物刪除完整版</small></span>
+      <span><strong>我的旅遊計畫</strong><small>TRAVEL PLANNER · v4.7 旅行願望清單版</small></span>
       <span class="heart">♥</span>
     </button>
     <nav class="nav" aria-label="主選單">
@@ -1498,6 +1787,8 @@ body{background:#fffaf7}
         <button class="tab active" data-tab="itinerary">🗓️ 行程表</button>
         <button class="tab" data-tab="quickview">📱 行程快捷</button>
         <button class="tab" data-tab="expenses">💰 旅程分帳</button>
+        <button class="tab" data-tab="packing">🧳 行李準備</button>
+        <button class="tab" data-tab="wishlist">💗 旅行願望</button>
         <button class="tab" data-tab="photos">📷 旅程相簿</button>
       </div>
 
@@ -1566,6 +1857,88 @@ body{background:#fffaf7}
             <div id="settlements"></div>
           </aside>
         </div>
+      </section>
+
+
+      <section id="packingTab" class="tab-panel">
+        <div class="panel-head packing-head">
+          <div>
+            <p class="eyebrow">TRAVEL CHECKLIST</p>
+            <h2>🧳 行李＆出發前準備</h2>
+            <p>每個旅程都有自己的清單，勾選完成後會自動保存並同步到其他設備。</p>
+          </div>
+        </div>
+
+        <div class="packing-grid">
+          <section class="packing-card">
+            <div class="packing-card-head">
+              <div>
+                <h3>🧳 行李清單</h3>
+                <p>要帶進行李箱、隨身包的東西</p>
+              </div>
+              <span id="packingProgress" class="check-progress">0 / 0</span>
+            </div>
+            <div class="check-add-row">
+              <input id="packingInput" type="text" placeholder="例如：衣服、充電器、泳衣、護照" />
+              <button type="button" class="primary" id="addPackingBtn">＋ 加入</button>
+            </div>
+            <div id="packingList" class="check-list"></div>
+          </section>
+
+          <section class="packing-card prep-card">
+            <div class="packing-card-head">
+              <div>
+                <h3>✅ 需要準備的東西</h3>
+                <p>出發前要買、要訂、要處理的事情</p>
+              </div>
+              <span id="prepProgress" class="check-progress">0 / 0</span>
+            </div>
+            <div class="check-add-row">
+              <input id="prepInput" type="text" placeholder="例如：換外幣、買網卡、旅平險、訂停車" />
+              <button type="button" class="primary" id="addPrepBtn">＋ 加入</button>
+            </div>
+            <div id="prepList" class="check-list"></div>
+          </section>
+        </div>
+      </section>
+
+
+      <section id="wishlistTab" class="tab-panel">
+        <div class="panel-head wishlist-head">
+          <div>
+            <p class="eyebrow">TRAVEL WISHLIST</p>
+            <h2>💗 旅行願望清單</h2>
+            <p>把想去的地方、想吃的美食、想買的東西、想做的體驗先收藏起來。</p>
+          </div>
+        </div>
+
+        <div class="wishlist-add-card">
+          <div class="wishlist-add-grid">
+            <label>類型
+              <select id="wishType">
+                <option value="place">📍 想去的地方</option>
+                <option value="food">🍜 想吃的美食</option>
+                <option value="shop">🛍️ 想逛／想買</option>
+                <option value="experience">✨ 想做的體驗</option>
+                <option value="other">💭 其他願望</option>
+              </select>
+            </label>
+            <label>願望內容
+              <input id="wishText" type="text" placeholder="例如：去看櫻花、吃醬蟹、逛弘大..." />
+            </label>
+          </div>
+          <label>備註
+            <textarea id="wishNote" rows="2" placeholder="可以記地址、推薦店家、想買什麼、朋友推薦原因..."></textarea>
+          </label>
+          <button type="button" class="primary" id="addWishBtn">＋ 加入願望</button>
+        </div>
+
+        <div class="wishlist-summary">
+          <span id="wishProgress" class="check-progress">0 / 0</span>
+          <span class="helper">完成後可以打勾，願望會保留在這趟旅程裡 ♡</span>
+        </div>
+
+        <div id="wishlistList" class="wishlist-list"></div>
       </section>
 
       <section id="photosTab" class="tab-panel">
@@ -1824,26 +2197,18 @@ function removeQuickPerson(name){
 
   saveQuickPeople();
   fillQuickPeople();
+  if(window.forceTravelCloudSync){
+    setTimeout(()=>window.forceTravelCloudSync(),50);
+  }
 }
 
 function getQuickKnownPeople(){
   const names=[];
-  const add=n=>{n=String(n||'').trim(); if(n && !names.includes(n)) names.push(n)};
-  quickPeople.forEach(add);
-  try{
-    if(window.state && Array.isArray(state.trips)){
-      state.trips.forEach(t=>{
-        const ps=Array.isArray(t.people)?t.people:
-          String(t.people||'').split(/[,，]/);
-        ps.forEach(add);
-      });
-    }
-  }catch(e){}
-  quickSplit.forEach(r=>{
-    add(r.payer);
-    (r.people||[]).forEach(add);
+  quickPeople.forEach(n=>{
+    n=String(n||'').trim();
+    if(n && !quickHiddenPeople.includes(n) && !names.includes(n)) names.push(n);
   });
-  return names.filter(n=>!quickHiddenPeople.includes(n));
+  return names;
 }
 function fillQuickPeople(){
   const payer=document.getElementById('qPayer');
@@ -1857,7 +2222,7 @@ function fillQuickPeople(){
     people.map(p=>`<option value="${qEsc(p)}">${qEsc(p)}</option>`).join('');
   if(people.includes(oldPayer)) payer.value=oldPayer;
   checks.innerHTML=people.length
-    ? people.map(p=>`<label class="quick-person-check"><input type="checkbox" value="${qEsc(p)}" ${selected.includes(p)?'checked':''}> <span>${qEsc(p)}</span><button type="button" class="quick-person-remove" data-qperson-remove="${qEsc(p)}" aria-label="刪除 ${qEsc(p)}">×</button></label>`).join('')
+    ? people.map(p=>`<label class="quick-person-check"><input type="checkbox" value="${qEsc(p)}" ${selected.includes(p)?'checked':''}> <span>${qEsc(p)}</span></label>`).join('')
     : '<span class="quick-empty" style="width:100%;padding:10px">目前還沒有分帳成員，可在上方新增。</span>';
   if(hint) hint.textContent=people.length
     ? '直接勾選要一起分這筆費用的人。'
@@ -1865,8 +2230,17 @@ function fillQuickPeople(){
   const roster=document.getElementById('qPeopleRoster');
   if(roster){
     roster.innerHTML=people.length
-      ? people.map(p=>`<span class="roster-chip">👤 ${qEsc(p)}<button type="button" class="roster-remove-btn" data-qperson-remove="${qEsc(p)}" aria-label="刪除 ${qEsc(p)}">×</button></span>`).join('')
+      ? people.map(p=>`<span class="roster-chip">👤 <span>${qEsc(p)}</span><button type="button" class="roster-remove-btn" data-qperson-remove="${qEsc(p)}">刪除</button></span>`).join('')
       : '<span class="quick-empty-inline">尚未加入人物</span>';
+    roster.querySelectorAll('[data-qperson-remove]').forEach(btn=>{
+      btn.onclick=(ev)=>{
+        ev.preventDefault(); ev.stopPropagation();
+        const name=btn.dataset.qpersonRemove||'';
+        if(name && confirm(`確定刪除「${name}」嗎？\n\n刪除後會從分帳成員、誰付錢、一起分的人全部消失。之後需要時再重新加入即可。`)){
+          removeQuickPerson(name);
+        }
+      };
+    });
   }
 }
 
@@ -1984,14 +2358,6 @@ document.addEventListener('click',e=>{
     e.preventDefault();
     document.querySelectorAll('.nav-btn').forEach(b=>b.classList.toggle('active',b.dataset.action==='quick-split'));
     openQuickSplit();
-  }
-  const personRemove=e.target.closest('[data-qperson-remove]');
-  if(personRemove){
-    e.preventDefault();
-    e.stopPropagation();
-    const name=personRemove.dataset.qpersonRemove;
-    if(confirm(`確定刪除分帳成員「${name}」嗎？\n\n刪除後會立即從「分帳成員」、「誰付錢」和「一起分的人」消失。之後需要時可再用「＋ 加入人物」重新加入。舊分帳紀錄不會被刪除。`)) removeQuickPerson(name);
-    return;
   }
   const edit=e.target.closest('[data-qedit]');
   if(edit){
