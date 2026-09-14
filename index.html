@@ -297,6 +297,18 @@ html,body{max-width:100%;overflow-x:hidden}
   .trip-actions-main .money-btn{grid-column:1/-1}
 }
 
+
+.roster-remove-btn{
+  display:inline-flex;align-items:center;justify-content:center;
+  width:24px;height:24px;margin-left:3px;border-radius:50%!important;
+  background:#fff0f1!important;color:#b65460!important;
+  font-size:18px!important;font-weight:900;cursor:pointer;
+}
+.quick-person-remove{
+  width:28px;height:28px;display:flex;align-items:center;justify-content:center;
+  border-radius:50%!important;background:#fff0f1!important;color:#b65460!important;
+}
+
 </style>
 <script>window.TRAVEL_SUPABASE={url:"https://lfvzobfvotcehkkjkgdc.supabase.co",anonKey:"sb_publishable_iwDwCSXNjpVLJyl16mKDyw_NcFqrAoW"};</script>
 <script>
@@ -1342,7 +1354,7 @@ body{background:#fffaf7}
   <header class="topbar">
     <button class="brand" data-action="home" aria-label="回首頁">
       <span class="brand-icon">🗺️</span>
-      <span><strong>我的旅遊計畫</strong><small>TRAVEL PLANNER · v4.3 行程快捷回歸版</small></span>
+      <span><strong>我的旅遊計畫</strong><small>TRAVEL PLANNER · v4.4 分帳人物刪除完整版</small></span>
       <span class="heart">♥</span>
     </button>
     <nav class="nav" aria-label="主選單">
@@ -1429,7 +1441,7 @@ body{background:#fffaf7}
               <button type="button" class="primary" id="qAddPersonBtn">＋ 加入人物</button>
             </div>
             <div id="qPeopleRoster" class="quick-people-roster"></div>
-            <small>加入後，就能直接在「誰付錢」和「一起分的人」裡選擇。</small>
+            <small>按名字旁的 × 可刪除人物；刪除後會從下方選單一起消失，需要時再重新加入即可。</small>
           </div>
 
           <label>誰付錢
@@ -1786,13 +1798,28 @@ function addQuickPerson(name){
 }
 function removeQuickPerson(name){
   name=String(name||'').trim();
+  if(!name)return;
+
+  // Remove from the manually-added list and mark as hidden. Hidden names are
+  // excluded even if they still exist in trip companions or old split records.
   quickPeople=quickPeople.filter(x=>x!==name);
-  if(name && !quickHiddenPeople.includes(name)) quickHiddenPeople.push(name);
+  if(!quickHiddenPeople.includes(name)) quickHiddenPeople.push(name);
 
   const payer=document.getElementById('qPayer');
   if(payer && payer.value===name) payer.value='';
+
   document.querySelectorAll('#qPeopleChecks input').forEach(x=>{
     if(x.value===name)x.checked=false;
+  });
+
+  // Immediate visual removal on Safari/iPhone before the full list rebuild.
+  document.querySelectorAll('[data-qperson-remove]').forEach(btn=>{
+    if(btn.dataset.qpersonRemove===name){
+      const chip=btn.closest('.roster-chip');
+      const check=btn.closest('.quick-person-check');
+      if(chip)chip.remove();
+      if(check)check.remove();
+    }
   });
 
   saveQuickPeople();
@@ -1830,15 +1857,15 @@ function fillQuickPeople(){
     people.map(p=>`<option value="${qEsc(p)}">${qEsc(p)}</option>`).join('');
   if(people.includes(oldPayer)) payer.value=oldPayer;
   checks.innerHTML=people.length
-    ? people.map(p=>`<label class="quick-person-check"><input type="checkbox" value="${qEsc(p)}" ${selected.includes(p)?'checked':''}> <span>${qEsc(p)}</span>${quickPeople.includes(p)?`<button type="button" class="quick-person-remove" data-qperson-remove="${qEsc(p)}" aria-label="移除 ${qEsc(p)}">×</button>`:''}</label>`).join('')
-    : '<span class="quick-empty" style="width:100%;padding:10px">目前還沒有朋友名單，可直接在上方新增。</span>';
+    ? people.map(p=>`<label class="quick-person-check"><input type="checkbox" value="${qEsc(p)}" ${selected.includes(p)?'checked':''}> <span>${qEsc(p)}</span><button type="button" class="quick-person-remove" data-qperson-remove="${qEsc(p)}" aria-label="刪除 ${qEsc(p)}">×</button></label>`).join('')
+    : '<span class="quick-empty" style="width:100%;padding:10px">目前還沒有分帳成員，可在上方新增。</span>';
   if(hint) hint.textContent=people.length
     ? '直接勾選要一起分這筆費用的人。'
     : '請先在上方按「＋ 加入人物」。';
   const roster=document.getElementById('qPeopleRoster');
   if(roster){
     roster.innerHTML=people.length
-      ? people.map(p=>`<span class="roster-chip">👤 ${qEsc(p)}${quickPeople.includes(p)?`<button type="button" data-qperson-remove="${qEsc(p)}">×</button>`:''}</span>`).join('')
+      ? people.map(p=>`<span class="roster-chip">👤 ${qEsc(p)}<button type="button" class="roster-remove-btn" data-qperson-remove="${qEsc(p)}" aria-label="刪除 ${qEsc(p)}">×</button></span>`).join('')
       : '<span class="quick-empty-inline">尚未加入人物</span>';
   }
 }
@@ -1963,7 +1990,7 @@ document.addEventListener('click',e=>{
     e.preventDefault();
     e.stopPropagation();
     const name=personRemove.dataset.qpersonRemove;
-    if(confirm(`要移除「${name}」嗎？\n\n移除後，他會從「誰付錢」和「一起分的人」選單消失；舊的分帳紀錄會保留。`)) removeQuickPerson(name);
+    if(confirm(`確定刪除分帳成員「${name}」嗎？\n\n刪除後會立即從「分帳成員」、「誰付錢」和「一起分的人」消失。之後需要時可再用「＋ 加入人物」重新加入。舊分帳紀錄不會被刪除。`)) removeQuickPerson(name);
     return;
   }
   const edit=e.target.closest('[data-qedit]');
