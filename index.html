@@ -395,6 +395,28 @@ html,body{max-width:100%;overflow-x:hidden}
   padding:7px 11px!important;border-radius:999px!important;font-weight:900!important;
 }
 
+
+.wishlist-simple-grid{
+  display:grid;grid-template-columns:180px minmax(320px,1fr) auto;
+  gap:12px;align-items:end;margin-bottom:14px;
+}
+.wish-address-label{min-width:0}
+.google-preview-btn{height:48px;white-space:nowrap}
+.global-wish-add-card{padding:22px!important}
+.global-wish-add-card>label{margin-top:4px}
+.global-wish-add-card textarea{min-height:110px}
+.wish-card{padding:16px 18px!important}
+.wish-check strong{font-size:18px!important}
+.wish-note{
+  margin:10px 0 0 42px!important;padding:10px 12px;border-radius:12px;
+  background:#fff8f4;color:#6f666a!important;
+}
+.wish-actions{margin-top:12px!important}
+@media(max-width:800px){
+  .wishlist-simple-grid{grid-template-columns:1fr}
+  .google-preview-btn{width:100%}
+}
+
 </style>
 <script>window.TRAVEL_SUPABASE={url:"https://lfvzobfvotcehkkjkgdc.supabase.co",anonKey:"sb_publishable_iwDwCSXNjpVLJyl16mKDyw_NcFqrAoW"};</script>
 <script>
@@ -837,7 +859,7 @@ document.addEventListener('DOMContentLoaded',()=>{
           <input type="checkbox" ${item.done?'checked':''} data-check-toggle="${checklistEsc(item.id)}" data-check-kind="${kind}">
           <span>${checklistEsc(item.text)}</span>
         </label>
-        <button type="button" class="check-delete" onclick="deleteChecklistItem('${kind}','${checklistEsc(item.id)}')">刪除</button>
+        <button type="button" class="check-delete" data-check-delete="${checklistEsc(item.id)}" data-check-kind="${kind}">刪除</button>
       </div>
     `).join('');
   }
@@ -976,11 +998,10 @@ document.addEventListener('DOMContentLoaded',()=>{
             <input type="checkbox" data-wish-toggle="${esc(item.id)}" ${item.done?'checked':''}>
             <span class="wish-icon">${icon}</span>
             <span>
-              <strong>${esc(item.text)}</strong>
+              <strong>${esc(item.location||item.text)}</strong>
               <small>${label}${item.from_trip?`・原本在「${esc(item.from_trip)}」`:''}</small>
             </span>
           </label>
-          ${item.location?`<p class="wish-location">📍 ${esc(item.location)}</p>`:''}
           ${item.note?`<p class="wish-note">${esc(item.note).replace(/\n/g,'<br>')}</p>`:''}
           <div class="wish-actions">
             <button type="button" class="google-map-btn" data-wish-map="${esc(item.id)}">🗺️ Google 地圖</button>
@@ -993,26 +1014,24 @@ document.addEventListener('DOMContentLoaded',()=>{
 
   function addWish(){
     const type=document.getElementById('wishType')?.value||'other';
-    const text=String(document.getElementById('wishText')?.value||'').trim();
     const location=String(document.getElementById('wishLocation')?.value||'').trim();
     const note=String(document.getElementById('wishNote')?.value||'').trim();
-    if(!text){
-      alert('請先輸入願望內容');
-      document.getElementById('wishText')?.focus();
+    if(!location){
+      alert('請先輸入店家、地點或地址');
+      document.getElementById('wishLocation')?.focus();
       return;
     }
 
     globalWishlist.push({
       id:'wish-'+Date.now()+'-'+Math.random().toString(36).slice(2,7),
-      type,text,location,note,done:false
+      type,text:location,location,note,done:false
     });
 
-    document.getElementById('wishText').value='';
     document.getElementById('wishLocation').value='';
     document.getElementById('wishNote').value='';
     saveGlobalWishlist();
     renderWishlist();
-    document.getElementById('wishText')?.focus();
+    document.getElementById('wishLocation')?.focus();
   }
 
   function toggleWish(id,done){
@@ -1023,13 +1042,16 @@ document.addEventListener('DOMContentLoaded',()=>{
     renderWishlist();
   }
 
-  function deleteWish(id){
-    const item=globalWishlist.find(x=>x.id===id);
+  async function deleteWish(id){
+    const item=globalWishlist.find(x=>String(x.id)===String(id));
     if(!item)return;
-    if(!confirm(`確定刪除「${item.text}」嗎？`))return;
-    globalWishlist=globalWishlist.filter(x=>x.id!==id);
+    const title=item.location||item.text||'這筆願望';
+    if(!confirm(`確定刪除「${title}」嗎？`))return;
+    cloudPullPausedUntil=Date.now()+6000;
+    globalWishlist=globalWishlist.filter(x=>String(x.id)!==String(id));
     saveGlobalWishlist();
     renderWishlist();
+    try{ if(window.forceTravelCloudSync) await window.forceTravelCloudSync(); }catch(e){}
   }
 
   function renderStayTop(){
@@ -1666,11 +1688,8 @@ document.addEventListener('DOMContentLoaded',()=>{
 
   $('#addWishBtn')?.addEventListener('click',addWish);
   $('#wishGooglePreviewBtn')?.addEventListener('click',()=>{
-    const q=String(document.getElementById('wishLocation')?.value||document.getElementById('wishText')?.value||'').trim();
+    const q=String(document.getElementById('wishLocation')?.value||'').trim();
     openWishGoogle(q);
-  });
-  $('#wishText')?.addEventListener('keydown',e=>{
-    if(e.key==='Enter'){e.preventDefault();addWish();}
   });
   document.addEventListener('change',e=>{
     const box=e.target.closest?.('[data-wish-toggle]');
@@ -1729,7 +1748,7 @@ body{background:#fffaf7}
   <header class="topbar">
     <button class="brand" data-action="home" aria-label="回首頁">
       <span class="brand-icon">🗺️</span>
-      <span><strong>我的旅遊計畫</strong><small>TRAVEL PLANNER · v4.9 刪除功能修正版</small></span>
+      <span><strong>我的旅遊計畫</strong><small>TRAVEL PLANNER · v5.0 刪除＋快速分帳修正版</small></span>
       <span class="heart">♥</span>
     </button>
     <nav class="nav" aria-label="主選單">
@@ -1779,7 +1798,7 @@ body{background:#fffaf7}
         </div>
 
         <div class="wishlist-add-card global-wish-add-card">
-          <div class="wishlist-add-grid">
+          <div class="wishlist-simple-grid">
             <label>類型
               <select id="wishType">
                 <option value="place">📍 想去的地方</option>
@@ -1789,19 +1808,10 @@ body{background:#fffaf7}
                 <option value="other">💭 其他願望</option>
               </select>
             </label>
-            <label>願望內容
-              <input id="wishText" type="text" placeholder="例如：明洞醬蟹、弘大咖啡廳、富士山..." />
+            <label class="wish-address-label">📍 店家／地點／地址
+              <input id="wishLocation" type="text" placeholder="例如：明洞醬蟹、弘大咖啡廳、首爾市中區..." />
             </label>
-          </div>
-
-          <div class="wishlist-add-grid wish-location-grid">
-            <label>📍 店家／地點／地址
-              <input id="wishLocation" type="text" placeholder="例如：明洞某某醬蟹、首爾市中區..." />
-            </label>
-            <div class="wish-map-preview-box">
-              <span>🗺️ Google 地圖</span>
-              <button type="button" class="ghost google-preview-btn" id="wishGooglePreviewBtn">先在 Google 地圖查看</button>
-            </div>
+            <button type="button" class="ghost google-preview-btn" id="wishGooglePreviewBtn">🗺️ Google 地圖查看</button>
           </div>
 
           <label>備註
@@ -1820,7 +1830,7 @@ body{background:#fffaf7}
       </section>
     </section>
 
-    <section id="quickSplitView" class="view" style="display:none">
+    <section id="quickSplitView" class="view">
       <div class="panel">
         <div class="panel-head">
           <div>
@@ -2348,7 +2358,7 @@ function fillQuickPeople(){
   const roster=document.getElementById('qPeopleRoster');
   if(roster){
     roster.innerHTML=people.length
-      ? people.map(p=>`<span class="roster-chip">👤 <span>${qEsc(p)}</span><button type="button" class="roster-remove-btn" onclick="removeQuickPersonByName('${qEsc(p)}')">刪除</button></span>`).join('')
+      ? people.map(p=>`<span class="roster-chip">👤 <span>${qEsc(p)}</span><button type="button" class="roster-remove-btn" data-qperson-remove="${qEsc(p)}">刪除</button></span>`).join('')
       : '<span class="quick-empty-inline">尚未加入人物</span>';
   }
 }
@@ -2894,6 +2904,59 @@ document.addEventListener('click',async function(e){
     btn.click();
   }
 },true);
+</script>
+
+
+<script id="v50-delete-and-nav-fix">
+(function(){
+  // 快速分帳：直接切頁，避免 inline style 或舊 handler 影響。
+  document.addEventListener('click',function(e){
+    const quick=e.target.closest('[data-action="quick-split"]');
+    if(!quick)return;
+    e.preventDefault();
+    e.stopImmediatePropagation();
+    document.querySelectorAll('.view').forEach(v=>v.classList.remove('active'));
+    const view=document.getElementById('quickSplitView');
+    if(view){
+      view.style.display='';
+      view.classList.add('active');
+    }
+    document.querySelectorAll('.nav-btn').forEach(b=>b.classList.toggle('active',b.dataset.action==='quick-split'));
+    if(typeof renderQuickSplit==='function')renderQuickSplit();
+    if(typeof fillQuickPeople==='function')fillQuickPeople();
+  },true);
+
+  // 所有「刪除」都用 capture phase 處理，Safari / iPad 不會再被其他 click handler 擋掉。
+  document.addEventListener('click',async function(e){
+    const pack=e.target.closest('[data-check-delete]');
+    if(pack){
+      e.preventDefault(); e.stopImmediatePropagation();
+      const kind=pack.dataset.checkKind;
+      const id=pack.dataset.checkDelete;
+      if(typeof deleteChecklistItem==='function') await deleteChecklistItem(kind,id);
+      return;
+    }
+
+    const person=e.target.closest('[data-qperson-remove]');
+    if(person){
+      e.preventDefault(); e.stopImmediatePropagation();
+      const name=person.dataset.qpersonRemove||'';
+      if(!name)return;
+      if(!confirm(`確定刪除「${name}」嗎？\n\n刪除後會從分帳成員、誰付錢、一起分的人全部消失。`))return;
+      if(typeof cloudPullPausedUntil!=='undefined')cloudPullPausedUntil=Date.now()+6000;
+      if(typeof removeQuickPerson==='function')removeQuickPerson(name);
+      try{if(window.forceTravelCloudSync)await window.forceTravelCloudSync();}catch(err){}
+      return;
+    }
+
+    const wish=e.target.closest('[data-wish-delete]');
+    if(wish){
+      e.preventDefault(); e.stopImmediatePropagation();
+      if(typeof deleteWish==='function')await deleteWish(wish.dataset.wishDelete);
+      return;
+    }
+  },true);
+})();
 </script>
 
 </body>
