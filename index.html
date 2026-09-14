@@ -527,6 +527,27 @@ html,body{max-width:100%;overflow-x:hidden}
   .wish-editor-actions button{flex:1}
 }
 
+
+.wish-edit-btn{
+  border:1px solid #eadde3;background:#fff8fb;color:#9b5870;border-radius:12px;
+  padding:9px 10px;font-weight:800;cursor:pointer;
+}
+.wish-card-actions{display:grid!important;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px!important}
+.wish-card-actions button{width:100%;min-width:0!important}
+@media(max-width:480px){
+  .wish-card-actions{grid-template-columns:1fr 1fr!important}
+}
+
+
+.wish-visited-btn{
+  border:1px solid #eadde3;background:#fff7fa;color:#a65a73;
+  border-radius:999px;padding:8px 13px;font-size:13px;font-weight:900;
+  cursor:pointer;white-space:nowrap;
+}
+.wish-visited-btn.done{
+  background:#edf7ed;border-color:#d4ead8;color:#4d8f5b;
+}
+
 </style>
 <script>window.TRAVEL_SUPABASE={url:"https://lfvzobfvotcehkkjkgdc.supabase.co",anonKey:"sb_publishable_iwDwCSXNjpVLJyl16mKDyw_NcFqrAoW"};</script>
 <script>
@@ -1099,6 +1120,7 @@ document.addEventListener('DOMContentLoaded',()=>{
   let globalWishlist=[];
   let wishFilter='all';
   let wishSearch='';
+  let editingWishId='';
   try{
     globalWishlist=JSON.parse(localStorage.getItem(GLOBAL_WISHLIST_KEY)||'[]')||[];
     if(!globalWishlist.length){
@@ -1213,7 +1235,7 @@ document.addEventListener('DOMContentLoaded',()=>{
       return `<article class="wish-card-wall ${item.done?'done':''}" data-wish-id="${esc(item.id)}">
         <div class="wish-card-top">
           <div class="wish-badge">${icon} ${label}</div>
-          <button type="button" class="wish-heart ${item.done?'done':''}" data-wish-toggle="${esc(item.id)}" aria-label="${item.done?'改回想去':'標記去過'}">${item.done?'✅':'♡'}</button>
+          <button type="button" class="wish-visited-btn ${item.done?'done':''}" data-wish-toggle="${esc(item.id)}" aria-label="${item.done?'改回想去':'標記去過'}">${item.done?'✅ 已去過':'✓ 去過了'}</button>
         </div>
 
         <div class="wish-card-body">
@@ -1226,6 +1248,7 @@ document.addEventListener('DOMContentLoaded',()=>{
         <div class="wish-card-actions">
           <button type="button" class="google-map-btn" data-wish-map="${esc(item.id)}">🗺️ 地圖</button>
           <button type="button" class="wish-trip-btn" data-wish-add-trip="${esc(item.id)}">✈️ 加入旅程</button>
+          <button type="button" class="wish-edit-btn" data-wish-edit="${esc(item.id)}">✏️ 編輯</button>
           <button type="button" class="check-delete" data-wish-delete="${esc(item.id)}">🗑️ 刪除</button>
         </div>
       </article>`;
@@ -1252,9 +1275,16 @@ document.addEventListener('DOMContentLoaded',()=>{
     });
 
     list.querySelectorAll('[data-wish-add-trip]').forEach(btn=>{
+      btn.onclick=async ev=>{
+        ev.preventDefault();ev.stopPropagation();
+        await addWishToTrip(btn.dataset.wishAddTrip);
+      };
+    });
+
+    list.querySelectorAll('[data-wish-edit]').forEach(btn=>{
       btn.onclick=ev=>{
         ev.preventDefault();ev.stopPropagation();
-        addWishToTrip(btn.dataset.wishAddTrip);
+        editWish(btn.dataset.wishEdit);
       };
     });
 
@@ -1273,7 +1303,39 @@ document.addEventListener('DOMContentLoaded',()=>{
     if(show)setTimeout(()=>document.getElementById('wishName')?.focus(),50);
   }
 
-  function addWish(){
+
+  function resetWishEditor(){
+    editingWishId='';
+    ['wishName','wishCity','wishLocation','wishNote'].forEach(id=>{
+      const el=document.getElementById(id); if(el)el.value='';
+    });
+    const type=document.getElementById('wishType');
+    if(type)type.value='place';
+    const saveBtn=document.getElementById('addWishBtn');
+    if(saveBtn)saveBtn.textContent='＋ 加入願望';
+    const title=document.querySelector('.wish-form-title strong');
+    if(title)title.textContent='💗 收藏一個旅行願望';
+  }
+
+  function editWish(id){
+    const item=globalWishlist.find(x=>String(x.id)===String(id));
+    if(!item)return;
+    normalizeWishItem(item);
+    editingWishId=String(item.id);
+    document.getElementById('wishType').value=item.type||'place';
+    document.getElementById('wishName').value=item.name||'';
+    document.getElementById('wishCity').value=item.city||'';
+    document.getElementById('wishLocation').value=item.location||'';
+    document.getElementById('wishNote').value=item.note||'';
+    const saveBtn=document.getElementById('addWishBtn');
+    if(saveBtn)saveBtn.textContent='💾 儲存修改';
+    const title=document.querySelector('.wish-form-title strong');
+    if(title)title.textContent='✏️ 編輯旅行願望';
+    toggleWishEditor(true);
+    document.getElementById('wishlistAddPanel')?.scrollIntoView({behavior:'smooth',block:'center'});
+  }
+
+  async function addWish(){
     const type=document.getElementById('wishType')?.value||'other';
     const name=String(document.getElementById('wishName')?.value||'').trim();
     const city=String(document.getElementById('wishCity')?.value||'').trim();
@@ -1286,19 +1348,30 @@ document.addEventListener('DOMContentLoaded',()=>{
       return;
     }
 
-    globalWishlist.push({
-      id:'wish-'+Date.now()+'-'+Math.random().toString(36).slice(2,7),
-      type,name,text:name,city,location,note,done:false
-    });
-
-    ['wishName','wishCity','wishLocation','wishNote'].forEach(id=>{
-      const el=document.getElementById(id); if(el)el.value='';
-    });
+    if(editingWishId){
+      const item=globalWishlist.find(x=>String(x.id)===String(editingWishId));
+      if(item){
+        item.type=type;
+        item.name=name;
+        item.text=name;
+        item.city=city;
+        item.location=location;
+        item.note=note;
+      }
+    }else{
+      globalWishlist.push({
+        id:'wish-'+Date.now()+'-'+Math.random().toString(36).slice(2,7),
+        type,name,text:name,city,location,note,done:false
+      });
+    }
 
     saveGlobalWishlist();
     renderWishlist();
+    resetWishEditor();
     toggleWishEditor(false);
+    try{if(window.forceTravelCloudSync)await window.forceTravelCloudSync();}catch(e){}
   }
+
 
   async function deleteWish(id){
     const item=globalWishlist.find(x=>String(x.id)===String(id));
@@ -1314,7 +1387,8 @@ document.addEventListener('DOMContentLoaded',()=>{
     await forceCloudWriteLatest();
   }
 
-  function addWishToTrip(id){
+
+  async function addWishToTrip(id){
     const item=globalWishlist.find(x=>String(x.id)===String(id));
     if(!item)return;
 
@@ -1325,8 +1399,9 @@ document.addEventListener('DOMContentLoaded',()=>{
     }
 
     const options=trips.map((t,i)=>`${i+1}. ${t.name}`).join('\n');
-    const ans=prompt(`要加入哪一個旅程？\n\n${options}\n\n請輸入編號：`);
+    const ans=prompt(`要把「${item.name}」加入哪一個旅程的【行程表】？\n\n${options}\n\n請輸入旅程編號：`);
     if(ans===null)return;
+
     const idx=Number(ans)-1;
     const trip=trips[idx];
     if(!trip){
@@ -1334,24 +1409,36 @@ document.addEventListener('DOMContentLoaded',()=>{
       return;
     }
 
-    if(!Array.isArray(trip.itinerary))trip.itinerary=[];
-    trip.itinerary.push({
-      id:'wish-it-'+Date.now()+'-'+Math.random().toString(36).slice(2,6),
+    const row={
+      id:'wish-it-'+Date.now()+'-'+Math.random().toString(36).slice(2,7),
+      trip_id:trip.id,
       date:trip.start_date||'',
       time:'12:00',
-      type:item.type==='food'?'food':item.type==='shop'?'shop':'spot',
+      type:item.type==='food'||item.type==='cafe'?'food':item.type==='shop'?'shop':'spot',
+      parent_spot_id:'',
       place:item.name,
       transport:'',
       station:'',
-      note:[item.city,item.location,item.note].filter(Boolean).join('\n'),
-      parent_id:null,
       rating:0,
-      review:''
-    });
+      review:'',
+      note:[item.city,item.location,item.note].filter(Boolean).join('\n')
+    };
 
-    persist();
-    alert(`已加入「${trip.name}」的行程。`);
+    try{
+      if(state.cloud){
+        await cloudUpsert('itineraries',row);
+        await loadCloud();
+      }else{
+        state.itineraries.push(row);
+        persist();
+      }
+      alert(`已把「${item.name}」加入「${trip.name}」的行程表。\n\n預設日期：${row.date||'未設定'}\n預設時間：12:00\n之後可以進入該旅程再編輯日期、時間與內容。`);
+    }catch(err){
+      console.error(err);
+      alert('加入旅程失敗，請再試一次。');
+    }
   }
+
 
   function renderStayTop(){
     const box=$('#stayTopContent'); const t=currentTrip(); if(!box||!t)return;
@@ -1985,8 +2072,8 @@ document.addEventListener('DOMContentLoaded',()=>{
   });
 
 
-  $('#wishAddToggleBtn')?.addEventListener('click',()=>toggleWishEditor(true));
-  $('#cancelWishAddBtn')?.addEventListener('click',()=>toggleWishEditor(false));
+  $('#wishAddToggleBtn')?.addEventListener('click',()=>{resetWishEditor();toggleWishEditor(true);});
+  $('#cancelWishAddBtn')?.addEventListener('click',()=>{resetWishEditor();toggleWishEditor(false);});
   $('#addWishBtn')?.addEventListener('click',addWish);
   $('#wishGooglePreviewBtn')?.addEventListener('click',()=>{
     const q=String(document.getElementById('wishLocation')?.value||document.getElementById('wishName')?.value||'').trim();
@@ -2043,7 +2130,7 @@ body{background:#fffaf7}
   <header class="topbar">
     <button class="brand" data-action="home" aria-label="回首頁">
       <span class="brand-icon">🗺️</span>
-      <span><strong>我的旅遊計畫</strong><small>TRAVEL PLANNER · v5.3 願望排版＋快速分帳修正版</small></span>
+      <span><strong>我的旅遊計畫</strong><small>TRAVEL PLANNER · v5.5 願望去過了按鈕版</small></span>
       <span class="heart">♥</span>
     </button>
     <nav class="nav" aria-label="主選單">
