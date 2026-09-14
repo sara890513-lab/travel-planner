@@ -1586,7 +1586,45 @@ document.addEventListener('DOMContentLoaded',()=>{
   window.saveTripObject = saveTripObject;
   window.renderMajorTransports = renderMajorTransports;
 
-  function renderItinerary(){
+  
+async function deleteMainItineraryById(id){
+  id=String(id||'');
+  const row=state.itineraries.find(x=>String(x.id)===id);
+  if(!row)return;
+
+  if(!confirm(`確定刪除「${row.place||'這筆行程'}」嗎？`))return;
+
+  // 同時刪除掛在這個大景點下面的美食 / 小店。
+  const childIds=state.itineraries
+    .filter(x=>String(x.parent_spot_id||'')===id)
+    .map(x=>String(x.id));
+
+  // 先從畫面與記憶體刪掉，避免按了「好」之後看起來完全沒反應。
+  state.itineraries=state.itineraries.filter(x=>{
+    const xid=String(x.id);
+    return xid!==id && !childIds.includes(xid);
+  });
+
+  localSave();
+  renderItinerary();
+  if(typeof renderQuickItinerary==='function')renderQuickItinerary();
+
+  try{
+    if(state.cloud){
+      // 目前網站的 Supabase 是整份快照同步，所以直接把「刪除後的新狀態」寫回雲端。
+      cloudPullPausedUntil=Date.now()+8000;
+      await forceCloudWriteLatest();
+    }else{
+      persist();
+    }
+    toast('行程已刪除');
+  }catch(err){
+    console.error('delete itinerary failed',err);
+    alert('畫面已刪除，但雲端同步失敗。請重新整理前先再按一次「立即同步」。');
+  }
+}
+
+function renderItinerary(){
     const list=$('#itineraryList');
     const rows=state.itineraries.filter(x=>x.trip_id===state.currentTripId)
       .sort((a,b)=>`${a.date} ${a.time}`.localeCompare(`${b.date} ${b.time}`));
@@ -1613,9 +1651,10 @@ document.addEventListener('DOMContentLoaded',()=>{
       const dateLabel=x.date!==lastDate?`<small>${fmtDate(x.date)}</small><br>`:'';
       lastDate=x.date;
       const icon=x.type==='food'?'🍜':x.type==='shop'?'🛍️':'📍';
+      item.dataset.itineraryId=x.id;
       item.innerHTML=`<div class="timeline-time">${dateLabel}${esc(x.time?.slice(0,5)||'')}</div>
         <div class="timeline-card">
-          <div class="mini-actions"><button title="編輯">✏️</button><button title="刪除">🗑️</button></div>
+          <div class="mini-actions"><button type="button" title="編輯" data-it-edit="${esc(x.id)}">✏️</button><button type="button" title="刪除" data-it-delete="${esc(x.id)}">🗑️</button></div>
           <h3>${icon} ${esc(x.place)}</h3>
           ${x.station?`<p class="it-station-line">🚉 站名：${esc(x.station)}</p>`:''}
           ${x.type==='food'&&x.rating?`<p class="food-stars">${'★'.repeat(Number(x.rating))}${'☆'.repeat(5-Number(x.rating))}</p>`:''}
@@ -1627,9 +1666,10 @@ document.addEventListener('DOMContentLoaded',()=>{
           </div>`:''}
           <div class="subplace-list"></div>
         </div>`;
-      const [e,d]=item.querySelectorAll('.mini-actions button');
-      e.onclick=()=>openItineraryDialog(x);
-      d.onclick=()=>removeRecord('itineraries',x.id);
+      const e=item.querySelector('[data-it-edit]');
+      const d=item.querySelector('[data-it-delete]');
+      if(e)e.onclick=(ev)=>{ev.preventDefault();ev.stopPropagation();openItineraryDialog(x);};
+      if(d)d.onclick=async(ev)=>{ev.preventDefault();ev.stopPropagation();await deleteMainItineraryById(x.id);};
 
       const addFood=item.querySelector('.add-food-child');
       if(addFood) addFood.onclick=()=>openChildItineraryDialog(x,'food');
@@ -1656,7 +1696,22 @@ document.addEventListener('DOMContentLoaded',()=>{
           b.onclick=()=>{const k=rows.find(r=>r.id===b.dataset.subEdit);if(k)openItineraryDialog(k);};
         });
         sub.querySelectorAll('[data-sub-del]').forEach(b=>{
-          b.onclick=()=>removeRecord('itineraries',b.dataset.subDel);
+          b.onclick=async(ev)=>{
+            ev.preventDefault();ev.stopPropagation();
+            const id=String(b.dataset.subDel||'');
+            const row=state.itineraries.find(r=>String(r.id)===id);
+            if(!row)return;
+            if(!confirm(`確定刪除「${row.place||'這個小行程'}」嗎？`))return;
+            state.itineraries=state.itineraries.filter(r=>String(r.id)!==id);
+            localSave();
+            renderItinerary();
+            if(typeof renderQuickItinerary==='function')renderQuickItinerary();
+            if(state.cloud){
+              cloudPullPausedUntil=Date.now()+8000;
+              await forceCloudWriteLatest();
+            }else persist();
+            toast('已刪除');
+          };
         });
       }else sub.remove();
 
@@ -1951,7 +2006,23 @@ document.addEventListener('DOMContentLoaded',()=>{
   }
   async function saveItinerary(){const row={id:$('#itineraryId').value||uid(),trip_id:state.currentTripId,date:$('#itDate').value,time:timeFromSelects('itHour','itMinute'),type:$('#itType').value||'spot',parent_spot_id:($('#itType').value==='spot'?'':($('#itParentSpot').value||'')),place:$('#itPlace').value.trim(),transport:$('#itTransport').value.trim(),station:$('#itStation').value.trim(),rating:Number($('#itRating').value||0),review:$('#itReview').value.trim(),note:$('#itNote').value.trim()};if(state.cloud){await cloudUpsert('itineraries',row);await loadCloud();}else{const i=state.itineraries.findIndex(x=>x.id===row.id);if(i>=0)state.itineraries[i]=row;else state.itineraries.push(row);persist();renderItinerary();renderQuickItinerary();}toast('行程已儲存');}
   async function saveExpense(){const participants=$$('#participantChecks input:checked').map(x=>x.value);if(!participants.length){toast('至少選一位分帳成員');return false}const row={id:$('#expenseId').value||uid(),trip_id:state.currentTripId,item:$('#exItem').value.trim(),amount:Number($('#exAmount').value),payer:$('#exPayer').value,participants,note:$('#exNote').value.trim()};if(state.cloud){await cloudUpsert('expenses',row);await loadCloud();}else{const i=state.expenses.findIndex(x=>x.id===row.id);if(i>=0)state.expenses[i]=row;else state.expenses.unshift(row);persist();renderExpenses();}toast('支出已儲存');return true;}
-  async function removeRecord(table,id){if(!confirm('確定要刪除嗎？'))return;if(state.cloud){await cloudDelete(table,id);await loadCloud();}else{state[table]=state[table].filter(x=>x.id!==id);persist();renderTrip();}toast('已刪除');}
+  async function removeRecord(table,id){
+  if(!confirm('確定要刪除嗎？'))return;
+  if(!Array.isArray(state[table]))return;
+  state[table]=state[table].filter(x=>String(x.id)!==String(id));
+  localSave();
+  if(table==='itineraries'){
+    renderItinerary();
+    if(typeof renderQuickItinerary==='function')renderQuickItinerary();
+  }else if(typeof renderTrip==='function'){
+    renderTrip();
+  }
+  if(state.cloud){
+    cloudPullPausedUntil=Date.now()+8000;
+    await forceCloudWriteLatest();
+  }else persist();
+  toast('已刪除');
+}
 
   async function uploadPhotoFile(file,tripId,isCover=false){
     return await dataURL(file);
@@ -2130,7 +2201,7 @@ body{background:#fffaf7}
   <header class="topbar">
     <button class="brand" data-action="home" aria-label="回首頁">
       <span class="brand-icon">🗺️</span>
-      <span><strong>我的旅遊計畫</strong><small>TRAVEL PLANNER · v5.5 願望去過了按鈕版</small></span>
+      <span><strong>我的旅遊計畫</strong><small>TRAVEL PLANNER · v5.6 行程刪除修正版</small></span>
       <span class="heart">♥</span>
     </button>
     <nav class="nav" aria-label="主選單">
@@ -3200,62 +3271,6 @@ document.addEventListener('click', async function(e){
         if(typeof window.saveTripObject==='function') window.saveTripObject(currentTrip());
         if(typeof window.renderMajorTransports==='function') window.renderMajorTransports();
       }
-    }catch(err){ console.error(err); alert('刪除失敗，請再試一次。'); }
-    return;
-  }
-
-  // Sub-place delete
-  const subDel = e.target.closest('[data-sub-del]');
-  if(subDel){
-    e.preventDefault();
-    e.stopPropagation();
-    const id = subDel.dataset.subDel;
-    if(!confirm('確定刪除這個美食／小店嗎？')) return;
-    try{
-      if(state.cloud){
-        await cloudDelete('itineraries',id);
-        await loadCloud();
-      }else{
-        state.itineraries = state.itineraries.filter(x=>x.id!==id);
-        persist();
-        renderItinerary();
-        if(typeof renderQuickItinerary==='function') renderQuickItinerary();
-      }
-      toast('已刪除');
-    }catch(err){ console.error(err); alert('刪除失敗，請再試一次。'); }
-    return;
-  }
-
-  // Main itinerary delete buttons
-  const mainDel = e.target.closest('.timeline-card .mini-actions button[title="刪除"]');
-  if(mainDel){
-    e.preventDefault();
-    e.stopPropagation();
-    const card = mainDel.closest('.timeline-item');
-    if(!card) return;
-
-    // Locate matching item by edit button's closure-independent data attributes.
-    const place = card.querySelector('h3')?.textContent?.replace(/^[^\s]+\s*/,'').trim() || '';
-    const time = card.querySelector('.timeline-time')?.textContent?.trim().split(/\s+/).pop() || '';
-    const candidates = state.itineraries.filter(x=>x.trip_id===state.currentTripId);
-    const row = candidates.find(x=>x.place===place && (!time || (x.time||'').slice(0,5)===time)) || candidates.find(x=>x.place===place);
-    if(!row) return;
-    if(!confirm(`確定刪除「${row.place}」嗎？`)) return;
-
-    try{
-      // Delete children attached to this main spot too.
-      const childIds = state.itineraries.filter(x=>x.parent_spot_id===row.id).map(x=>x.id);
-      if(state.cloud){
-        for(const cid of childIds){ try{ await cloudDelete('itineraries',cid); }catch(_){} }
-        await cloudDelete('itineraries',row.id);
-        await loadCloud();
-      }else{
-        state.itineraries = state.itineraries.filter(x=>x.id!==row.id && !childIds.includes(x.id));
-        persist();
-        renderItinerary();
-        if(typeof renderQuickItinerary==='function') renderQuickItinerary();
-      }
-      toast('行程已刪除');
     }catch(err){ console.error(err); alert('刪除失敗，請再試一次。'); }
     return;
   }
