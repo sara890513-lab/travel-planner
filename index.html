@@ -2194,6 +2194,122 @@ body{background:#fffaf7}
 .modal.open{display:flex!important}
 .modal>.modal-card{width:min(620px,100%);max-height:88vh;margin:auto;background:#fff}
 .modal::backdrop{display:none!important}
+
+/* v5.7 手機主選單修正版：四個快捷鍵完整顯示 */
+@media(max-width:640px){
+  .topbar{
+    position:sticky!important;
+    top:0!important;
+    z-index:40!important;
+    display:grid!important;
+    grid-template-columns:minmax(0,1fr) auto!important;
+    grid-template-rows:auto auto!important;
+    gap:8px 10px!important;
+    padding:8px 10px 10px!important;
+    background:rgba(255,250,247,.97)!important;
+    backdrop-filter:blur(18px)!important;
+  }
+
+  .brand{
+    grid-column:1!important;
+    grid-row:1!important;
+    min-width:0!important;
+    gap:7px!important;
+  }
+  .brand-icon{font-size:24px!important}
+  .brand strong{
+    display:block!important;
+    font-size:15px!important;
+    letter-spacing:.5px!important;
+    white-space:nowrap!important;
+    overflow:hidden!important;
+    text-overflow:ellipsis!important;
+  }
+  .brand small,.heart{display:none!important}
+
+  .auth-btn{
+    grid-column:2!important;
+    grid-row:1!important;
+    align-self:center!important;
+    font-size:0!important;
+    width:38px!important;
+    height:38px!important;
+    padding:0!important;
+    border-radius:50%!important;
+  }
+  .auth-btn:after{
+    content:"☁️"!important;
+    font-size:17px!important;
+  }
+
+  .nav{
+    position:static!important;
+    grid-column:1 / -1!important;
+    grid-row:2!important;
+    display:grid!important;
+    grid-template-columns:repeat(2,minmax(0,1fr))!important;
+    gap:7px!important;
+    width:100%!important;
+    padding:0!important;
+    border:0!important;
+    background:transparent!important;
+    backdrop-filter:none!important;
+  }
+
+  .nav-btn{
+    width:100%!important;
+    min-width:0!important;
+    min-height:48px!important;
+    padding:7px 8px!important;
+    margin:0!important;
+    border-radius:14px!important;
+    font-size:13px!important;
+    line-height:1.2!important;
+    display:flex!important;
+    align-items:center!important;
+    justify-content:center!important;
+    gap:7px!important;
+    white-space:nowrap!important;
+    background:#fff!important;
+    border:1px solid #efe5e1!important;
+    box-shadow:0 3px 10px rgba(60,50,55,.035)!important;
+  }
+
+  .nav-btn span{
+    display:inline!important;
+    font-size:18px!important;
+    line-height:1!important;
+  }
+
+  .nav-btn.active{
+    background:var(--blue)!important;
+    border-color:#c6e3f8!important;
+  }
+
+  /* 取消舊版手機底部選單預留的空白 */
+  .cute-footer{padding-bottom:34px!important}
+  .tab-panel{padding-bottom:34px!important}
+
+  /* 首頁主圖與內容不要被快捷鍵擠壓或裁切 */
+  .hero-wrap{padding:8px 10px 0!important}
+  .hero-img{
+    border-radius:18px!important;
+    min-height:0!important;
+    max-height:260px!important;
+    object-fit:cover!important;
+  }
+}
+
+/* 很窄的手機也保證四個按鈕完整 */
+@media(max-width:380px){
+  .nav-btn{
+    font-size:12px!important;
+    gap:5px!important;
+    padding:6px 5px!important;
+  }
+  .nav-btn span{font-size:16px!important}
+}
+
 </style>
 </head>
 <body>
@@ -2201,7 +2317,7 @@ body{background:#fffaf7}
   <header class="topbar">
     <button class="brand" data-action="home" aria-label="回首頁">
       <span class="brand-icon">🗺️</span>
-      <span><strong>我的旅遊計畫</strong><small>TRAVEL PLANNER · v5.6 行程刪除修正版</small></span>
+      <span><strong>我的旅遊計畫</strong><small>TRAVEL PLANNER · v5.7 手機快捷鍵修正版</small></span>
       <span class="heart">♥</span>
     </button>
     <nav class="nav" aria-label="主選單">
