@@ -417,6 +417,66 @@ html,body{max-width:100%;overflow-x:hidden}
   .google-preview-btn{width:100%}
 }
 
+
+.google-picker-note{margin:12px 0 0;color:#8a7d82;font-size:13px;line-height:1.55}
+.check-delete,.roster-remove-btn,[data-wish-delete]{min-width:54px;min-height:36px}
+
+.wishlist-hero{display:flex;align-items:flex-end;justify-content:space-between;gap:18px}
+.wish-add-toggle{white-space:nowrap}
+.wish-filter-row{display:flex;gap:8px;flex-wrap:wrap;margin:20px 0 12px}
+.wish-filter{
+  border:1px solid #eadfe4;background:#fff;color:#544d51;border-radius:999px;
+  padding:9px 13px;font-weight:800;cursor:pointer;
+}
+.wish-filter.active{background:#ffe6ee;border-color:#f2bdcf;color:#a94769}
+.wish-search-row{margin-bottom:14px}
+.wish-search-row input{width:100%;max-width:560px}
+.wish-editor-collapsed{display:none!important}
+.wish-editor-actions{display:flex;gap:10px;flex-wrap:wrap}
+.wish-wall-summary{margin:16px 0}
+.wishlist-wall{
+  display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:16px;
+}
+.wish-card-wall{
+  background:#fff;border:1px solid #eee2e7;border-radius:22px;padding:16px;
+  box-shadow:0 10px 28px rgba(70,50,60,.05);display:flex;flex-direction:column;min-height:250px;
+}
+.wish-card-wall.done{opacity:.72;background:#fafafa}
+.wish-card-top{display:flex;align-items:center;justify-content:space-between;gap:10px}
+.wish-badge{
+  display:inline-flex;align-items:center;gap:6px;background:#fff6f8;color:#8f5165;
+  border-radius:999px;padding:7px 10px;font-size:12px;font-weight:900;
+}
+.wish-heart{
+  width:38px;height:38px;border:0;border-radius:50%;background:#fff0f4;color:#d45c83;
+  font-size:22px;cursor:pointer;
+}
+.wish-heart.done{background:#edf7ed;color:#4d8f5b;font-size:18px}
+.wish-card-body{padding:14px 2px 10px;flex:1}
+.wish-card-body h3{margin:0 0 8px;font-size:21px;line-height:1.35}
+.wish-city,.wish-location-card{margin:5px 0;color:#6f6870;line-height:1.45}
+.wish-note-card{
+  margin:10px 0 0;padding:10px 12px;background:#fff9f6;border-radius:12px;
+  color:#6a6165;line-height:1.55;
+}
+.wish-card-actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px}
+.wish-card-actions button{flex:1;min-width:90px}
+.wish-trip-btn{
+  border:1px solid #dce6f0;background:#f3f8fc;color:#456d8d;border-radius:12px;
+  padding:9px 10px;font-weight:800;cursor:pointer;
+}
+.wish-address-grid{grid-template-columns:1fr auto!important}
+.wish-wall-empty{grid-column:1/-1}
+@media(max-width:1000px){
+  .wishlist-wall{grid-template-columns:repeat(2,minmax(0,1fr))}
+}
+@media(max-width:680px){
+  .wishlist-hero{align-items:stretch;flex-direction:column}
+  .wish-add-toggle{width:100%}
+  .wishlist-wall{grid-template-columns:1fr}
+  .wish-address-grid{grid-template-columns:1fr!important}
+}
+
 </style>
 <script>window.TRAVEL_SUPABASE={url:"https://lfvzobfvotcehkkjkgdc.supabase.co",anonKey:"sb_publishable_iwDwCSXNjpVLJyl16mKDyw_NcFqrAoW"};</script>
 <script>
@@ -464,6 +524,40 @@ document.addEventListener('DOMContentLoaded',()=>{
   let cloudLastLoadedAt=0;
   let cloudPullPausedUntil=0;
 
+  const DELETED_CHECKLIST_KEY='travel_deleted_checklist_ids_v1';
+  const DELETED_WISH_KEY='travel_deleted_wish_ids_v1';
+  let deletedChecklistIds=[];
+  let deletedWishIds=[];
+  try{deletedChecklistIds=JSON.parse(localStorage.getItem(DELETED_CHECKLIST_KEY)||'[]')||[];}catch(e){deletedChecklistIds=[];}
+  try{deletedWishIds=JSON.parse(localStorage.getItem(DELETED_WISH_KEY)||'[]')||[];}catch(e){deletedWishIds=[];}
+
+  function rememberDeletedChecklist(id){
+    id=String(id||'');
+    if(id && !deletedChecklistIds.includes(id))deletedChecklistIds.push(id);
+    try{localStorage.setItem(DELETED_CHECKLIST_KEY,JSON.stringify(deletedChecklistIds));}catch(e){}
+  }
+  function rememberDeletedWish(id){
+    id=String(id||'');
+    if(id && !deletedWishIds.includes(id))deletedWishIds.push(id);
+    try{localStorage.setItem(DELETED_WISH_KEY,JSON.stringify(deletedWishIds));}catch(e){}
+  }
+  async function forceCloudWriteLatest(){
+    if(!state.supabase)return false;
+    try{
+      const payload=collectCloudData();
+      const {error}=await state.supabase.from('travel_data').upsert({id:1,data:payload},{onConflict:'id'});
+      if(error)throw error;
+      cloudLastLoadedAt=Date.now();
+      state.cloud=true;
+      updateAuthUI();
+      return true;
+    }catch(err){
+      console.warn('force cloud write failed',err);
+      return false;
+    }
+  }
+
+
   function collectCloudData(){
     return {
       version:1,
@@ -476,6 +570,8 @@ document.addEventListener('DOMContentLoaded',()=>{
         currentTripId:state.currentTripId||null
       },
       globalWishlist:(typeof globalWishlist!=='undefined'?globalWishlist:[]),
+      deletedChecklistIds:(typeof deletedChecklistIds!=='undefined'?deletedChecklistIds:[]),
+      deletedWishIds:(typeof deletedWishIds!=='undefined'?deletedWishIds:[]),
       quickSplit:(typeof quickSplit!=='undefined'?quickSplit:[]),
       quickPeople:(typeof quickPeople!=='undefined'?quickPeople:[]),
       quickHiddenPeople:(typeof quickHiddenPeople!=='undefined'?quickHiddenPeople:[]),
@@ -492,10 +588,26 @@ document.addEventListener('DOMContentLoaded',()=>{
     state.photos=Array.isArray(p.photos)?p.photos:[];
     state.currentTripId=p.currentTripId||null;
 
+    // 合併「已刪除紀錄」，避免舊雲端快照把東西復活。
+    try{
+      const remoteChecklist=Array.isArray(payload.deletedChecklistIds)?payload.deletedChecklistIds.map(String):[];
+      const remoteWish=Array.isArray(payload.deletedWishIds)?payload.deletedWishIds.map(String):[];
+      deletedChecklistIds=[...new Set([...(deletedChecklistIds||[]).map(String),...remoteChecklist])];
+      deletedWishIds=[...new Set([...(deletedWishIds||[]).map(String),...remoteWish])];
+      localStorage.setItem(DELETED_CHECKLIST_KEY,JSON.stringify(deletedChecklistIds));
+      localStorage.setItem(DELETED_WISH_KEY,JSON.stringify(deletedWishIds));
+
+      state.trips.forEach(t=>{
+        if(Array.isArray(t.packing_items))t.packing_items=t.packing_items.filter(x=>!deletedChecklistIds.includes(String(x.id)));
+        if(Array.isArray(t.prep_items))t.prep_items=t.prep_items.filter(x=>!deletedChecklistIds.includes(String(x.id)));
+      });
+    }catch(e){}
+
     try{
       if(typeof globalWishlist!=='undefined' && Array.isArray(payload.globalWishlist)){
-        globalWishlist.splice(0,globalWishlist.length,...payload.globalWishlist);
-        localStorage.setItem('travel_global_wishlist_v1',JSON.stringify(globalWishlist));
+        const incoming=payload.globalWishlist.filter(x=>!deletedWishIds.includes(String(x.id)));
+        globalWishlist.splice(0,globalWishlist.length,...incoming);
+        localStorage.setItem(GLOBAL_WISHLIST_KEY,JSON.stringify(globalWishlist));
       }
       if(typeof quickSplit!=='undefined' && Array.isArray(payload.quickSplit)){
         quickSplit.splice(0,quickSplit.length,...payload.quickSplit);
@@ -506,7 +618,8 @@ document.addEventListener('DOMContentLoaded',()=>{
         localStorage.setItem('travel_quick_people_v1',JSON.stringify(quickPeople));
       }
       if(typeof quickHiddenPeople!=='undefined' && Array.isArray(payload.quickHiddenPeople)){
-        quickHiddenPeople.splice(0,quickHiddenPeople.length,...payload.quickHiddenPeople);
+        const mergedHidden=[...new Set([...(quickHiddenPeople||[]),...payload.quickHiddenPeople].map(x=>String(x||'').trim()).filter(Boolean))];
+        quickHiddenPeople.splice(0,quickHiddenPeople.length,...mergedHidden);
         localStorage.setItem('travel_quick_hidden_people_v1',JSON.stringify(quickHiddenPeople));
       }
       if(typeof quickArchives!=='undefined' && Array.isArray(payload.quickArchives)){
@@ -616,6 +729,7 @@ document.addEventListener('DOMContentLoaded',()=>{
 
   async function loadCloud(){
     if(!state.supabase)return false;
+    if(Date.now()<cloudPullPausedUntil)return true;
     try{
       const {data,error}=await state.supabase
         .from('travel_data')
@@ -862,6 +976,12 @@ document.addEventListener('DOMContentLoaded',()=>{
         <button type="button" class="check-delete" data-check-delete="${checklistEsc(item.id)}" data-check-kind="${kind}">刪除</button>
       </div>
     `).join('');
+    list.querySelectorAll('[data-check-delete]').forEach(btn=>{
+      btn.onclick=async ev=>{
+        ev.preventDefault();ev.stopPropagation();
+        await deleteChecklistItem(btn.dataset.checkKind,btn.dataset.checkDelete);
+      };
+    });
   }
 
   function renderPacking(){
@@ -909,23 +1029,32 @@ document.addEventListener('DOMContentLoaded',()=>{
     if(!item)return;
     if(!confirm(`確定刪除「${item.text}」嗎？`))return;
 
+    cloudPullPausedUntil=Date.now()+8000;
+    rememberDeletedChecklist(id);
+
+    // 先直接從畫面拿掉，使用者會立即看到刪除成功。
+    document.querySelectorAll(`[data-check-id="${CSS.escape(String(id))}"]`).forEach(el=>el.remove());
+
     t[key]=t[key].filter(x=>String(x.id)!==String(id));
-    cloudPullPausedUntil=Date.now()+4000;
-    persist();
+    localSave();
     renderPacking();
 
-    // 立刻把刪除結果寫到雲端，避免自動同步把舊資料抓回來。
-    try{
-      if(window.forceTravelCloudSync) await window.forceTravelCloudSync();
-    }catch(e){console.warn('packing delete cloud sync failed',e);}
+    // 不等 debounce，直接把最新資料寫到 Supabase。
+    await forceCloudWriteLatest();
   }
 
 
 
-  const GLOBAL_WISHLIST_KEY='travel_global_wishlist_v1';
+  const GLOBAL_WISHLIST_KEY='travel_global_wishlist_v2';
   let globalWishlist=[];
-  try{globalWishlist=JSON.parse(localStorage.getItem(GLOBAL_WISHLIST_KEY)||'[]')||[];}
-  catch(e){globalWishlist=[];}
+  let wishFilter='all';
+  let wishSearch='';
+  try{
+    globalWishlist=JSON.parse(localStorage.getItem(GLOBAL_WISHLIST_KEY)||'[]')||[];
+    if(!globalWishlist.length){
+      globalWishlist=JSON.parse(localStorage.getItem('travel_global_wishlist_v1')||'[]')||[];
+    }
+  }catch(e){globalWishlist=[];}
 
   function saveGlobalWishlist(){
     try{localStorage.setItem(GLOBAL_WISHLIST_KEY,JSON.stringify(globalWishlist));}catch(e){}
@@ -933,29 +1062,52 @@ document.addEventListener('DOMContentLoaded',()=>{
   }
 
   function migrateTripWishlistsToGlobal(){
-    const existingIds=new Set(globalWishlist.map(x=>x.id));
+    const existingIds=new Set(globalWishlist.map(x=>String(x.id)));
     let changed=false;
     (state.trips||[]).forEach(t=>{
       (Array.isArray(t.wishlist_items)?t.wishlist_items:[]).forEach(item=>{
-        const id=item.id||('wish-migrate-'+Date.now()+'-'+Math.random().toString(36).slice(2,6));
+        const id=String(item.id||('wish-migrate-'+Date.now()+'-'+Math.random().toString(36).slice(2,6)));
         if(existingIds.has(id))return;
-        globalWishlist.push({...item,id,from_trip:t.name||''});
+        const name=item.name||item.text||item.location||'未命名願望';
+        globalWishlist.push({
+          id,
+          type:item.type||'other',
+          name,
+          text:name,
+          city:item.city||'',
+          location:item.location||item.text||'',
+          note:item.note||'',
+          done:!!item.done,
+          from_trip:t.name||''
+        });
         existingIds.add(id);
         changed=true;
       });
     });
-    if(changed){
-      try{localStorage.setItem(GLOBAL_WISHLIST_KEY,JSON.stringify(globalWishlist));}catch(e){}
-    }
+    if(changed)saveGlobalWishlist();
+  }
+
+  function normalizeWishItem(item){
+    if(!item)return item;
+    const name=item.name||item.text||item.location||'未命名願望';
+    item.name=name;
+    item.text=name;
+    item.city=item.city||'';
+    item.location=item.location||item.text||'';
+    item.note=item.note||'';
+    item.done=!!item.done;
+    return item;
   }
 
   function wishTypeMeta(type){
     const map={
-      place:['📍','想去的地方'],
-      food:['🍜','想吃的美食'],
-      shop:['🛍️','想逛／想買'],
-      experience:['✨','想做的體驗'],
-      other:['💭','其他願望']
+      place:['📍','景點'],
+      food:['🍴','美食'],
+      cafe:['☕','咖啡'],
+      shop:['🛍️','購物'],
+      stay:['🏨','住宿'],
+      experience:['✨','體驗'],
+      other:['💭','其他']
     };
     return map[type]||map.other;
   }
@@ -967,8 +1119,24 @@ document.addEventListener('DOMContentLoaded',()=>{
 
   function openWishGoogle(query){
     const url=googleMapsUrl(query);
-    if(!url){alert('請先輸入店家、地點或地址');return;}
+    if(!url){alert('請先輸入店家、景點或地址');return;}
     window.open(url,'_blank','noopener');
+  }
+
+  function getFilteredWishlist(){
+    let items=globalWishlist.map(normalizeWishItem);
+    if(wishFilter==='done')items=items.filter(x=>x.done);
+    else if(wishFilter!=='all')items=items.filter(x=>x.type===wishFilter && !x.done);
+    else items=items.filter(x=>!x.done);
+
+    const q=wishSearch.trim().toLowerCase();
+    if(q){
+      items=items.filter(x=>
+        [x.name,x.city,x.location,x.note,wishTypeMeta(x.type)[1]]
+          .join(' ').toLowerCase().includes(q)
+      );
+    }
+    return items;
   }
 
   function renderWishlist(){
@@ -977,81 +1145,162 @@ document.addEventListener('DOMContentLoaded',()=>{
     if(!list||!progress)return;
 
     migrateTripWishlistsToGlobal();
+    globalWishlist=globalWishlist.map(normalizeWishItem);
 
-    const items=globalWishlist;
-    const done=items.filter(x=>x.done).length;
-    progress.textContent=`${done} / ${items.length}`;
+    const total=globalWishlist.length;
+    const done=globalWishlist.filter(x=>x.done).length;
+    progress.textContent=`${done} / ${total}`;
 
+    const items=getFilteredWishlist();
     if(!items.length){
-      list.innerHTML='<div class="check-empty">還沒有旅行願望。看到想去的地方或想吃的店，就先收藏進來 ♡</div>';
+      list.innerHTML='<div class="check-empty wish-wall-empty">目前這個分類還沒有願望 ♡</div>';
       return;
     }
 
-    const order={place:1,food:2,shop:3,experience:4,other:5};
-    const sorted=[...items].sort((a,b)=>(order[a.type]||9)-(order[b.type]||9));
-
-    list.innerHTML=sorted.map(item=>{
+    list.innerHTML=items.map(item=>{
       const [icon,label]=wishTypeMeta(item.type);
-      return `<article class="wish-card ${item.done?'done':''}" data-wish-id="${esc(item.id)}">
-        <div class="wish-main">
-          <label class="wish-check">
-            <input type="checkbox" data-wish-toggle="${esc(item.id)}" ${item.done?'checked':''}>
-            <span class="wish-icon">${icon}</span>
-            <span>
-              <strong>${esc(item.location||item.text)}</strong>
-              <small>${label}${item.from_trip?`・原本在「${esc(item.from_trip)}」`:''}</small>
-            </span>
-          </label>
-          ${item.note?`<p class="wish-note">${esc(item.note).replace(/\n/g,'<br>')}</p>`:''}
-          <div class="wish-actions">
-            <button type="button" class="google-map-btn" data-wish-map="${esc(item.id)}">🗺️ Google 地圖</button>
-            <button type="button" class="check-delete" data-wish-delete="${esc(item.id)}">刪除</button>
-          </div>
+      const mapQuery=item.location||item.name;
+      return `<article class="wish-card-wall ${item.done?'done':''}" data-wish-id="${esc(item.id)}">
+        <div class="wish-card-top">
+          <div class="wish-badge">${icon} ${label}</div>
+          <button type="button" class="wish-heart ${item.done?'done':''}" data-wish-toggle="${esc(item.id)}" aria-label="${item.done?'改回想去':'標記去過'}">${item.done?'✅':'♡'}</button>
+        </div>
+
+        <div class="wish-card-body">
+          <h3>${esc(item.name)}</h3>
+          ${item.city?`<p class="wish-city">🌏 ${esc(item.city)}</p>`:''}
+          ${item.location?`<p class="wish-location-card">📍 ${esc(item.location)}</p>`:''}
+          ${item.note?`<p class="wish-note-card">${esc(item.note).replace(/\n/g,'<br>')}</p>`:''}
+        </div>
+
+        <div class="wish-card-actions">
+          <button type="button" class="google-map-btn" data-wish-map="${esc(item.id)}">🗺️ 地圖</button>
+          <button type="button" class="wish-trip-btn" data-wish-add-trip="${esc(item.id)}">✈️ 加入旅程</button>
+          <button type="button" class="check-delete" data-wish-delete="${esc(item.id)}">🗑️ 刪除</button>
         </div>
       </article>`;
     }).join('');
+
+    list.querySelectorAll('[data-wish-toggle]').forEach(btn=>{
+      btn.onclick=async ev=>{
+        ev.preventDefault();ev.stopPropagation();
+        const item=globalWishlist.find(x=>String(x.id)===String(btn.dataset.wishToggle));
+        if(!item)return;
+        item.done=!item.done;
+        saveGlobalWishlist();
+        renderWishlist();
+        try{if(window.forceTravelCloudSync)await window.forceTravelCloudSync();}catch(e){}
+      };
+    });
+
+    list.querySelectorAll('[data-wish-map]').forEach(btn=>{
+      btn.onclick=ev=>{
+        ev.preventDefault();ev.stopPropagation();
+        const item=globalWishlist.find(x=>String(x.id)===String(btn.dataset.wishMap));
+        if(item)openWishGoogle(item.location||item.name);
+      };
+    });
+
+    list.querySelectorAll('[data-wish-add-trip]').forEach(btn=>{
+      btn.onclick=ev=>{
+        ev.preventDefault();ev.stopPropagation();
+        addWishToTrip(btn.dataset.wishAddTrip);
+      };
+    });
+
+    list.querySelectorAll('[data-wish-delete]').forEach(btn=>{
+      btn.onclick=async ev=>{
+        ev.preventDefault();ev.stopPropagation();
+        await deleteWish(btn.dataset.wishDelete);
+      };
+    });
+  }
+
+  function toggleWishEditor(show){
+    const panel=document.getElementById('wishlistAddPanel');
+    if(!panel)return;
+    panel.classList.toggle('wish-editor-collapsed',!show);
+    if(show)setTimeout(()=>document.getElementById('wishName')?.focus(),50);
   }
 
   function addWish(){
     const type=document.getElementById('wishType')?.value||'other';
+    const name=String(document.getElementById('wishName')?.value||'').trim();
+    const city=String(document.getElementById('wishCity')?.value||'').trim();
     const location=String(document.getElementById('wishLocation')?.value||'').trim();
     const note=String(document.getElementById('wishNote')?.value||'').trim();
-    if(!location){
-      alert('請先輸入店家、地點或地址');
-      document.getElementById('wishLocation')?.focus();
+
+    if(!name){
+      alert('請先輸入店家或景點名稱');
+      document.getElementById('wishName')?.focus();
       return;
     }
 
     globalWishlist.push({
       id:'wish-'+Date.now()+'-'+Math.random().toString(36).slice(2,7),
-      type,text:location,location,note,done:false
+      type,name,text:name,city,location,note,done:false
     });
 
-    document.getElementById('wishLocation').value='';
-    document.getElementById('wishNote').value='';
-    saveGlobalWishlist();
-    renderWishlist();
-    document.getElementById('wishLocation')?.focus();
-  }
+    ['wishName','wishCity','wishLocation','wishNote'].forEach(id=>{
+      const el=document.getElementById(id); if(el)el.value='';
+    });
 
-  function toggleWish(id,done){
-    const item=globalWishlist.find(x=>x.id===id);
-    if(!item)return;
-    item.done=!!done;
     saveGlobalWishlist();
     renderWishlist();
+    toggleWishEditor(false);
   }
 
   async function deleteWish(id){
     const item=globalWishlist.find(x=>String(x.id)===String(id));
     if(!item)return;
-    const title=item.location||item.text||'這筆願望';
+    const title=item.name||item.location||'這筆願望';
     if(!confirm(`確定刪除「${title}」嗎？`))return;
-    cloudPullPausedUntil=Date.now()+6000;
+
+    cloudPullPausedUntil=Date.now()+8000;
+    rememberDeletedWish(id);
     globalWishlist=globalWishlist.filter(x=>String(x.id)!==String(id));
-    saveGlobalWishlist();
+    try{localStorage.setItem(GLOBAL_WISHLIST_KEY,JSON.stringify(globalWishlist));}catch(e){}
     renderWishlist();
-    try{ if(window.forceTravelCloudSync) await window.forceTravelCloudSync(); }catch(e){}
+    await forceCloudWriteLatest();
+  }
+
+  function addWishToTrip(id){
+    const item=globalWishlist.find(x=>String(x.id)===String(id));
+    if(!item)return;
+
+    const trips=(state.trips||[]);
+    if(!trips.length){
+      alert('目前還沒有旅程，請先新增旅程。');
+      return;
+    }
+
+    const options=trips.map((t,i)=>`${i+1}. ${t.name}`).join('\n');
+    const ans=prompt(`要加入哪一個旅程？\n\n${options}\n\n請輸入編號：`);
+    if(ans===null)return;
+    const idx=Number(ans)-1;
+    const trip=trips[idx];
+    if(!trip){
+      alert('旅程編號不正確');
+      return;
+    }
+
+    if(!Array.isArray(trip.itinerary))trip.itinerary=[];
+    trip.itinerary.push({
+      id:'wish-it-'+Date.now()+'-'+Math.random().toString(36).slice(2,6),
+      date:trip.start_date||'',
+      time:'12:00',
+      type:item.type==='food'?'food':item.type==='shop'?'shop':'spot',
+      place:item.name,
+      transport:'',
+      station:'',
+      note:[item.city,item.location,item.note].filter(Boolean).join('\n'),
+      parent_id:null,
+      rating:0,
+      review:''
+    });
+
+    persist();
+    alert(`已加入「${trip.name}」的行程。`);
   }
 
   function renderStayTop(){
@@ -1686,27 +1935,23 @@ document.addEventListener('DOMContentLoaded',()=>{
   });
 
 
+  $('#wishAddToggleBtn')?.addEventListener('click',()=>toggleWishEditor(true));
+  $('#cancelWishAddBtn')?.addEventListener('click',()=>toggleWishEditor(false));
   $('#addWishBtn')?.addEventListener('click',addWish);
   $('#wishGooglePreviewBtn')?.addEventListener('click',()=>{
-    const q=String(document.getElementById('wishLocation')?.value||'').trim();
+    const q=String(document.getElementById('wishLocation')?.value||document.getElementById('wishName')?.value||'').trim();
     openWishGoogle(q);
   });
-  document.addEventListener('change',e=>{
-    const box=e.target.closest?.('[data-wish-toggle]');
-    if(box)toggleWish(box.dataset.wishToggle,box.checked);
+  $('#wishSearchInput')?.addEventListener('input',e=>{
+    wishSearch=e.target.value||'';
+    renderWishlist();
   });
-  document.addEventListener('click',e=>{
-    const mapBtn=e.target.closest?.('[data-wish-map]');
-    if(mapBtn){
-      e.preventDefault();
-      const item=globalWishlist.find(x=>x.id===mapBtn.dataset.wishMap);
-      if(item)openWishGoogle(item.location||item.text);
-      return;
-    }
-    const btn=e.target.closest?.('[data-wish-delete]');
-    if(!btn)return;
-    e.preventDefault();
-    deleteWish(btn.dataset.wishDelete);
+  $$('.wish-filter').forEach(btn=>{
+    btn.addEventListener('click',()=>{
+      wishFilter=btn.dataset.wishFilter||'all';
+      $$('.wish-filter').forEach(b=>b.classList.toggle('active',b===btn));
+      renderWishlist();
+    });
   });
 
   $('#authBtn').onclick=async()=>{
@@ -1748,7 +1993,7 @@ body{background:#fffaf7}
   <header class="topbar">
     <button class="brand" data-action="home" aria-label="回首頁">
       <span class="brand-icon">🗺️</span>
-      <span><strong>我的旅遊計畫</strong><small>TRAVEL PLANNER · v5.0 刪除＋快速分帳修正版</small></span>
+      <span><strong>我的旅遊計畫</strong><small>TRAVEL PLANNER · v5.2 願望卡片牆版</small></span>
       <span class="heart">♥</span>
     </button>
     <nav class="nav" aria-label="主選單">
@@ -1787,46 +2032,79 @@ body{background:#fffaf7}
 
 
 
+
     <section id="wishlistView" class="view">
       <section class="global-wishlist-wrap">
-        <div class="global-wishlist-head">
+        <div class="global-wishlist-head wishlist-hero">
           <div>
             <p class="eyebrow">TRAVEL WISHLIST</p>
-            <h1>💗 旅行願望清單</h1>
-            <p>不用先建立旅程，把未來想去的景點、餐廳、小店、購物和體驗先收藏在這裡。</p>
+            <h1>💗 我的旅行願望</h1>
+            <p>看到想去的地方就先收藏，之後再把它加入真正的旅程。</p>
           </div>
+          <button type="button" class="primary wish-add-toggle" id="wishAddToggleBtn">＋ 收藏新願望</button>
         </div>
 
-        <div class="wishlist-add-card global-wish-add-card">
+        <div class="wish-filter-row">
+          <button type="button" class="wish-filter active" data-wish-filter="all">全部</button>
+          <button type="button" class="wish-filter" data-wish-filter="place">📍 景點</button>
+          <button type="button" class="wish-filter" data-wish-filter="food">🍴 美食</button>
+          <button type="button" class="wish-filter" data-wish-filter="cafe">☕ 咖啡</button>
+          <button type="button" class="wish-filter" data-wish-filter="shop">🛍️ 購物</button>
+          <button type="button" class="wish-filter" data-wish-filter="stay">🏨 住宿</button>
+          <button type="button" class="wish-filter" data-wish-filter="experience">✨ 體驗</button>
+          <button type="button" class="wish-filter" data-wish-filter="done">✅ 去過了</button>
+        </div>
+
+        <div class="wish-search-row">
+          <input id="wishSearchInput" type="search" placeholder="搜尋店名、景點、城市或備註…" />
+        </div>
+
+        <div id="wishlistAddPanel" class="wishlist-add-card global-wish-add-card wish-editor-collapsed">
           <div class="wishlist-simple-grid">
             <label>類型
               <select id="wishType">
-                <option value="place">📍 想去的地方</option>
-                <option value="food">🍜 想吃的美食</option>
-                <option value="shop">🛍️ 想逛／想買</option>
-                <option value="experience">✨ 想做的體驗</option>
-                <option value="other">💭 其他願望</option>
+                <option value="place">📍 景點</option>
+                <option value="food">🍴 美食</option>
+                <option value="cafe">☕ 咖啡廳</option>
+                <option value="shop">🛍️ 購物</option>
+                <option value="stay">🏨 住宿</option>
+                <option value="experience">✨ 體驗</option>
+                <option value="other">💭 其他</option>
               </select>
             </label>
-            <label class="wish-address-label">📍 店家／地點／地址
-              <input id="wishLocation" type="text" placeholder="例如：明洞醬蟹、弘大咖啡廳、首爾市中區..." />
+            <label>店家／景點名稱
+              <input id="wishName" type="text" placeholder="例如：明洞醬蟹、弘大咖啡廳、富士山" />
             </label>
-            <button type="button" class="ghost google-preview-btn" id="wishGooglePreviewBtn">🗺️ Google 地圖查看</button>
+            <label>國家／城市
+              <input id="wishCity" type="text" placeholder="例如：韓國・首爾、日本・山梨" />
+            </label>
+          </div>
+
+          <div class="wishlist-simple-grid wish-address-grid">
+            <label class="wish-address-label">📍 地址／地點
+              <input id="wishLocation" type="text" placeholder="可填地址、店名或景點名稱" />
+            </label>
+            <button type="button" class="ghost google-preview-btn" id="wishGooglePreviewBtn">🗺️ Google 地圖搜尋</button>
           </div>
 
           <label>備註
-            <textarea id="wishNote" rows="3" placeholder="可以記推薦原因、想吃什麼、想買什麼、朋友推薦內容..."></textarea>
+            <textarea id="wishNote" rows="3" placeholder="例如：朋友推薦、想吃什麼、必買品、拍照位置…"></textarea>
           </label>
 
-          <button type="button" class="primary" id="addWishBtn">＋ 加入願望</button>
+          <div class="wish-editor-actions">
+            <button type="button" class="primary" id="addWishBtn">＋ 加入願望</button>
+            <button type="button" class="ghost" id="cancelWishAddBtn">取消</button>
+          </div>
+
+          <p class="google-picker-note">📍 目前可直接開 Google 地圖搜尋。之後設定 Google Maps API 金鑰，就能做到選店後自動帶回店名和地址。</p>
         </div>
 
-        <div class="wishlist-summary">
+        <div class="wishlist-summary wish-wall-summary">
           <span id="wishProgress" class="check-progress">0 / 0</span>
-          <span class="helper">完成後可以打勾；每一筆都可以直接開 Google 地圖看位置。</span>
+          <span class="helper">收藏的願望會顯示成卡片；去過後可以標記完成，也能直接加入旅程。</span>
         </div>
 
-        <div id="wishlistList" class="wishlist-list"></div>
+        <div id="wishlistList" class="wishlist-wall"></div>
       </section>
     </section>
 
@@ -2284,47 +2562,39 @@ function removeQuickPerson(name){
   name=String(name||'').trim();
   if(!name)return;
 
-  // Remove from the manually-added list and mark as hidden. Hidden names are
-  // excluded even if they still exist in trip companions or old split records.
-  quickPeople=quickPeople.filter(x=>x!==name);
-  if(!quickHiddenPeople.includes(name)) quickHiddenPeople.push(name);
+  cloudPullPausedUntil=Date.now()+8000;
+  quickPeople=quickPeople.filter(x=>String(x||'').trim()!==name);
+  if(!quickHiddenPeople.includes(name))quickHiddenPeople.push(name);
+
+  try{
+    localStorage.setItem('travel_quick_people_v1',JSON.stringify(quickPeople));
+    localStorage.setItem('travel_quick_hidden_people_v1',JSON.stringify(quickHiddenPeople));
+  }catch(e){}
 
   const payer=document.getElementById('qPayer');
-  if(payer && payer.value===name) payer.value='';
+  if(payer && payer.value===name)payer.value='';
 
   document.querySelectorAll('#qPeopleChecks input').forEach(x=>{
     if(x.value===name)x.checked=false;
   });
 
-  // Immediate visual removal on Safari/iPhone before the full list rebuild.
   document.querySelectorAll('[data-qperson-remove]').forEach(btn=>{
-    if(btn.dataset.qpersonRemove===name){
-      const chip=btn.closest('.roster-chip');
-      const check=btn.closest('.quick-person-check');
-      if(chip)chip.remove();
-      if(check)check.remove();
-    }
+    if((btn.dataset.qpersonRemove||'').trim()===name)btn.closest('.roster-chip')?.remove();
+  });
+  document.querySelectorAll('#qPeopleChecks .quick-person-check').forEach(label=>{
+    const input=label.querySelector('input');
+    if((input?.value||'').trim()===name)label.remove();
   });
 
-  saveQuickPeople();
   fillQuickPeople();
-  if(window.forceTravelCloudSync){
-    setTimeout(()=>window.forceTravelCloudSync(),50);
-  }
 }
 
 async function removeQuickPersonByName(name){
   name=String(name||'').trim();
   if(!name)return;
-  if(!confirm(`確定刪除「${name}」嗎？\n\n刪除後會從「分帳成員」、「誰付錢」和「一起分的人」全部消失；之後需要時再重新加入即可。`))return;
-
-  cloudPullPausedUntil=Date.now()+4000;
+  if(!confirm(`確定刪除「${name}」嗎？\n\n刪除後會從「分帳成員」、「誰付錢」和「一起分的人」全部消失。`))return;
   removeQuickPerson(name);
-
-  // 強制同步一次，確保其他裝置及下一次自動讀取都不會把名字還原。
-  try{
-    if(window.forceTravelCloudSync) await window.forceTravelCloudSync();
-  }catch(e){console.warn('quick person delete cloud sync failed',e);}
+  await forceCloudWriteLatest();
 }
 
 window.removeQuickPersonByName=removeQuickPersonByName;
@@ -2360,6 +2630,12 @@ function fillQuickPeople(){
     roster.innerHTML=people.length
       ? people.map(p=>`<span class="roster-chip">👤 <span>${qEsc(p)}</span><button type="button" class="roster-remove-btn" data-qperson-remove="${qEsc(p)}">刪除</button></span>`).join('')
       : '<span class="quick-empty-inline">尚未加入人物</span>';
+    roster.querySelectorAll('[data-qperson-remove]').forEach(btn=>{
+      btn.onclick=async ev=>{
+        ev.preventDefault();ev.stopPropagation();
+        await removeQuickPersonByName(btn.dataset.qpersonRemove||'');
+      };
+    });
   }
 }
 
@@ -2907,55 +3183,20 @@ document.addEventListener('click',async function(e){
 </script>
 
 
-<script id="v50-delete-and-nav-fix">
+
+
+<script id="v51-quick-nav-fix">
 (function(){
-  // 快速分帳：直接切頁，避免 inline style 或舊 handler 影響。
-  document.addEventListener('click',function(e){
-    const quick=e.target.closest('[data-action="quick-split"]');
-    if(!quick)return;
-    e.preventDefault();
-    e.stopImmediatePropagation();
-    document.querySelectorAll('.view').forEach(v=>v.classList.remove('active'));
-    const view=document.getElementById('quickSplitView');
-    if(view){
-      view.style.display='';
-      view.classList.add('active');
-    }
-    document.querySelectorAll('.nav-btn').forEach(b=>b.classList.toggle('active',b.dataset.action==='quick-split'));
-    if(typeof renderQuickSplit==='function')renderQuickSplit();
-    if(typeof fillQuickPeople==='function')fillQuickPeople();
-  },true);
-
-  // 所有「刪除」都用 capture phase 處理，Safari / iPad 不會再被其他 click handler 擋掉。
-  document.addEventListener('click',async function(e){
-    const pack=e.target.closest('[data-check-delete]');
-    if(pack){
-      e.preventDefault(); e.stopImmediatePropagation();
-      const kind=pack.dataset.checkKind;
-      const id=pack.dataset.checkDelete;
-      if(typeof deleteChecklistItem==='function') await deleteChecklistItem(kind,id);
-      return;
-    }
-
-    const person=e.target.closest('[data-qperson-remove]');
-    if(person){
-      e.preventDefault(); e.stopImmediatePropagation();
-      const name=person.dataset.qpersonRemove||'';
-      if(!name)return;
-      if(!confirm(`確定刪除「${name}」嗎？\n\n刪除後會從分帳成員、誰付錢、一起分的人全部消失。`))return;
-      if(typeof cloudPullPausedUntil!=='undefined')cloudPullPausedUntil=Date.now()+6000;
-      if(typeof removeQuickPerson==='function')removeQuickPerson(name);
-      try{if(window.forceTravelCloudSync)await window.forceTravelCloudSync();}catch(err){}
-      return;
-    }
-
-    const wish=e.target.closest('[data-wish-delete]');
-    if(wish){
-      e.preventDefault(); e.stopImmediatePropagation();
-      if(typeof deleteWish==='function')await deleteWish(wish.dataset.wishDelete);
-      return;
-    }
-  },true);
+  document.addEventListener('DOMContentLoaded',()=>{
+    document.querySelectorAll('[data-action="quick-split"]').forEach(btn=>{
+      btn.addEventListener('click',ev=>{
+        ev.preventDefault();
+        if(typeof setView==='function')setView('quickSplit');
+        if(typeof renderQuickSplit==='function')renderQuickSplit();
+        if(typeof fillQuickPeople==='function')fillQuickPeople();
+      });
+    });
+  });
 })();
 </script>
 
