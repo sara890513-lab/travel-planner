@@ -2310,6 +2310,148 @@ body{background:#fffaf7}
   .nav-btn span{font-size:16px!important}
 }
 
+
+/* v5.8 手機旅遊行程排版修正 */
+@media(max-width:620px){
+  #itineraryPanel .panel-head{
+    gap:14px!important;
+    margin-bottom:8px!important;
+  }
+
+  #itineraryPanel .panel-actions{
+    display:grid!important;
+    grid-template-columns:1fr 1fr!important;
+    gap:8px!important;
+    width:100%!important;
+  }
+  #itineraryPanel .panel-actions .export-btn{
+    width:100%!important;
+    min-height:46px!important;
+    padding:10px 8px!important;
+    font-size:14px!important;
+  }
+  #itineraryPanel .panel-actions .primary{
+    grid-column:1 / -1!important;
+    width:100%!important;
+    min-height:52px!important;
+    position:static!important;
+    border-radius:16px!important;
+    font-size:16px!important;
+    padding:12px 16px!important;
+  }
+  #itineraryPanel .panel-actions .primary:after{content:none!important}
+
+  .timeline{
+    margin-top:20px!important;
+    padding-left:0!important;
+  }
+  .timeline:before{
+    left:15px!important;
+    top:37px!important;
+    bottom:20px!important;
+    width:3px!important;
+  }
+
+  .timeline-item{
+    display:block!important;
+    margin:0 0 22px!important;
+    padding-left:38px!important;
+  }
+
+  .timeline-time{
+    text-align:left!important;
+    padding:0 0 8px 0!important;
+    font-size:13px!important;
+    line-height:1.35!important;
+    color:#66748b!important;
+    white-space:nowrap!important;
+    font-weight:800!important;
+  }
+
+  .timeline-card{
+    padding:16px 14px 15px!important;
+    border-radius:18px!important;
+    min-width:0!important;
+  }
+
+  .timeline-card:before{
+    left:-31px!important;
+    top:18px!important;
+    width:13px!important;
+    height:13px!important;
+  }
+
+  .timeline-card h3{
+    margin:0 78px 8px 0!important;
+    font-size:20px!important;
+    line-height:1.35!important;
+  }
+
+  .timeline-card p{
+    font-size:14px!important;
+    line-height:1.55!important;
+    word-break:break-word!important;
+  }
+
+  .mini-actions{
+    right:9px!important;
+    top:9px!important;
+    gap:5px!important;
+  }
+  .mini-actions button{
+    width:37px!important;
+    height:37px!important;
+    padding:0!important;
+    display:grid!important;
+    place-items:center!important;
+    font-size:17px!important;
+    border-radius:11px!important;
+  }
+
+  .sub-place-actions{
+    display:grid!important;
+    grid-template-columns:1fr 1fr!important;
+    gap:8px!important;
+    margin-top:12px!important;
+  }
+  .sub-place-actions button{
+    width:100%!important;
+    min-width:0!important;
+    margin:0!important;
+    padding:10px 8px!important;
+    font-size:14px!important;
+    line-height:1.35!important;
+    border-radius:14px!important;
+  }
+
+  .timeline-transit{
+    margin:0 0 18px 38px!important;
+    min-height:48px!important;
+    padding:11px 13px!important;
+    border-radius:15px!important;
+    font-size:14px!important;
+    line-height:1.4!important;
+    position:relative!important;
+  }
+
+  .timeline-transit:before{
+    content:""!important;
+    position:absolute!important;
+    left:-24px!important;
+    top:50%!important;
+    width:18px!important;
+    border-top:2px dashed #cfdceb!important;
+  }
+}
+
+@media(max-width:390px){
+  .timeline-item{padding-left:34px!important}
+  .timeline:before{left:13px!important}
+  .timeline-card:before{left:-27px!important}
+  .timeline-card h3{font-size:18px!important;margin-right:76px!important}
+  .timeline-transit{margin-left:34px!important}
+}
+
 </style>
 </head>
 <body>
@@ -2317,7 +2459,7 @@ body{background:#fffaf7}
   <header class="topbar">
     <button class="brand" data-action="home" aria-label="回首頁">
       <span class="brand-icon">🗺️</span>
-      <span><strong>我的旅遊計畫</strong><small>TRAVEL PLANNER · v5.7 手機快捷鍵修正版</small></span>
+      <span><strong>我的旅遊計畫</strong><small>TRAVEL PLANNER · v5.8 手機行程排版修正版</small></span>
       <span class="heart">♥</span>
     </button>
     <nav class="nav" aria-label="主選單">
