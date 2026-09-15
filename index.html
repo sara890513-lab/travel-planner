@@ -1656,6 +1656,7 @@ function renderItinerary(){
         <div class="timeline-card">
           <div class="mini-actions"><button type="button" title="編輯" data-it-edit="${esc(x.id)}">✏️</button><button type="button" title="刪除" data-it-delete="${esc(x.id)}">🗑️</button></div>
           <h3>${icon} ${esc(x.place)}</h3>
+          <p class="timeline-map-row"><button type="button" class="place-map-btn" data-map-place="${esc(x.place)}">🗺️ 地圖</button></p>
           ${x.station?`<p class="it-station-line">🚉 站名：${esc(x.station)}</p>`:''}
           ${x.type==='food'&&x.rating?`<p class="food-stars">${'★'.repeat(Number(x.rating))}${'☆'.repeat(5-Number(x.rating))}</p>`:''}
           ${x.type==='food'&&x.review?`<p class="food-review multiline-note">💬 ${esc(x.review)}</p>`:''}
@@ -1688,6 +1689,7 @@ function renderItinerary(){
               ${k.station?`<span>🚉 ${esc(k.station)}</span>`:''}
               ${stars}${review}
               ${k.note?`<div class="sub-note multiline-note">📝 ${esc(k.note)}</div>`:''}
+              <div class="subplace-map-row"><button type="button" class="place-map-btn" data-map-place="${esc(k.place)}">🗺️ 地圖</button></div>
             </div>
             <div class="subplace-actions"><button type="button" data-sub-edit="${esc(k.id)}">✏️</button><button type="button" data-sub-del="${esc(k.id)}">🗑️</button></div>
           </div>`;
@@ -1714,6 +1716,15 @@ function renderItinerary(){
           };
         });
       }else sub.remove();
+
+      item.querySelectorAll('[data-map-place]').forEach(btn=>{
+        btn.onclick=(ev)=>{
+          ev.preventDefault();ev.stopPropagation();
+          const place=String(btn.dataset.mapPlace||'').trim();
+          if(!place)return;
+          window.open('https://www.google.com/maps/search/?api=1&query='+encodeURIComponent(place),'_blank','noopener');
+        };
+      });
 
       list.appendChild(item);
 
@@ -2452,6 +2463,32 @@ body{background:#fffaf7}
   .timeline-transit{margin-left:34px!important}
 }
 
+
+/* v5.9 行程地圖快捷鍵 */
+.place-map-btn{
+  border:1px solid #cfe2ef!important;
+  background:#eef8ff!important;
+  color:#315f7e!important;
+  border-radius:11px!important;
+  padding:7px 10px!important;
+  font:inherit!important;
+  font-weight:800!important;
+  cursor:pointer!important;
+  white-space:nowrap!important;
+}
+.place-map-btn:hover{background:#e3f3ff!important}
+.timeline-map-row{margin:9px 0 2px!important}
+.subplace-map-row{margin-top:8px!important}
+@media(max-width:620px){
+  .place-map-btn{
+    min-height:38px!important;
+    padding:8px 10px!important;
+    font-size:14px!important;
+  }
+  .timeline-map-row{margin-top:10px!important}
+  .subplace-map-row{margin-top:8px!important}
+}
+
 </style>
 </head>
 <body>
@@ -2459,7 +2496,7 @@ body{background:#fffaf7}
   <header class="topbar">
     <button class="brand" data-action="home" aria-label="回首頁">
       <span class="brand-icon">🗺️</span>
-      <span><strong>我的旅遊計畫</strong><small>TRAVEL PLANNER · v5.8 手機行程排版修正版</small></span>
+      <span><strong>我的旅遊計畫</strong><small>TRAVEL PLANNER · v5.9 行程地圖版</small></span>
       <span class="heart">♥</span>
     </button>
     <nav class="nav" aria-label="主選單">
