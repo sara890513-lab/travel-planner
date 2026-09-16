@@ -2182,13 +2182,49 @@ function renderItinerary(){
   $('#signUpBtn').onclick=()=>toast('目前已改成自動雲端同步，不需要註冊');
   $('#signInBtn').onclick=()=>toast('目前已改成自動雲端同步，不需要登入');
 
-  try{ localLoad(); }catch(e){ console.warn('local startup render failed',e); }
-  initCloud().then(()=>{
+  // v6.0：首頁啟動時先顯示本機快取，再等待雲端資料完成後立即重畫首頁。
+  // 避免第一次開啟時旅程區是空白，必須切換頁面才出現。
+  try{
+    localLoad();
     if(typeof renderTrips==='function')renderTrips();
-  });
+  }catch(e){
+    console.warn('local startup render failed',e);
+  }
+
+  (async()=>{
+    try{
+      await initCloud();
+    }catch(e){
+      console.error('startup cloud load failed',e);
+    }
+    // initCloud / applyCloudData 完成後，強制把首頁所有依賴資料重新渲染。
+    try{
+      if(typeof renderTrips==='function')renderTrips();
+      if(typeof renderWishlist==='function')renderWishlist();
+      if(typeof renderQuickSplit==='function')renderQuickSplit();
+      if(typeof fillQuickPeople==='function')fillQuickPeople();
+      if(typeof updateAuthUI==='function')updateAuthUI();
+      // 保持使用者第一次進站就在首頁，不必先切換快速分帳。
+      if(typeof setView==='function')setView('home');
+    }catch(e){
+      console.error('startup render after cloud failed',e);
+    }
+  })();
 })();
 });
 
+</script>
+
+<script id="v60-home-cloud-first-fix">
+/* Safari / iPhone 雲端首頁保險：雲端初始化後再補畫一次首頁旅程。 */
+window.addEventListener('load',()=>{
+  setTimeout(async()=>{
+    try{
+      if(window.forceTravelCloudPull) await window.forceTravelCloudPull();
+      if(typeof renderTrips==='function') renderTrips();
+    }catch(e){ console.warn('v6.0 delayed home refresh',e); }
+  },700);
+});
 </script>
 
 <style>
@@ -2496,7 +2532,7 @@ body{background:#fffaf7}
   <header class="topbar">
     <button class="brand" data-action="home" aria-label="回首頁">
       <span class="brand-icon">🗺️</span>
-      <span><strong>我的旅遊計畫</strong><small>TRAVEL PLANNER · v5.9 行程地圖版</small></span>
+      <span><strong>我的旅遊計畫</strong><small>TRAVEL PLANNER · v6.0 首頁自動載入版</small></span>
       <span class="heart">♥</span>
     </button>
     <nav class="nav" aria-label="主選單">
