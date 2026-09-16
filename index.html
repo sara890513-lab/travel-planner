@@ -2092,34 +2092,47 @@ function renderItinerary(){
         updated_at: new Date().toISOString()
       };
 
-      if(state.cloud){
-        await cloudUpsert('trips',row);
-        await loadCloud();
-      }else{
-        const i = state.trips.findIndex(t=>t.id===id);
-        if(i>=0) state.trips[i]=row;
-        else state.trips.unshift(row);
+      // v6.1 Optimistic UI：
+      // 不管雲端是否已連線，都先把這筆旅程立即放進畫面與本機快取。
+      // 這可避免按一次後畫面沒反應，使用者又按第二次造成重複旅程。
+      const i = state.trips.findIndex(t=>t.id===id);
+      if(i>=0) state.trips[i]=row;
+      else state.trips.unshift(row);
 
-        try{
-          localStorage.setItem(LS, JSON.stringify({
-            trips:state.trips,
-            itineraries:state.itineraries,
-            expenses:state.expenses,
-            photos:state.photos,
-            currentTripId:state.currentTripId
-          }));
-          storageAvailable = true;
-        }catch(err){
-          storageAvailable = false;
-          console.warn('localStorage failed, keeping trip in memory',err);
-        }
-
-        renderTrips();
+      try{
+        localStorage.setItem(LS, JSON.stringify({
+          trips:state.trips,
+          itineraries:state.itineraries,
+          expenses:state.expenses,
+          photos:state.photos,
+          currentTripId:state.currentTripId
+        }));
+        storageAvailable = true;
+      }catch(err){
+        console.warn('localStorage failed, keeping trip in memory',err);
       }
 
       closeModal('#tripDialog');
       setView('home');
-      toast('旅程已新增 ♡');
+      renderTrips();
+      toast(existingId ? '旅程已更新 ♡' : '旅程已新增 ♡');
+
+      // 雲端改成背景同步；不要先等待雲端再顯示卡片。
+      if(state.cloud){
+        cloudPullPausedUntil = Date.now() + 5000;
+        try{
+          await cloudUpsert('trips',row);
+          // 成功後只更新本機快取，不立刻 loadCloud 覆蓋剛新增的畫面。
+          localSave();
+        }catch(cloudErr){
+          console.error('trip cloud sync failed',cloudErr);
+          toast('旅程已先儲存在這台裝置，雲端稍後再同步');
+          try{ if(typeof scheduleCloudSave==='function') scheduleCloudSave(); }catch(e){}
+        }
+      }else{
+        // 雲端尚未初始化完成時，也排入背景同步。
+        try{ if(typeof scheduleCloudSave==='function') scheduleCloudSave(); }catch(e){}
+      }
     }catch(err){
       console.error('saveTripDirect failed', err);
       alert('新增旅程失敗：' + (err?.message || String(err)));
@@ -2134,7 +2147,21 @@ function renderItinerary(){
   $('#tripPasswordCancelX').onclick=()=>finishPasswordUnlock(false);
 
   const saveTripBtn = $('#saveTripBtn');
-  if(saveTripBtn) saveTripBtn.addEventListener('click', saveTripDirect);
+  if(saveTripBtn){
+    saveTripBtn.addEventListener('click', async()=>{
+      if(saveTripBtn.dataset.saving==='1')return;
+      saveTripBtn.dataset.saving='1';
+      saveTripBtn.disabled=true;
+      const oldText=saveTripBtn.textContent;
+      saveTripBtn.textContent='儲存中…';
+      try{ await saveTripDirect(); }
+      finally{
+        saveTripBtn.dataset.saving='0';
+        saveTripBtn.disabled=false;
+        saveTripBtn.textContent=oldText;
+      }
+    });
+  }
 
   $$('.tab').forEach(b=>b.onclick=()=>setTab(b.dataset.tab));
   $('#editTripBtn').onclick=()=>openTripDialog(currentTrip());$('#addItineraryBtn').onclick=()=>openItineraryDialog();$('#exportImageBtn').onclick=()=>exportItinerary('image');$('#exportPdfBtn').onclick=()=>exportItinerary('pdf');$('#addExpenseBtn').onclick=()=>{if(!peopleOf(currentTrip()).length){toast('請先在旅程中加入同行朋友');return}openExpenseDialog();};
@@ -2218,12 +2245,11 @@ function renderItinerary(){
 <script id="v60-home-cloud-first-fix">
 /* Safari / iPhone 雲端首頁保險：雲端初始化後再補畫一次首頁旅程。 */
 window.addEventListener('load',()=>{
-  setTimeout(async()=>{
-    try{
-      if(window.forceTravelCloudPull) await window.forceTravelCloudPull();
-      if(typeof renderTrips==='function') renderTrips();
-    }catch(e){ console.warn('v6.0 delayed home refresh',e); }
-  },700);
+  // v6.1：首頁採快取優先。localLoad 已經先畫出旅程，
+  // 這裡只補畫，不強制 pull，避免慢速雲端快照把首頁短暫清空。
+  requestAnimationFrame(()=>{
+    try{ if(typeof renderTrips==='function') renderTrips(); }catch(e){}
+  });
 });
 </script>
 
@@ -2532,7 +2558,7 @@ body{background:#fffaf7}
   <header class="topbar">
     <button class="brand" data-action="home" aria-label="回首頁">
       <span class="brand-icon">🗺️</span>
-      <span><strong>我的旅遊計畫</strong><small>TRAVEL PLANNER · v6.0 首頁自動載入版</small></span>
+      <span><strong>我的旅遊計畫</strong><small>TRAVEL PLANNER · v6.1 即時顯示版</small></span>
       <span class="heart">♥</span>
     </button>
     <nav class="nav" aria-label="主選單">
