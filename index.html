@@ -2744,13 +2744,55 @@ window.loadExportLibs=()=>Promise.all([
 .v611-instant-cover{position:relative;overflow:hidden!important}
 .v611-instant-cover img,
 .trip-card-cover{width:100%!important;height:100%!important;object-fit:cover!important;object-position:center!important;display:block!important}
-</style></head>
+</style>
+<style id="v620-mobile-cover-fill">
+@media(max-width:640px){
+  /* 首頁卡片左側照片欄固定從卡片頂到底 */
+  .trip-card{
+    position:relative!important;
+    display:grid!important;
+    grid-template-columns:34% minmax(0,1fr)!important;
+    align-items:stretch!important;
+    overflow:hidden!important;
+  }
+  .trip-card .trip-card-cover,
+  .trip-card .v611-instant-cover{
+    grid-column:1!important;
+    grid-row:1!important;
+    width:100%!important;
+    height:100%!important;
+    min-height:100%!important;
+    aspect-ratio:auto!important;
+    border-radius:20px 0 0 20px!important;
+    overflow:hidden!important;
+    align-self:stretch!important;
+  }
+  .trip-card .trip-card-cover img,
+  .trip-card .v611-instant-cover img,
+  .trip-card img.trip-card-cover{
+    width:100%!important;
+    height:100%!important;
+    min-height:100%!important;
+    object-fit:cover!important;
+    object-position:center!important;
+    border-radius:20px 0 0 20px!important;
+    display:block!important;
+  }
+  .trip-card .trip-card-body{
+    grid-column:2!important;
+    grid-row:1!important;
+    min-width:0!important;
+    width:auto!important;
+  }
+}
+</style>
+</head>
 <body>
   <div id="toast" class="toast"></div>
   <header class="topbar">
     <button class="brand" data-action="home" aria-label="回首頁">
       <span class="brand-icon">🗺️</span>
-      <span><strong>我的旅遊計畫</strong><small>TRAVEL PLANNER · v6.19 首頁封面完整顯示修正版</small></span>
+      <span><strong>我的旅遊計畫</strong><small>TRAVEL PLANNER · v6.20 手機封面填滿卡片版</small></span>
       <span class="heart">♥</span>
     </button>
     <nav class="nav" aria-label="主選單">
