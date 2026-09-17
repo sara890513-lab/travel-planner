@@ -549,6 +549,16 @@ html,body{max-width:100%;overflow-x:hidden}
   background:#edf7ed;border-color:#d4ead8;color:#4d8f5b;
 }
 
+
+/* v6.6（以 v6.5 為底）大景點＋子景點／美食／小店 */
+.subplace-list{margin:14px 0 0 8px!important;padding:12px 0 0 14px!important;border-top:1px dashed #eadfd9!important;border-left:3px solid #dcecf6!important;display:grid!important;gap:9px!important}
+.subplace-card{position:relative;background:#fffaf6!important;border:1px solid #eee2da!important;border-radius:14px!important;padding:10px 11px!important;box-shadow:none!important}
+.subplace-card:before{content:"";position:absolute;left:-20px;top:18px;width:17px;height:2px;background:#dcecf6}
+.subplace-main>strong{font-size:15px}.subplace-main>span,.sub-review,.sub-note{font-size:12px!important}
+.export-subplaces{margin-top:14px;padding:10px 0 0 14px;border-top:1px dashed #e5e8ec;border-left:3px solid #dcecf6;display:grid;gap:8px}
+.export-subplace{display:flex;flex-wrap:wrap;gap:5px 10px;background:#fffaf6;border:1px solid #eee5df;border-radius:12px;padding:9px 11px;font-size:16px}
+.export-subplace strong{width:100%;font-size:17px}.export-subplace span{color:#657080}.export-substars{color:#d99b2b!important}
+
 </style>
 <script>window.TRAVEL_SUPABASE={url:"https://lfvzobfvotcehkkjkgdc.supabase.co",anonKey:"sb_publishable_iwDwCSXNjpVLJyl16mKDyw_NcFqrAoW"};</script>
 <script>
@@ -1820,10 +1830,20 @@ function renderItinerary(){
   function buildExportSheet(){
     const t=currentTrip(); const rows=itineraryRows(); const sheet=$('#exportSheet');
     if(!t||!rows.length){toast('目前還沒有可以匯出的行程');return null;}
+    const childrenByParent={};
+    rows.forEach(x=>{if(x.parent_spot_id)(childrenByParent[String(x.parent_spot_id)] ||= []).push(x);});
+    const topRows=rows.filter(x=>!x.parent_spot_id);
     let last='';
-    const body=rows.map(x=>{
+    const body=topRows.map(x=>{
       const day=x.date!==last?`<div class="export-day">🗓️ ${esc(fmtDate(x.date))}</div>`:''; last=x.date;
-      return `${day}<div class="export-row"><div class="export-time">${esc(x.time?.slice(0,5)||'')}</div><div class="export-card"><h3>📍 ${esc(x.place)}</h3>${x.station?`<p>🚉 站名：${esc(x.station)}</p>`:''}${x.stay?`<p>🏠 住宿：${esc(x.stay)}</p>`:''}${x.transport?`<p>🚌 交通：${esc(x.transport)}</p>`:''}${x.note?`<p>📝 ${esc(x.note)}</p>`:''}</div></div>`;
+      const kids=(childrenByParent[String(x.id)]||[]).map(k=>`
+        <div class="export-subplace">
+          <strong>${k.type==='food'?'🍜':k.type==='shop'?'🛍️':'📍'} ${esc(k.place)}</strong>
+          ${k.rating?`<span class="export-substars">${'★'.repeat(Number(k.rating))}${'☆'.repeat(5-Number(k.rating))}</span>`:''}
+          ${k.review?`<span>💬 ${esc(k.review)}</span>`:''}
+          ${k.note?`<span>📝 ${esc(k.note)}</span>`:''}
+        </div>`).join('');
+      return `${day}<div class="export-row"><div class="export-time">${esc(x.time?.slice(0,5)||'')}</div><div class="export-card"><h3>📍 ${esc(x.place)}</h3>${x.station?`<p>🚉 站名：${esc(x.station)}</p>`:''}${x.stay?`<p>🏠 住宿：${esc(x.stay)}</p>`:''}${x.transport?`<p>🚌 交通：${esc(x.transport)}</p>`:''}${x.note?`<p>📝 ${esc(x.note)}</p>`:''}${kids?`<div class="export-subplaces">${kids}</div>`:''}</div></div>`;
     }).join('');
     sheet.innerHTML=`<div class="export-head"><div class="export-kicker">TRAVEL ITINERARY</div><h1>${esc(t.name)}</h1><p>🗓️ ${esc(t.start_date||'')} ${t.end_date?`～ ${esc(t.end_date)}`:''}</p><p>📍 ${esc(t.location||'未設定')}　👥 ${esc(peopleOf(t).join('、')||'')}</p></div>${body}<div class="export-foot">我的旅遊計畫 · Travel Planner ♡</div>`;
     return sheet;
@@ -1836,18 +1856,41 @@ function renderItinerary(){
     const canvas=await window.html2canvas(sheet,{scale:2,backgroundColor:'#fffaf7',useCORS:true,logging:false});
     const name=safeFilename(currentTrip()?.name);
     if(kind==='image'){
-      canvas.toBlob(blob=>{if(!blob)return;const url=URL.createObjectURL(blob);const a=document.createElement('a');a.href=url;a.download=`${name}_行程表.png`;document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),1500);},'image/png',1);
-      toast('圖檔已製作完成 🖼️'); return;
+      // v6.7：圖檔與 PDF 共用同一份父子結構 exportSheet。
+      // 因此大景點底下的美食／小店／小景點會一起縮排匯出。
+      canvas.toBlob(blob=>{
+        if(!blob)return;
+        const url=URL.createObjectURL(blob);
+        const a=document.createElement('a');
+        a.href=url;
+        a.download=`${name}_行程表_父子結構.png`;
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+        setTimeout(()=>URL.revokeObjectURL(url),1500);
+      },'image/png',1);
+      toast('父子結構圖檔已製作完成 🖼️');
+      return;
     }
     const jspdf=window.jspdf;
     if(!jspdf?.jsPDF){toast('PDF 元件尚未載入，請重新整理後再試');return;}
     const {jsPDF}=jspdf; const pdf=new jsPDF({orientation:'portrait',unit:'mm',format:'a4'});
-    const pageW=210,pageH=297,margin=10,usableW=pageW-margin*2;
-    const imgData=canvas.toDataURL('image/jpeg',0.95); const fullH=canvas.height*usableW/canvas.width;
-    if(fullH<=pageH-margin*2){pdf.addImage(imgData,'JPEG',margin,margin,usableW,fullH,'FAST');}
-    else{
-      const pxPerMm=canvas.width/usableW; const pagePxH=Math.floor((pageH-margin*2)*pxPerMm); let y=0,page=0;
-      while(y<canvas.height){const h=Math.min(pagePxH,canvas.height-y);const part=document.createElement('canvas');part.width=canvas.width;part.height=h;part.getContext('2d').drawImage(canvas,0,y,canvas.width,h,0,0,canvas.width,h);if(page>0)pdf.addPage();const partH=h*usableW/canvas.width;pdf.addImage(part.toDataURL('image/jpeg',0.95),'JPEG',margin,margin,usableW,partH,'FAST');y+=h;page++;}
+    const pageW=210,pageH=297,margin=10,usableW=pageW-margin*2,usableH=pageH-margin*2;
+    const pxPerMm=canvas.width/usableW;
+    const pagePxH=Math.max(1,Math.floor(usableH*pxPerMm));
+    let y=0,page=0;
+    while(y<canvas.height){
+      const sliceH=Math.min(pagePxH,canvas.height-y);
+      const part=document.createElement('canvas');
+      part.width=canvas.width;part.height=sliceH;
+      const ctx=part.getContext('2d');
+      ctx.fillStyle='#fffaf7';ctx.fillRect(0,0,part.width,part.height);
+      ctx.drawImage(canvas,0,y,canvas.width,sliceH,0,0,canvas.width,sliceH);
+      if(page>0)pdf.addPage();
+      const partH=sliceH/pxPerMm;
+      pdf.addImage(part.toDataURL('image/jpeg',0.92),'JPEG',margin,margin,usableW,partH,undefined,'FAST');
+      y+=sliceH;page++;
+      await new Promise(r=>setTimeout(r,0));
     }
     pdf.save(`${name}_行程表.pdf`); toast('PDF 已製作完成 📄');
   }
@@ -2609,7 +2652,7 @@ body{background:#fffaf7}
   <header class="topbar">
     <button class="brand" data-action="home" aria-label="回首頁">
       <span class="brand-icon">🗺️</span>
-      <span><strong>我的旅遊計畫</strong><small>TRAVEL PLANNER · v6.5 首頁載入加速版</small></span>
+      <span><strong>我的旅遊計畫</strong><small>TRAVEL PLANNER · v6.7（v6.5底版）PDF＋圖檔父子結構版</small></span>
       <span class="heart">♥</span>
     </button>
     <nav class="nav" aria-label="主選單">
