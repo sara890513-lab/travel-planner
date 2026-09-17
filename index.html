@@ -769,7 +769,8 @@ document.addEventListener('DOMContentLoaded',()=>{
       state.cloud=true;
       cloudLastLoadedAt=Date.now();
       updateAuthUI();
-      if(typeof renderTrips==='function')renderTrips();
+      // v6.16：雲端儲存完成不再延遲重畫首頁。
+      // 本機操作在送雲端前就已經即時更新畫面。
       if(showToast)toast('☁️ 已同步到雲端');
       return true;
     }catch(err){
@@ -832,7 +833,19 @@ document.addEventListener('DOMContentLoaded',()=>{
         });
         state.trips=[...merged.values()];
         localSave();
-        if(JSON.stringify(state.trips)!==before && typeof renderTrips==='function')renderTrips();
+        // v6.16：雲端啟動同步只更新 state/localStorage。
+        // 首頁已經顯示的旅程卡保持原位，不因 Supabase 晚回來而整批換掉／重新排序。
+        // 使用者新增、編輯、刪除時仍由既有操作流程正常重畫。
+        if(JSON.stringify(state.trips)!==before){
+          try{
+            const cards=(state.trips||[]).map(t=>({
+              id:t.id,name:t.name||'',start_date:t.start_date||'',end_date:t.end_date||'',
+              location:t.location||'',people:Array.isArray(t.people)?t.people:[],
+              password_hash:t.password_hash?'1':'',updated_at:t.updated_at||''
+            }));
+            localStorage.setItem('travel_trip_cards_instant_v1',JSON.stringify(cards));
+          }catch(e){}
+        }
       }else{
         saveCloudSnapshot(false).catch(e=>console.warn('initial cloud snapshot failed',e));
       }
@@ -872,7 +885,8 @@ document.addEventListener('DOMContentLoaded',()=>{
       }
       state.cloud=true;
       updateAuthUI();
-      if(typeof renderTrips==='function')renderTrips();
+      // v6.16：背景／手動 pull 不讓首頁突然換位。
+      if(window.__forceTripRender && typeof renderTrips==='function')renderTrips();
       return true;
     }catch(err){
       console.error('cloud load failed',err);
@@ -2687,7 +2701,7 @@ window.loadExportLibs=()=>Promise.all([
   <header class="topbar">
     <button class="brand" data-action="home" aria-label="回首頁">
       <span class="brand-icon">🗺️</span>
-      <span><strong>我的旅遊計畫</strong><small>TRAVEL PLANNER · v6.15 首頁不重建版</small></span>
+      <span><strong>我的旅遊計畫</strong><small>TRAVEL PLANNER · v6.16 首頁固定不跳動版</small></span>
       <span class="heart">♥</span>
     </button>
     <nav class="nav" aria-label="主選單">
