@@ -916,9 +916,42 @@ document.addEventListener('DOMContentLoaded',()=>{
     localSave();
     await saveCloudSnapshot(false);
   }
+  // v6.17：首頁封面縮圖快取。完整照片只負責產生一次小縮圖，
+  // 之後首頁直接從 localStorage 讀小圖，避免每次重新解碼大照片。
+  const HOME_THUMB_PREFIX='travel_home_thumb_v1_';
+  function getHomeThumb(id){
+    try{return localStorage.getItem(HOME_THUMB_PREFIX+String(id))||'';}catch(e){return '';}
+  }
+  function cacheHomeThumb(id,src){
+    if(!id||!src||String(src).startsWith('blob:'))return;
+    const img=new Image();
+    img.decoding='async';
+    img.onload=()=>{
+      try{
+        const maxW=320,maxH=220;
+        const scale=Math.min(1,maxW/img.naturalWidth,maxH/img.naturalHeight);
+        const w=Math.max(1,Math.round(img.naturalWidth*scale));
+        const hh=Math.max(1,Math.round(img.naturalHeight*scale));
+        const c=document.createElement('canvas');c.width=w;c.height=hh;
+        c.getContext('2d').drawImage(img,0,0,w,hh);
+        const tiny=c.toDataURL('image/jpeg',0.68);
+        localStorage.setItem(HOME_THUMB_PREFIX+String(id),tiny);
+      }catch(e){}
+    };
+    img.src=src;
+  }
+
 
 
   function renderTrips(){
+    // 背景建立首頁小縮圖，不阻塞旅程卡顯示。
+    try{
+      (state.trips||[]).forEach(t=>{
+        const src=t.cover_url||t.cover||t.image||t.photo||'';
+        if(src && !getHomeThumb(t.id)) cacheHomeThumb(t.id,src);
+      });
+    }catch(e){}
+
     // v6.15：首頁的快取旅程卡已經出現時，不再清空 tripGrid 重建。
     // 只有資料真的變更，或使用者操作後，才允許正式重畫。
     const instantPainted=document.documentElement.classList.contains('v611-home-painted');
@@ -2695,13 +2728,16 @@ window.loadExportLibs=()=>Promise.all([
 @media(max-width:640px){.hero-fast{min-height:150px;padding:20px 18px;border-radius:18px}.hero-fast-copy strong{font-size:22px}.hero-fast-copy small{font-size:12px}.hero-fast-icons{font-size:30px;letter-spacing:-4px}}
 </style><style id="v611-instant-style">
 .v611-instant-cover{width:100%;aspect-ratio:600/420;display:grid;place-items:center;font-size:54px;background:linear-gradient(135deg,#dff3ff,#ffe8e2);border-radius:20px 20px 0 0}
+</style><style id="v617-thumb-style">
+.v611-instant-cover{overflow:hidden}
+.v611-instant-cover img{width:100%;height:100%;object-fit:cover;display:block}
 </style></head>
 <body>
   <div id="toast" class="toast"></div>
   <header class="topbar">
     <button class="brand" data-action="home" aria-label="回首頁">
       <span class="brand-icon">🗺️</span>
-      <span><strong>我的旅遊計畫</strong><small>TRAVEL PLANNER · v6.16 首頁固定不跳動版</small></span>
+      <span><strong>我的旅遊計畫</strong><small>TRAVEL PLANNER · v6.17 首頁縮圖快取版</small></span>
       <span class="heart">♥</span>
     </button>
     <nav class="nav" aria-label="主選單">
@@ -2763,11 +2799,15 @@ window.loadExportLibs=()=>Promise.all([
     return [];
   }
 
-  // 首畫故意不解析/顯示可能很大的 cover_url，避免照片拖慢旅程卡出現。
+  // v6.17：首畫直接使用手機內已存好的小縮圖；沒有縮圖時才顯示 ✈️。
   grid.innerHTML=trips.map(function(t){
-    var p=people(t);
+    var p=people(t),thumb='';
+    try{thumb=localStorage.getItem('travel_home_thumb_v1_'+String(t.id))||'';}catch(e){}
+    var cover=thumb
+      ? '<div class="v611-instant-cover"><img src="'+thumb+'" alt="" decoding="async"></div>'
+      : '<div class="v611-instant-cover">✈️</div>';
     return '<article class="trip-card v611-instant-card" data-trip-id="'+esc(t.id)+'">'+
-      '<div class="v611-instant-cover">✈️</div>'+
+      cover+
       '<div class="trip-card-body">'+
         (t.password_hash?'<span class="trip-lock-badge">🔒 密碼保護</span>':'')+
         '<h3>'+esc(t.name||'未命名旅程')+'</h3>'+
