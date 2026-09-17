@@ -600,26 +600,23 @@ document.addEventListener('DOMContentLoaded',()=>{
   }
 
   function localSave(){
-    window.__forceTripRender=true;
-
+    // 本機資料與首頁輕量卡片一起保存；不再永久打開強制重畫旗標。
     saveTripCardCache();
-    if(!storageAvailable) return false;
+    if(!storageAvailable)return false;
     try{
-      const out={trips:state.trips,itineraries:state.itineraries,expenses:state.expenses,photos:state.photos,currentTripId:state.currentTripId};
+      const out={
+        trips:state.trips,itineraries:state.itineraries,expenses:state.expenses,
+        photos:state.photos,currentTripId:state.currentTripId
+      };
       localStorage.setItem(LS,JSON.stringify(out));
       return true;
-    
-    try{
-      const cards=(state.trips||[]).map(t=>({id:t.id,name:t.name||'',start_date:t.start_date||'',end_date:t.end_date||'',location:t.location||'',people:Array.isArray(t.people)?t.people:[],password_hash:t.password_hash?'1':'',updated_at:t.updated_at||''}));
-      localStorage.setItem('travel_trip_cards_instant_v1',JSON.stringify(cards));
-      setTimeout(()=>{window.__forceTripRender=false;},0);
-    }catch(e){}
-  }catch(err){
+    }catch(err){
       storageAvailable=false;
       console.warn('localStorage save failed; continuing in memory mode',err);
       return false;
     }
   }
+
   let cloudSaveTimer=null;
   let cloudBusy=false;
   let cloudLastLoadedAt=0;
@@ -936,6 +933,15 @@ document.addEventListener('DOMContentLoaded',()=>{
         c.getContext('2d').drawImage(img,0,0,w,hh);
         const tiny=c.toDataURL('image/jpeg',0.68);
         localStorage.setItem(HOME_THUMB_PREFIX+String(id),tiny);
+        const card=document.querySelector('[data-trip-id="'+CSS.escape(String(id))+'"]');
+        if(card){
+          const im=card.querySelector('.trip-card-cover,.v611-instant-cover img');
+          if(im)im.src=tiny;
+          else{
+            const holder=card.querySelector('.v611-instant-cover');
+            if(holder)holder.innerHTML='<img src="'+tiny+'" alt="" decoding="async">';
+          }
+        }
       }catch(e){}
     };
     img.src=src;
@@ -979,7 +985,7 @@ document.addEventListener('DOMContentLoaded',()=>{
 
     grid.innerHTML=trips.map(t=>{
       const people=peopleOf(t);
-      const cover=t.cover_url||fallbackCover;
+      const cover=getHomeThumb(t.id)||t.cover_url||fallbackCover;
       const locked=!!t.password_hash;
       const lockText=locked?(unlockedTripIds.has(t.id)?'🔓 已解鎖':'🔒 密碼保護'):'';
       return `<article class="trip-card${locked?' is-password-protected':''}" data-trip-id="${esc(t.id)}">
@@ -2737,7 +2743,7 @@ window.loadExportLibs=()=>Promise.all([
   <header class="topbar">
     <button class="brand" data-action="home" aria-label="回首頁">
       <span class="brand-icon">🗺️</span>
-      <span><strong>我的旅遊計畫</strong><small>TRAVEL PLANNER · v6.17 首頁縮圖快取版</small></span>
+      <span><strong>我的旅遊計畫</strong><small>TRAVEL PLANNER · v6.18 首頁照片不卡頓修正版</small></span>
       <span class="heart">♥</span>
     </button>
     <nav class="nav" aria-label="主選單">
