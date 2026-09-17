@@ -2320,7 +2320,6 @@ function renderItinerary(){
   // 避免第一次開啟時旅程區是空白，必須切換頁面才出現。
   try{
     localLoad();
-    if(typeof renderTrips==='function')renderTrips();
   }catch(e){
     console.warn('local startup render failed',e);
   }
@@ -2664,13 +2663,15 @@ window.loadExportLibs=()=>Promise.all([
 .hero-fast{min-height:220px;border-radius:24px;background:linear-gradient(135deg,#f9e6ea 0%,#eef5fb 52%,#fff1dc 100%);display:flex;align-items:center;justify-content:space-between;padding:32px 42px;overflow:hidden}
 .hero-fast-copy{display:flex;flex-direction:column;gap:8px;min-width:0}.hero-fast-kicker{font-size:12px;letter-spacing:2px;font-weight:800;color:#8a7c7b}.hero-fast-copy strong{font-size:clamp(24px,4vw,42px);line-height:1.25;color:#4f5663}.hero-fast-copy small{font-size:14px;color:#7b8088}.hero-fast-icons{font-size:clamp(32px,6vw,64px);white-space:nowrap;opacity:.86}
 @media(max-width:640px){.hero-fast{min-height:150px;padding:20px 18px;border-radius:18px}.hero-fast-copy strong{font-size:22px}.hero-fast-copy small{font-size:12px}.hero-fast-icons{font-size:30px;letter-spacing:-4px}}
+</style><style id="v611-instant-style">
+.v611-instant-cover{width:100%;aspect-ratio:600/420;display:grid;place-items:center;font-size:54px;background:linear-gradient(135deg,#dff3ff,#ffe8e2);border-radius:20px 20px 0 0}
 </style></head>
 <body>
   <div id="toast" class="toast"></div>
   <header class="topbar">
     <button class="brand" data-action="home" aria-label="回首頁">
       <span class="brand-icon">🗺️</span>
-      <span><strong>我的旅遊計畫</strong><small>TRAVEL PLANNER · v6.10 最新版・首頁輕量化版</small></span>
+      <span><strong>我的旅遊計畫</strong><small>TRAVEL PLANNER · v6.11 最新版・真正即時首頁版</small></span>
       <span class="heart">♥</span>
     </button>
     <nav class="nav" aria-label="主選單">
@@ -2704,6 +2705,59 @@ window.loadExportLibs=()=>Promise.all([
           <button class="primary" data-action="new-trip">＋ 新增旅程</button>
         </div>
         <div id="tripGrid" class="trip-grid"></div>
+<script id="v611-true-instant-home">
+/* v6.11：真正首屏快取。
+   這段緊接 tripGrid 執行，不等待 DOMContentLoaded、不等待主程式、不等待 Supabase。 */
+(function(){
+  var grid=document.getElementById('tripGrid');
+  var empty=document.getElementById('emptyTrips');
+  if(!grid)return;
+  var trips=[];
+  try{
+    trips=JSON.parse(localStorage.getItem('travel_trip_cards_instant_v1')||'[]')||[];
+    if(!trips.length){
+      var full=JSON.parse(localStorage.getItem('cute-travel-planner-v1')||'{}')||{};
+      trips=Array.isArray(full.trips)?full.trips:[];
+    }
+  }catch(e){trips=[]}
+  if(!trips.length)return;
+
+  function esc(s){
+    return String(s==null?'':s).replace(/[&<>'"]/g,function(c){
+      return {'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[c];
+    });
+  }
+  function people(t){
+    if(Array.isArray(t.people))return t.people;
+    if(typeof t.people==='string')return t.people.split(/[,，、]/).map(function(x){return x.trim()}).filter(Boolean);
+    return [];
+  }
+
+  // 首畫故意不解析/顯示可能很大的 cover_url，避免照片拖慢旅程卡出現。
+  grid.innerHTML=trips.map(function(t){
+    var p=people(t);
+    return '<article class="trip-card v611-instant-card" data-trip-id="'+esc(t.id)+'">'+
+      '<div class="v611-instant-cover">✈️</div>'+
+      '<div class="trip-card-body">'+
+        (t.password_hash?'<span class="trip-lock-badge">🔒 密碼保護</span>':'')+
+        '<h3>'+esc(t.name||'未命名旅程')+'</h3>'+
+        '<div class="trip-info">'+
+          '<div>🗓️ '+esc(t.start_date||'未設定')+' ～ '+esc(t.end_date||'未設定')+'</div>'+
+          '<div>📍 '+esc(t.location||'未設定')+'</div>'+
+          '<div>👥 '+p.length+' 人'+(p.length?'・'+esc(p.join('、')):'')+'</div>'+
+        '</div>'+
+        '<div class="trip-actions trip-actions-main">'+
+          '<button type="button" class="it-btn" data-trip-open="'+esc(t.id)+'">📑 查看行程</button>'+
+          '<button type="button" class="quick-home-btn" data-trip-quick="'+esc(t.id)+'">📱 行程快捷</button>'+
+          '<button type="button" class="money-btn" data-trip-money="'+esc(t.id)+'">＄ 快速分帳</button>'+
+        '</div>'+
+      '</div>'+
+    '</article>';
+  }).join('');
+  if(empty)empty.classList.add('hidden');
+  document.documentElement.classList.add('v611-home-painted');
+})();
+</script>
 <div id="emptyTrips" class="empty-card hidden">
           <div class="empty-illu">✈️☁️</div>
           <h3>還沒有旅程</h3>
