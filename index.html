@@ -672,6 +672,18 @@ document.addEventListener('DOMContentLoaded',()=>{
     state.expenses=Array.isArray(p.expenses)?p.expenses:[];
     state.photos=Array.isArray(p.photos)?p.photos:[];
     state.currentTripId=p.currentTripId||null;
+    // v6.4：雲端最新資料一收到就寫回完整本機快取，供下一次首屏 0 等待顯示。
+    try{
+      localStorage.setItem(LS,JSON.stringify({
+        trips:state.trips,itineraries:state.itineraries,expenses:state.expenses,
+        photos:state.photos,currentTripId:state.currentTripId
+      }));
+      localStorage.setItem('travel_trip_cards_instant_v1',JSON.stringify(
+        state.trips.map(t=>({id:t.id,name:t.name,start_date:t.start_date,end_date:t.end_date,
+          location:t.location,people:t.people,cover_url:t.cover_url,password_hash:t.password_hash,
+          updated_at:t.updated_at}))
+      ));
+    }catch(e){}
 
     // 合併「已刪除紀錄」，避免舊雲端快照把東西復活。
     try{
@@ -2241,6 +2253,9 @@ function renderItinerary(){
   $('#signUpBtn').onclick=()=>toast('目前已改成自動雲端同步，不需要註冊');
   $('#signInBtn').onclick=()=>toast('目前已改成自動雲端同步，不需要登入');
 
+  // v6.4：讓首屏快取卡片在完整程式載入後可立即接手。
+  try{ if(typeof openTrip==='function') window.openTrip=openTrip; }catch(e){}
+
   // v6.0：首頁啟動時先顯示本機快取，再等待雲端資料完成後立即重畫首頁。
   // 避免第一次開啟時旅程區是空白，必須切換頁面才出現。
   try{
@@ -2593,7 +2608,7 @@ body{background:#fffaf7}
   <header class="topbar">
     <button class="brand" data-action="home" aria-label="回首頁">
       <span class="brand-icon">🗺️</span>
-      <span><strong>我的旅遊計畫</strong><small>TRAVEL PLANNER · v6.3 即時操作版</small></span>
+      <span><strong>我的旅遊計畫</strong><small>TRAVEL PLANNER · v6.4 首頁零等待版</small></span>
       <span class="heart">♥</span>
     </button>
     <nav class="nav" aria-label="主選單">
@@ -2620,6 +2635,59 @@ body{background:#fffaf7}
           <button class="primary" data-action="new-trip">＋ 新增旅程</button>
         </div>
         <div id="tripGrid" class="trip-grid"></div>
+<script id="v64-zero-wait-home">
+(function(){
+  const grid=document.getElementById('tripGrid'), empty=document.getElementById('emptyTrips');
+  if(!grid)return;
+  let trips=[];
+  try{
+    trips=JSON.parse(localStorage.getItem('travel_trip_cards_instant_v1')||'[]')||[];
+    if(!trips.length){
+      const full=JSON.parse(localStorage.getItem('cute-travel-planner-v1')||'{}');
+      trips=Array.isArray(full.trips)?full.trips:[];
+    }
+  }catch(e){}
+  if(!trips.length)return;
+  const esc=s=>String(s??'').replace(/[&<>'"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[c]));
+  const fallback='data:image/svg+xml;charset=UTF-8,'+encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" width="600" height="420"><rect width="100%" height="100%" fill="#eef7fb"/><text x="50%" y="52%" text-anchor="middle" font-size="72">✈️</text></svg>');
+  if(empty)empty.classList.add('hidden');
+  grid.innerHTML=trips.map(t=>{
+    const people=Array.isArray(t.people)?t.people:[];
+    const locked=!!t.password_hash;
+    return `<article class="trip-card${locked?' is-password-protected':''}" data-trip-id="${esc(t.id)}">
+      <img class="trip-card-cover" src="${esc(t.cover_url||fallback)}" alt="${esc(t.name||'旅程')}">
+      <div class="trip-card-body">
+        ${locked?'<span class="trip-lock-badge">🔒 密碼保護</span>':''}
+        <h3>${esc(t.name||'未命名旅程')}</h3>
+        <div class="trip-info">
+          <div>🗓️ ${esc(t.start_date||'未設定')} ～ ${esc(t.end_date||'未設定')}</div>
+          <div>📍 ${esc(t.location||'未設定')}</div>
+          <div>👥 ${people.length} 人${people.length?'・'+esc(people.join('、')):''}</div>
+        </div>
+        <div class="trip-actions trip-actions-main">
+          <button type="button" class="it-btn" data-zero-open="${esc(t.id)}">📑 查看行程</button>
+          <button type="button" class="quick-home-btn" data-zero-open="${esc(t.id)}">📱 行程快捷</button>
+          <button type="button" class="money-btn" data-zero-open="${esc(t.id)}">＄ 快速分帳</button>
+        </div>
+      </div>
+    </article>`;
+  }).join('');
+  // Before full app JS is ready, clicks are queued and replayed once state/openTrip exists.
+  grid.addEventListener('click',function(e){
+    const b=e.target.closest('[data-zero-open]');
+    if(!b)return;
+    const id=b.dataset.zeroOpen;
+    const tryOpen=()=>{
+      if(window.state && typeof window.openTrip==='function'){ window.openTrip(id,'itinerary'); return true; }
+      return false;
+    };
+    if(!tryOpen()){
+      let n=0; const timer=setInterval(()=>{ if(tryOpen()||++n>30)clearInterval(timer); },50);
+    }
+  },{once:false});
+})();
+</script>
+
 <div id="emptyTrips" class="empty-card hidden">
           <div class="empty-illu">✈️☁️</div>
           <h3>還沒有旅程</h3>
