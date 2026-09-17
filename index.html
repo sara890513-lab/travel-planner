@@ -2786,13 +2786,54 @@ window.loadExportLibs=()=>Promise.all([
   }
 }
 </style>
+
+<style id="v621-compact-mobile-cover">
+@media(max-width:640px){
+  .trip-card{
+    display:grid!important;
+    grid-template-columns:34% minmax(0,1fr)!important;
+    align-items:start!important;
+    overflow:visible!important;
+  }
+  .trip-card .trip-card-cover,
+  .trip-card .v611-instant-cover{
+    grid-column:1!important;
+    grid-row:1!important;
+    width:100%!important;
+    height:auto!important;
+    min-height:0!important;
+    aspect-ratio:4/3!important;
+    align-self:start!important;
+    overflow:hidden!important;
+    border-radius:18px!important;
+    margin:0!important;
+  }
+  .trip-card .trip-card-cover img,
+  .trip-card .v611-instant-cover img,
+  .trip-card img.trip-card-cover{
+    width:100%!important;
+    height:100%!important;
+    min-height:0!important;
+    aspect-ratio:auto!important;
+    object-fit:cover!important;
+    object-position:center!important;
+    border-radius:18px!important;
+    display:block!important;
+  }
+  .trip-card .trip-card-body{
+    grid-column:2!important;
+    grid-row:1!important;
+    min-width:0!important;
+  }
+}
+</style>
 </head>
 <body>
   <div id="toast" class="toast"></div>
   <header class="topbar">
     <button class="brand" data-action="home" aria-label="回首頁">
       <span class="brand-icon">🗺️</span>
-      <span><strong>我的旅遊計畫</strong><small>TRAVEL PLANNER · v6.20 手機封面填滿卡片版</small></span>
+      <span><strong>我的旅遊計畫</strong><small>TRAVEL PLANNER · v6.21 手機封面適中版</small></span>
       <span class="heart">♥</span>
     </button>
     <nav class="nav" aria-label="主選單">
