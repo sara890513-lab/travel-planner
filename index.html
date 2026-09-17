@@ -578,7 +578,21 @@ document.addEventListener('DOMContentLoaded',()=>{
     }
     if(typeof renderTrips==='function') renderTrips();
   }
+
+  function saveTripCardCache(){
+    try{
+      localStorage.setItem('travel_trip_cards_instant_v1', JSON.stringify(
+        (state.trips||[]).map(t=>({
+          id:t.id,name:t.name,start_date:t.start_date,end_date:t.end_date,
+          location:t.location,people:t.people,cover_url:t.cover_url,
+          password_hash:t.password_hash,updated_at:t.updated_at
+        }))
+      ));
+    }catch(e){}
+  }
+
   function localSave(){
+    saveTripCardCache();
     if(!storageAvailable) return false;
     try{
       const out={trips:state.trips,itineraries:state.itineraries,expenses:state.expenses,photos:state.photos,currentTripId:state.currentTripId};
@@ -844,6 +858,7 @@ document.addEventListener('DOMContentLoaded',()=>{
 
 
   function renderTrips(){
+    saveTripCardCache();
     const grid=$('#tripGrid');
     const empty=$('#emptyTrips');
     if(!grid || !empty)return;
@@ -2551,6 +2566,9 @@ body{background:#fffaf7}
   .subplace-map-row{margin-top:8px!important}
 }
 
+
+.instant-sync-note{margin-top:12px;font-size:12px;color:#9a8f93}
+
 </style>
 </head>
 <body>
@@ -2558,7 +2576,7 @@ body{background:#fffaf7}
   <header class="topbar">
     <button class="brand" data-action="home" aria-label="回首頁">
       <span class="brand-icon">🗺️</span>
-      <span><strong>我的旅遊計畫</strong><small>TRAVEL PLANNER · v6.1 即時顯示版</small></span>
+      <span><strong>我的旅遊計畫</strong><small>TRAVEL PLANNER · v6.2 首屏快取版</small></span>
       <span class="heart">♥</span>
     </button>
     <nav class="nav" aria-label="主選單">
@@ -2585,6 +2603,48 @@ body{background:#fffaf7}
           <button class="primary" data-action="new-trip">＋ 新增旅程</button>
         </div>
         <div id="tripGrid" class="trip-grid"></div>
+<script id="v62-instant-trip-paint">
+(function(){
+  try{
+    const grid=document.getElementById('tripGrid');
+    const empty=document.getElementById('emptyTrips');
+    if(!grid)return;
+
+    let trips=[];
+    try{ trips=JSON.parse(localStorage.getItem('travel_trip_cards_instant_v1')||'[]')||[]; }catch(e){}
+    if(!trips.length){
+      try{
+        const old=JSON.parse(localStorage.getItem('cute-travel-planner-v1')||'{}');
+        trips=Array.isArray(old.trips)?old.trips:[];
+      }catch(e){}
+    }
+    if(!trips.length)return;
+
+    const esc=s=>String(s??'').replace(/[&<>'"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[c]));
+    const fallback='data:image/svg+xml;charset=UTF-8,'+encodeURIComponent(
+      '<svg xmlns="http://www.w3.org/2000/svg" width="600" height="420"><rect width="100%" height="100%" fill="#eef7fb"/><text x="50%" y="52%" text-anchor="middle" font-size="72">✈️</text></svg>'
+    );
+
+    if(empty)empty.classList.add('hidden');
+    grid.innerHTML=trips.map(t=>{
+      const people=Array.isArray(t.people)?t.people:[];
+      return `<article class="trip-card instant-cache-card" data-trip-id="${esc(t.id)}">
+        <img class="trip-card-cover" src="${esc(t.cover_url||fallback)}" alt="${esc(t.name||'旅程')}">
+        <div class="trip-card-body">
+          <h3>${esc(t.name||'未命名旅程')}</h3>
+          <div class="trip-info">
+            <div>🗓️ ${esc(t.start_date||'未設定')} ～ ${esc(t.end_date||'未設定')}</div>
+            <div>📍 ${esc(t.location||'未設定')}</div>
+            <div>👥 ${people.length} 人${people.length?'・'+esc(people.join('、')):''}</div>
+          </div>
+          <div class="instant-sync-note">☁️ 正在確認最新資料…</div>
+        </div>
+      </article>`;
+    }).join('');
+  }catch(e){}
+})();
+</script>
+
         <div id="emptyTrips" class="empty-card hidden">
           <div class="empty-illu">✈️☁️</div>
           <h3>還沒有旅程</h3>
