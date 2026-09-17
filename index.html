@@ -1,14 +1,6 @@
 <!doctype html>
 <html lang="zh-Hant">
 <head>
-<script id="v614-speed-start">
-window.__speedDiag={navStart:performance.now(),marks:[]};
-window.__speedMark=function(name){
-  try{window.__speedDiag.marks.push([name,performance.now()]);}catch(e){}
-};
-window.__speedMark('HTML開始');
-</script>
-
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
   <meta name="theme-color" content="#fff8f4" />
@@ -608,6 +600,8 @@ document.addEventListener('DOMContentLoaded',()=>{
   }
 
   function localSave(){
+    window.__forceTripRender=true;
+
     saveTripCardCache();
     if(!storageAvailable) return false;
     try{
@@ -618,6 +612,7 @@ document.addEventListener('DOMContentLoaded',()=>{
     try{
       const cards=(state.trips||[]).map(t=>({id:t.id,name:t.name||'',start_date:t.start_date||'',end_date:t.end_date||'',location:t.location||'',people:Array.isArray(t.people)?t.people:[],password_hash:t.password_hash?'1':'',updated_at:t.updated_at||''}));
       localStorage.setItem('travel_trip_cards_instant_v1',JSON.stringify(cards));
+      setTimeout(()=>{window.__forceTripRender=false;},0);
     }catch(e){}
   }catch(err){
       storageAvailable=false;
@@ -910,6 +905,14 @@ document.addEventListener('DOMContentLoaded',()=>{
 
 
   function renderTrips(){
+    // v6.15：首頁的快取旅程卡已經出現時，不再清空 tripGrid 重建。
+    // 只有資料真的變更，或使用者操作後，才允許正式重畫。
+    const instantPainted=document.documentElement.classList.contains('v611-home-painted');
+    const gridNow=$('#tripGrid');
+    if(instantPainted && gridNow && gridNow.querySelector('.v611-instant-card') && !window.__forceTripRender){
+      return;
+    }
+
     saveTripCardCache();
     const grid=$('#tripGrid');
     const empty=$('#emptyTrips');
@@ -2684,7 +2687,7 @@ window.loadExportLibs=()=>Promise.all([
   <header class="topbar">
     <button class="brand" data-action="home" aria-label="回首頁">
       <span class="brand-icon">🗺️</span>
-      <span><strong>我的旅遊計畫</strong><small>TRAVEL PLANNER · v6.14 首頁速度診斷版</small></span>
+      <span><strong>我的旅遊計畫</strong><small>TRAVEL PLANNER · v6.15 首頁不重建版</small></span>
       <span class="heart">♥</span>
     </button>
     <nav class="nav" aria-label="主選單">
@@ -2717,24 +2720,17 @@ window.loadExportLibs=()=>Promise.all([
           </div>
           <button class="primary" data-action="new-trip">＋ 新增旅程</button>
         </div>
-        <div id="speedDiagBox" style="margin:0 0 14px;padding:12px 14px;border:1px solid #dfe6ee;border-radius:14px;background:#fff;font-size:12px;line-height:1.65;color:#56606d">
-  <strong style="font-size:13px">⚙️ 首頁速度診斷 v6.14</strong>
-  <div id="speedDiagText">正在記錄…</div>
-</div>
-<div id="tripGrid" class="trip-grid"></div>
+        <div id="tripGrid" class="trip-grid"></div>
 <script id="v611-true-instant-home">
 /* v6.11：真正首屏快取。
    這段緊接 tripGrid 執行，不等待 DOMContentLoaded、不等待主程式、不等待 Supabase。 */
 (function(){
-  window.__speedMark&&window.__speedMark('即時首頁腳本開始');
   var grid=document.getElementById('tripGrid');
   var empty=document.getElementById('emptyTrips');
   if(!grid)return;
   var trips=[];
   try{
-    window.__speedMark&&window.__speedMark('讀取localStorage前');
     trips=JSON.parse(localStorage.getItem('travel_trip_cards_instant_v1')||'[]')||[];
-    window.__speedMark&&window.__speedMark('讀取localStorage後');
     if(!trips.length){
       var full=JSON.parse(localStorage.getItem('cute-travel-planner-v1')||'{}')||{};
       trips=Array.isArray(full.trips)?full.trips:[];
@@ -2776,11 +2772,6 @@ window.loadExportLibs=()=>Promise.all([
   }).join('');
   if(empty)empty.classList.add('hidden');
   document.documentElement.classList.add('v611-home-painted');
-  window.__speedMark&&window.__speedMark('旅程卡寫入DOM');
-  requestAnimationFrame(function(){
-    window.__speedMark&&window.__speedMark('瀏覽器首次繪製旅程卡');
-    if(window.__renderSpeedDiag)window.__renderSpeedDiag();
-  });
 })();
 </script>
 <div id="emptyTrips" class="empty-card hidden">
@@ -3934,42 +3925,30 @@ document.addEventListener('DOMContentLoaded',()=>{
 </script>
 
 
-<script id="v614-speed-panel">
-(function(){
-  function render(){
-    var box=document.getElementById('speedDiagText'),d=window.__speedDiag;
-    if(!box||!d)return;
-    var base=d.marks.length?d.marks[0][1]:d.navStart;
-    var lines=d.marks.map(function(m){
-      return m[0]+'：'+Math.round(m[1]-base)+' ms';
-    });
-    var nav=performance.getEntriesByType&&performance.getEntriesByType('navigation')[0];
-    if(nav){
-      lines.push('DOM完成：'+Math.round(nav.domContentLoadedEventEnd)+' ms');
-      if(nav.loadEventEnd)lines.push('頁面load完成：'+Math.round(nav.loadEventEnd)+' ms');
-      if(nav.responseStart)lines.push('GitHub開始回傳HTML：'+Math.round(nav.responseStart)+' ms');
-      if(nav.responseEnd)lines.push('HTML下載完成：'+Math.round(nav.responseEnd)+' ms');
+<script id="v615-instant-card-handoff">
+document.addEventListener('DOMContentLoaded',function(){
+  var grid=document.getElementById('tripGrid');
+  if(!grid)return;
+  grid.addEventListener('click',function(e){
+    var b=e.target.closest('[data-trip-open],[data-trip-quick],[data-trip-money]');
+    if(!b)return;
+    var id=b.getAttribute('data-trip-open')||b.getAttribute('data-trip-quick')||b.getAttribute('data-trip-money');
+    if(!id)return;
+    if(b.hasAttribute('data-trip-open')){
+      if(typeof window.openTrip==='function')window.openTrip(id);
+    }else if(b.hasAttribute('data-trip-quick')){
+      var real=[].slice.call(document.querySelectorAll('[data-quick-trip]')).find(function(x){return String(x.dataset.quickTrip)===String(id)});
+      if(real)real.click();
+      else if(typeof window.openTrip==='function')window.openTrip(id);
+    }else if(b.hasAttribute('data-trip-money')){
+      var money=[].slice.call(document.querySelectorAll('[data-money-trip]')).find(function(x){return String(x.dataset.moneyTrip)===String(id)});
+      if(money)money.click();
+      else{
+        try{ state.currentTripId=id; if(typeof setView==='function')setView('quickSplit'); }catch(err){}
+      }
     }
-    box.innerHTML=lines.join('<br>');
-  }
-  window.__renderSpeedDiag=render;
-  document.addEventListener('DOMContentLoaded',function(){
-    window.__speedMark&&window.__speedMark('DOMContentLoaded');
-    render();
   });
-  window.addEventListener('load',function(){
-    window.__speedMark&&window.__speedMark('window.load');
-    render();
-    setTimeout(function(){
-      window.__speedMark&&window.__speedMark('開站後1秒');
-      render();
-    },1000);
-    setTimeout(function(){
-      window.__speedMark&&window.__speedMark('開站後2秒');
-      render();
-    },2000);
-  });
-})();
+});
 </script>
 </body>
 </html>
