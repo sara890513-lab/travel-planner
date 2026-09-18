@@ -570,7 +570,8 @@ document.addEventListener('DOMContentLoaded',()=>{
   const dataURL = file => new Promise((res, rej) => { const r = new FileReader(); r.onload = () => res(r.result); r.onerror = rej; r.readAsDataURL(file); });
 
   const state = { trips:[], itineraries:[], expenses:[], photos:[], currentTripId:null, supabase:null, user:null, cloud:false }; window.state=state;
-  const LS='cute-travel-planner-v1';
+  let LS='cute-travel-planner-v1';
+  function useUserStorage(uid){ LS='cute-travel-planner-v1:'+String(uid||'guest'); }
 
   function toast(msg){ const t=$('#toast'); t.textContent=msg; t.classList.add('show'); setTimeout(()=>t.classList.remove('show'),1800); }
   function openModal(target){ const m=typeof target==='string'?$(target):target; if(!m)return; m.classList.add('open'); document.body.style.overflow='hidden'; }
@@ -643,7 +644,7 @@ document.addEventListener('DOMContentLoaded',()=>{
     if(!state.supabase)return false;
     try{
       const payload=collectCloudData();
-      const {error}=await state.supabase.from('travel_data').upsert({id:1,data:payload},{onConflict:'id'});
+      const {error}=await state.supabase.from('user_travel_data').upsert({user_id:state.user.id,data:payload},{onConflict:'user_id'});
       if(error)throw error;
       cloudLastLoadedAt=Date.now();
       state.cloud=true;
@@ -760,8 +761,8 @@ document.addEventListener('DOMContentLoaded',()=>{
       localSave();
       const payload=collectCloudData();
       const {error}=await state.supabase
-        .from('travel_data')
-        .upsert({id:1,data:payload},{onConflict:'id'});
+        .from('user_travel_data')
+        .upsert({user_id:state.user.id,data:payload},{onConflict:'user_id'});
       if(error)throw error;
       state.cloud=true;
       cloudLastLoadedAt=Date.now();
@@ -796,69 +797,34 @@ document.addEventListener('DOMContentLoaded',()=>{
 
   async function initCloud(){
     const cfg=window.TRAVEL_SUPABASE||{};
-    if(!cfg.url || !cfg.anonKey){
-      $('#modeText').textContent='本機模式（雲端設定未完成）';
-      return;
-    }
+    if(!cfg.url || !cfg.anonKey)return false;
     if(!window.supabase){
-      try{await window.loadSupabaseLib();}
-      catch(e){console.warn(e);$('#modeText').textContent='本機模式（雲端稍後再連線）';return;}
+      try{await window.loadSupabaseLib();}catch(e){console.warn(e);return false;}
     }
+    if(!state.supabase){
+      state.supabase=window.supabase.createClient(cfg.url,cfg.anonKey,{auth:{persistSession:true,autoRefreshToken:true,detectSessionInUrl:true}});
+    }
+    const {data:{session}}=await state.supabase.auth.getSession();
+    if(!session?.user){ state.user=null; state.cloud=false; showLoginGate(); updateAuthUI(); return false; }
+    state.user=session.user; useUserStorage(state.user.id); hideLoginGate();
+    try{ localLoad(); }catch(e){}
     try{
-      state.supabase=window.supabase.createClient(cfg.url,cfg.anonKey,{
-        auth:{persistSession:false,autoRefreshToken:false}
-      });
-      const {data,error}=await state.supabase
-        .from('travel_data')
-        .select('id,data')
-        .eq('id',1)
-        .maybeSingle();
+      const {data:profile}=await state.supabase.from('profiles').select('username,display_name,role,status').eq('id',state.user.id).maybeSingle();
+      state.profile=profile||null;
+      if(profile?.status==='disabled'){ await state.supabase.auth.signOut(); showLoginGate('此帳號已停用'); return false; }
+      updateAccountUI();
+      const {data,error}=await state.supabase.from('user_travel_data').select('data').eq('user_id',state.user.id).maybeSingle();
       if(error)throw error;
-
-      state.cloud=true;
-      if(data?.data){
-        const localTrips=[...(state.trips||[])];
-        const before=JSON.stringify(localTrips);
-        applyCloudData(data.data);
-        const merged=new Map();
-        [...(state.trips||[]),...localTrips].forEach(t=>{
-          const key=String(t?.id||''); if(!key)return;
-          const prev=merged.get(key);
-          if(!prev){merged.set(key,t);return;}
-          const pa=Date.parse(prev.updated_at||0)||0, ta=Date.parse(t.updated_at||0)||0;
-          if(ta>=pa)merged.set(key,t);
-        });
-        state.trips=[...merged.values()];
-        localSave();
-        // v6.16：雲端啟動同步只更新 state/localStorage。
-        // 首頁已經顯示的旅程卡保持原位，不因 Supabase 晚回來而整批換掉／重新排序。
-        // 使用者新增、編輯、刪除時仍由既有操作流程正常重畫。
-        if(JSON.stringify(state.trips)!==before){
-          try{
-            const cards=(state.trips||[]).map(t=>({
-              id:t.id,name:t.name||'',start_date:t.start_date||'',end_date:t.end_date||'',
-              location:t.location||'',people:Array.isArray(t.people)?t.people:[],
-              password_hash:t.password_hash?'1':'',updated_at:t.updated_at||''
-            }));
-            localStorage.setItem('travel_trip_cards_instant_v1',JSON.stringify(cards));
-          }catch(e){}
-        }
-      }else{
-        saveCloudSnapshot(false).catch(e=>console.warn('initial cloud snapshot failed',e));
-      }
-      updateAuthUI();
-    }catch(err){
-      console.error('cloud init failed',err);
-      state.cloud=false;
-      updateAuthUI();
-      toast('目前無法連上雲端，先使用本機資料');
-    }
+      if(data?.data){ applyCloudData(data.data); }
+      else { await saveCloudSnapshot(false); }
+      state.cloud=true; updateAuthUI(); return true;
+    }catch(err){ console.error('cloud init failed',err); state.cloud=false; updateAuthUI(); return false; }
   }
 
   function updateAuthUI(){
-    if($('#authBtn')) $('#authBtn').textContent=state.cloud?'☁️ 立即同步':'☁️ 重新連線';
-    if($('#modeText')) $('#modeText').textContent=state.cloud?'☁️ Supabase 雲端共用中':'本機模式（等待雲端連線）';
-    if($('#cloudStatus')) $('#cloudStatus').textContent=state.cloud?'手機、iPad、電腦會共用同一份資料':'目前未連上雲端';
+    if($('#authBtn')) $('#authBtn').textContent=state.user?'👤 '+(state.profile?.display_name||state.profile?.username||'我的帳號'):'🔐 登入';
+    if($('#modeText')) $('#modeText').textContent=state.cloud?'☁️ 個人雲端已同步':'尚未登入雲端';
+    if($('#cloudStatus')) $('#cloudStatus').textContent=state.cloud?'同一帳號在手機、iPad、電腦同步':'目前未登入';
     const chip=$('#syncStatusChip');
     if(chip){
       chip.textContent=state.cloud?'☁️ 雲端已連線':'⚠️ 尚未連線';
@@ -871,9 +837,9 @@ document.addEventListener('DOMContentLoaded',()=>{
     if(Date.now()<cloudPullPausedUntil)return true;
     try{
       const {data,error}=await state.supabase
-        .from('travel_data')
+        .from('user_travel_data')
         .select('data')
-        .eq('id',1)
+        .eq('user_id',state.user.id)
         .maybeSingle();
       if(error)throw error;
       if(data?.data){
@@ -2376,26 +2342,53 @@ function renderItinerary(){
     });
   });
 
-  $('#authBtn').onclick=async()=>{
-    if(window.forceTravelCloudSync){
-      await window.forceTravelCloudSync();
-      if(window.forceTravelCloudPull)await window.forceTravelCloudPull();
-    }
-  };
-  $('#signUpBtn').onclick=()=>toast('目前已改成自動雲端同步，不需要註冊');
-  $('#signInBtn').onclick=()=>toast('目前已改成自動雲端同步，不需要登入');
+  function showLoginGate(msg=''){
+    const g=$('#multiLoginGate'); if(g){g.classList.add('show'); $('#loginError').textContent=msg||'';}
+  }
+  function hideLoginGate(){ $('#multiLoginGate')?.classList.remove('show'); }
+  function updateAccountUI(){
+    const p=state.profile||{}; const b=$('#adminPanelBtn');
+    if(b)b.style.display=['admin','super_admin'].includes(p.role)?'inline-flex':'none';
+    const who=$('#accountWho'); if(who)who.textContent=(p.display_name||p.username||'')+(p.role==='super_admin'?' 👑':'');
+  }
+  async function usernameLogin(){
+    const username=$('#loginUsername').value.trim(); const password=$('#loginPassword').value;
+    if(!username||!password){showLoginGate('請輸入帳號和密碼');return;}
+    $('#loginSubmit').disabled=true; $('#loginError').textContent='登入中…';
+    try{
+      if(!state.supabase){await initCloud();}
+      const cfg=window.TRAVEL_SUPABASE;
+      const r=await fetch(cfg.url+'/functions/v1/username-login',{method:'POST',headers:{'Content-Type':'application/json','apikey':cfg.anonKey},body:JSON.stringify({username})});
+      const j=await r.json(); if(!r.ok||!j.email)throw new Error(j.error||'帳號或密碼錯誤');
+      const {data,error}=await state.supabase.auth.signInWithPassword({email:j.email,password}); if(error)throw error;
+      state.user=data.user; useUserStorage(state.user.id);
+      // 第一次登入：保留這台裝置原本 v6.21 的資料給第一個管理員帳號
+      const legacy=localStorage.getItem('cute-travel-planner-v1');
+      const own=localStorage.getItem(LS);
+      if(!own && legacy && j.role==='super_admin')localStorage.setItem(LS,legacy);
+      // 一般使用者在共用裝置登入時，先清空記憶體中的上一位使用者資料；
+      // 若雲端已有自己的資料，initCloud 會立即載回。
+      if(j.role!=='super_admin'){
+        state.trips=[];state.itineraries=[];state.expenses=[];state.photos=[];state.currentTripId=null;
+        try{if(typeof globalWishlist!=='undefined')globalWishlist.splice(0);if(typeof quickSplit!=='undefined')quickSplit.splice(0);if(typeof quickPeople!=='undefined')quickPeople.splice(0);if(typeof quickHiddenPeople!=='undefined')quickHiddenPeople.splice(0);if(typeof quickArchives!=='undefined')quickArchives.splice(0);}catch(_){}
+      }
+      await initCloud(); hideLoginGate(); toast('登入成功 ♡');
+    }catch(e){showLoginGate(e?.message==='Invalid login credentials'?'帳號或密碼錯誤':(e?.message||'登入失敗'));}
+    finally{$('#loginSubmit').disabled=false;}
+  }
+  $('#loginSubmit')?.addEventListener('click',usernameLogin);
+  $('#loginPassword')?.addEventListener('keydown',e=>{if(e.key==='Enter')usernameLogin();});
+  $('#logoutBtn')?.addEventListener('click',async()=>{if(state.supabase)await state.supabase.auth.signOut();state.user=null;state.profile=null;state.cloud=false;location.reload();});
+  $('#authBtn').onclick=()=>{ if(state.user)openModal('#accountModal'); else showLoginGate(); };
+  $('#adminPanelBtn')?.addEventListener('click',()=>{closeModal('#accountModal');openModal('#adminModal');$('#adminMe').textContent=(state.profile?.display_name||state.profile?.username||'管理員')+'｜'+(state.profile?.role||'');});
+  $('#signUpBtn')?.addEventListener('click',()=>showLoginGate('新帳號請由管理員建立'));
+  $('#signInBtn')?.addEventListener('click',()=>showLoginGate());
 
   // v6.4：讓首屏快取卡片在完整程式載入後可立即接手。
   try{ if(typeof openTrip==='function') window.openTrip=openTrip; }catch(e){}
 
   // v6.0：首頁啟動時先顯示本機快取，再等待雲端資料完成後立即重畫首頁。
   // 避免第一次開啟時旅程區是空白，必須切換頁面才出現。
-  try{
-    localLoad();
-  }catch(e){
-    console.warn('local startup render failed',e);
-  }
-
   // v6.8：首頁只由本機資料首畫一次；Supabase 在背景初始化。
   // 雲端完成後不再固定 renderTrips + setView('home')。
   (async()=>{
@@ -2827,13 +2820,28 @@ window.loadExportLibs=()=>Promise.all([
   }
 }
 </style>
+<style id="v622-multi-user">
+.multi-login-gate{position:fixed;inset:0;z-index:99999;background:linear-gradient(145deg,#fff8f5,#edf6ff);display:none;align-items:center;justify-content:center;padding:20px}.multi-login-gate.show{display:flex}.multi-login-card{width:min(420px,100%);background:#fff;border:1px solid #eee3df;border-radius:28px;padding:30px;box-shadow:0 20px 60px rgba(80,65,60,.14);text-align:center}.login-mark{font-size:42px}.multi-login-card h2{margin:6px 0}.multi-login-card p{color:#8b7e7b;margin:0 0 20px}.multi-login-card label{display:block;text-align:left;font-weight:800;font-size:13px;margin:12px 0}.multi-login-card input{width:100%;box-sizing:border-box;margin-top:7px;border:1px solid #e7ddda;border-radius:14px;padding:13px 14px;font-size:16px;background:#fffaf8}.login-main-btn{width:100%;border:0;border-radius:16px;padding:14px;background:#607d9b;color:white;font-size:16px;font-weight:900;margin-top:8px}.login-main-btn:disabled{opacity:.55}.login-error{min-height:22px;color:#b85d67;font-size:13px}.multi-login-card small{display:block;color:#9a8e8a;margin-top:14px}.admin-grid{display:grid;gap:12px;margin-top:18px}.admin-grid>div{padding:16px;border-radius:16px;background:#fff8f5;border:1px solid #eee2dd}.admin-grid b,.admin-grid span{display:block}.admin-grid span{margin-top:5px;color:#817875;font-size:13px}
+</style>
 </head>
 <body>
   <div id="toast" class="toast"></div>
+  <div id="multiLoginGate" class="multi-login-gate">
+    <div class="multi-login-card">
+      <div class="login-mark">✈️</div><h2>我的旅遊計畫</h2><p>登入自己的旅行帳本 ♡</p>
+      <label>使用者名稱<input id="loginUsername" autocomplete="username" placeholder="例如：xiaohua"></label>
+      <label>密碼<input id="loginPassword" type="password" autocomplete="current-password" placeholder="輸入密碼"></label>
+      <div id="loginError" class="login-error"></div>
+      <button id="loginSubmit" class="login-main-btn">登入</button>
+      <small>每個帳號都有自己的旅程、分帳與願望清單</small>
+    </div>
+  </div>
+  <div id="accountModal" class="modal"><div class="modal-card small"><button class="modal-x" data-close="#accountModal">×</button><h2>👤 我的帳號</h2><p id="accountWho"></p><div style="display:grid;gap:10px;margin-top:16px"><button id="adminPanelBtn" class="primary" style="display:none">👑 管理後台</button><button id="logoutBtn" class="secondary">登出</button></div></div></div>
+  <div id="adminModal" class="modal"><div class="modal-card"><button class="modal-x" data-close="#adminModal">×</button><h2>👑 管理後台</h2><p id="adminMe"></p><div class="admin-grid"><div><b>帳號管理</b><span>你的 Super Admin 權限已啟用</span></div><div><b>資料隔離</b><span>每位使用者只會讀寫自己的旅遊資料</span></div><div><b>下一階段</b><span>新增使用者、停用帳號、重設密碼會接管理員 Edge Function</span></div></div></div></div>
   <header class="topbar">
     <button class="brand" data-action="home" aria-label="回首頁">
       <span class="brand-icon">🗺️</span>
-      <span><strong>我的旅遊計畫</strong><small>TRAVEL PLANNER · v6.21 手機封面適中版</small></span>
+      <span><strong>我的旅遊計畫</strong><small>TRAVEL PLANNER · v6.22 多人登入測試版</small></span>
       <span class="heart">♥</span>
     </button>
     <nav class="nav" aria-label="主選單">
