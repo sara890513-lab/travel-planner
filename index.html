@@ -2356,8 +2356,17 @@ function renderItinerary(){
     if(!username||!password){showLoginGate('請輸入帳號和密碼');return;}
     $('#loginSubmit').disabled=true; $('#loginError').textContent='登入中…';
     try{
-      if(!state.supabase){await initCloud();}
-      const cfg=window.TRAVEL_SUPABASE;
+      const cfg=window.TRAVEL_SUPABASE||{};
+      if(!cfg.url||!cfg.anonKey) throw new Error('Supabase 設定不存在');
+      // 登入前沒有 session 是正常狀態；不要用 initCloud() 建 client，因為 initCloud()
+      // 在函式庫尚未載入或尚未登入時可能提早返回，造成 state.supabase 為 null。
+      if(!window.supabase){
+        try{ await window.loadSupabaseLib(); }catch(_){ throw new Error('登入元件載入失敗，請重新整理後再試'); }
+      }
+      if(!window.supabase?.createClient) throw new Error('登入元件尚未準備完成，請重新整理後再試');
+      if(!state.supabase){
+        state.supabase=window.supabase.createClient(cfg.url,cfg.anonKey,{auth:{persistSession:true,autoRefreshToken:true,detectSessionInUrl:true}});
+      }
       const r=await fetch(cfg.url+'/functions/v1/username-login',{method:'POST',headers:{'Content-Type':'application/json','apikey':cfg.anonKey},body:JSON.stringify({username})});
       const j=await r.json(); if(!r.ok||!j.email)throw new Error(j.error||'帳號或密碼錯誤');
       const {data,error}=await state.supabase.auth.signInWithPassword({email:j.email,password}); if(error)throw error;
