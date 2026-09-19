@@ -2385,12 +2385,48 @@ function renderItinerary(){
     }catch(e){showLoginGate(e?.message==='Invalid login credentials'?'帳號或密碼錯誤':(e?.message||'登入失敗'));}
     finally{$('#loginSubmit').disabled=false;}
   }
-  $('#loginSubmit')?.addEventListener('click',usernameLogin);
-  $('#loginPassword')?.addEventListener('keydown',e=>{if(e.key==='Enter')usernameLogin();});
+  let registerMode=false;
+  function setRegisterMode(on){
+    registerMode=!!on;
+    $('#loginFields')?.classList.toggle('hidden',registerMode);
+    $('#registerFields')?.classList.toggle('hidden',!registerMode);
+    if($('#loginSubmit')) $('#loginSubmit').textContent=registerMode?'建立帳號':'登入';
+    if($('#registerToggleBtn')) $('#registerToggleBtn').textContent=registerMode?'已經有帳號？回登入':'還沒有帳號？註冊新帳號';
+    if($('#loginGateSubtitle')) $('#loginGateSubtitle').textContent=registerMode?'建立自己的旅行帳本 ♡':'登入自己的旅行帳本 ♡';
+    if($('#loginError')) $('#loginError').textContent='';
+  }
+  async function registerUser(){
+    const display_name=$('#registerDisplayName')?.value.trim()||'';
+    const username=($('#registerUsername')?.value||'').trim().toLowerCase();
+    const password=$('#registerPassword')?.value||'';
+    const password2=$('#registerPassword2')?.value||'';
+    if(!display_name){showLoginGate('請輸入顯示名稱');return;}
+    if(!/^[a-z0-9_]{3,20}$/.test(username)){showLoginGate('帳號需為 3～20 個英文字母、數字或底線');return;}
+    if(password.length<6){showLoginGate('密碼至少需要 6 個字元');return;}
+    if(password!==password2){showLoginGate('兩次輸入的密碼不一樣');return;}
+    $('#loginSubmit').disabled=true; $('#loginError').textContent='建立帳號中…';
+    try{
+      const cfg=window.TRAVEL_SUPABASE||{};
+      if(!cfg.url||!cfg.anonKey)throw new Error('Supabase 設定不存在');
+      const r=await fetch(cfg.url+'/functions/v1/register-user',{method:'POST',headers:{'Content-Type':'application/json','apikey':cfg.anonKey},body:JSON.stringify({display_name,username,password})});
+      let j={}; try{j=await r.json();}catch(_){throw new Error('註冊服務回應異常');}
+      if(!r.ok||!j.ok)throw new Error(j.error||'註冊失敗');
+      setRegisterMode(false);
+      $('#loginUsername').value=username;
+      $('#loginPassword').value=password;
+      toast('註冊成功，正在登入 ♡');
+      await usernameLogin();
+    }catch(e){showLoginGate(e?.message||'註冊失敗');}
+    finally{$('#loginSubmit').disabled=false;}
+  }
+  $('#registerToggleBtn')?.addEventListener('click',()=>setRegisterMode(!registerMode));
+  $('#loginSubmit')?.addEventListener('click',()=>registerMode?registerUser():usernameLogin());
+  $('#loginPassword')?.addEventListener('keydown',e=>{if(e.key==='Enter'&&!registerMode)usernameLogin();});
+  $('#registerPassword2')?.addEventListener('keydown',e=>{if(e.key==='Enter'&&registerMode)registerUser();});
   $('#logoutBtn')?.addEventListener('click',async()=>{if(state.supabase)await state.supabase.auth.signOut();state.user=null;state.profile=null;state.cloud=false;location.reload();});
   $('#authBtn').onclick=()=>{ if(state.user)openModal('#accountModal'); else showLoginGate(); };
   $('#adminPanelBtn')?.addEventListener('click',()=>{closeModal('#accountModal');openModal('#adminModal');$('#adminMe').textContent=(state.profile?.display_name||state.profile?.username||'管理員')+'｜'+(state.profile?.role||'');});
-  $('#signUpBtn')?.addEventListener('click',()=>showLoginGate('新帳號請由管理員建立'));
+  $('#signUpBtn')?.addEventListener('click',()=>{closeModal('#authDialog');showLoginGate();setRegisterMode(true);});
   $('#signInBtn')?.addEventListener('click',()=>showLoginGate());
 
   // v6.4：讓首屏快取卡片在完整程式載入後可立即接手。
@@ -2830,18 +2866,28 @@ window.loadExportLibs=()=>Promise.all([
 }
 </style>
 <style id="v622-multi-user">
-.multi-login-gate{position:fixed;inset:0;z-index:99999;background:linear-gradient(145deg,#fff8f5,#edf6ff);display:none;align-items:center;justify-content:center;padding:20px}.multi-login-gate.show{display:flex}.multi-login-card{width:min(420px,100%);background:#fff;border:1px solid #eee3df;border-radius:28px;padding:30px;box-shadow:0 20px 60px rgba(80,65,60,.14);text-align:center}.login-mark{font-size:42px}.multi-login-card h2{margin:6px 0}.multi-login-card p{color:#8b7e7b;margin:0 0 20px}.multi-login-card label{display:block;text-align:left;font-weight:800;font-size:13px;margin:12px 0}.multi-login-card input{width:100%;box-sizing:border-box;margin-top:7px;border:1px solid #e7ddda;border-radius:14px;padding:13px 14px;font-size:16px;background:#fffaf8}.login-main-btn{width:100%;border:0;border-radius:16px;padding:14px;background:#607d9b;color:white;font-size:16px;font-weight:900;margin-top:8px}.login-main-btn:disabled{opacity:.55}.login-error{min-height:22px;color:#b85d67;font-size:13px}.multi-login-card small{display:block;color:#9a8e8a;margin-top:14px}.admin-grid{display:grid;gap:12px;margin-top:18px}.admin-grid>div{padding:16px;border-radius:16px;background:#fff8f5;border:1px solid #eee2dd}.admin-grid b,.admin-grid span{display:block}.admin-grid span{margin-top:5px;color:#817875;font-size:13px}
+.multi-login-gate{position:fixed;inset:0;z-index:99999;background:linear-gradient(145deg,#fff8f5,#edf6ff);display:none;align-items:center;justify-content:center;padding:20px}.multi-login-gate.show{display:flex}.multi-login-card{width:min(420px,100%);background:#fff;border:1px solid #eee3df;border-radius:28px;padding:30px;box-shadow:0 20px 60px rgba(80,65,60,.14);text-align:center}.login-mark{font-size:42px}.multi-login-card h2{margin:6px 0}.multi-login-card p{color:#8b7e7b;margin:0 0 20px}.multi-login-card label{display:block;text-align:left;font-weight:800;font-size:13px;margin:12px 0}.multi-login-card input{width:100%;box-sizing:border-box;margin-top:7px;border:1px solid #e7ddda;border-radius:14px;padding:13px 14px;font-size:16px;background:#fffaf8}.login-main-btn{width:100%;border:0;border-radius:16px;padding:14px;background:#607d9b;color:white;font-size:16px;font-weight:900;margin-top:8px}.login-main-btn:disabled{opacity:.55}.login-error{min-height:22px;color:#b85d67;font-size:13px}.multi-login-card small{display:block;color:#9a8e8a;margin-top:14px}.login-switch{margin-top:12px;border:0;background:transparent;color:#52789b;font-weight:900;padding:8px 10px;cursor:pointer}.register-fields.hidden{display:none!important}.register-fields{margin-top:4px}.register-title{font-size:13px;color:#8b7e7b;margin:4px 0 10px}.admin-grid{display:grid;gap:12px;margin-top:18px}.admin-grid>div{padding:16px;border-radius:16px;background:#fff8f5;border:1px solid #eee2dd}.admin-grid b,.admin-grid span{display:block}.admin-grid span{margin-top:5px;color:#817875;font-size:13px}
 </style>
 </head>
 <body>
   <div id="toast" class="toast"></div>
   <div id="multiLoginGate" class="multi-login-gate">
     <div class="multi-login-card">
-      <div class="login-mark">✈️</div><h2>我的旅遊計畫</h2><p>登入自己的旅行帳本 ♡</p>
-      <label>使用者名稱<input id="loginUsername" autocomplete="username" placeholder="例如：xiaohua"></label>
-      <label>密碼<input id="loginPassword" type="password" autocomplete="current-password" placeholder="輸入密碼"></label>
+      <div class="login-mark">✈️</div><h2>我的旅遊計畫</h2><p id="loginGateSubtitle">登入自己的旅行帳本 ♡</p>
+      <div id="loginFields">
+        <label>使用者名稱<input id="loginUsername" autocomplete="username" autocapitalize="none" placeholder="例如：xiaohua"></label>
+        <label>密碼<input id="loginPassword" type="password" autocomplete="current-password" placeholder="輸入密碼"></label>
+      </div>
+      <div id="registerFields" class="register-fields hidden">
+        <div class="register-title">建立自己的旅行帳本，不需要 Email</div>
+        <label>顯示名稱<input id="registerDisplayName" autocomplete="name" placeholder="例如：小花"></label>
+        <label>使用者名稱<input id="registerUsername" autocomplete="username" autocapitalize="none" placeholder="3～20 個英文、數字或底線"></label>
+        <label>密碼<input id="registerPassword" type="password" autocomplete="new-password" placeholder="至少 6 個字元"></label>
+        <label>確認密碼<input id="registerPassword2" type="password" autocomplete="new-password" placeholder="再輸入一次密碼"></label>
+      </div>
       <div id="loginError" class="login-error"></div>
       <button id="loginSubmit" class="login-main-btn">登入</button>
+      <button id="registerToggleBtn" type="button" class="login-switch">還沒有帳號？註冊新帳號</button>
       <small>每個帳號都有自己的旅程、分帳與願望清單</small>
     </div>
   </div>
@@ -2850,7 +2896,7 @@ window.loadExportLibs=()=>Promise.all([
   <header class="topbar">
     <button class="brand" data-action="home" aria-label="回首頁">
       <span class="brand-icon">🗺️</span>
-      <span><strong>我的旅遊計畫</strong><small>TRAVEL PLANNER · v6.22 多人登入測試版</small></span>
+      <span><strong>我的旅遊計畫</strong><small>TRAVEL PLANNER · v6.24 多人登入＋自行註冊版</small></span>
       <span class="heart">♥</span>
     </button>
     <nav class="nav" aria-label="主選單">
@@ -3437,8 +3483,8 @@ window.loadExportLibs=()=>Promise.all([
   <div id="authDialog" class="modal" role="dialog" aria-modal="true">
     <form id="authForm" class="modal-card">
       <div class="modal-head"><h2>☁️ 雲端同步</h2><button type="button" class="icon-btn" data-close>✕</button></div>
-      <p class="helper">用同一個 Email 登入手機、平板、電腦，就會看到同一份旅遊計畫與照片。</p>
-      <label>Email<input id="authEmail" type="email" required placeholder="you@example.com" /></label>
+      <p class="helper">使用同一個帳號登入手機、平板、電腦，就會看到自己的旅遊計畫與照片。</p>
+      <label>帳號<input id="authEmail" type="text" placeholder="使用者名稱" /></label>
       <label>密碼<input id="authPassword" type="password" minlength="6" required placeholder="至少 6 碼" /></label>
       <div class="modal-actions split"><button type="button" class="ghost" id="signUpBtn">註冊</button><button class="primary" id="signInBtn" type="button">登入</button></div>
       <div id="cloudStatus" class="cloud-status"></div>
