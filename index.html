@@ -2924,6 +2924,31 @@ window.loadExportLibs=()=>Promise.all([
   .trip-card>img.trip-card-cover{width:110px!important;height:82.5px!important;min-height:0!important;aspect-ratio:4/3!important;border-radius:16px!important}
 }
 </style>
+
+<style id="v627-cover-tablet-final-fix">
+/* v6.27：最後覆寫首頁卡片。照片完整顯示，不再裁掉人物；平板快捷按鈕不截字。 */
+.trip-card{align-items:start!important}
+.trip-card>img.trip-card-cover{
+  width:160px!important;height:120px!important;min-height:0!important;
+  aspect-ratio:4/3!important;object-fit:contain!important;object-position:center!important;
+  background:#f5f5f5!important;border-radius:18px!important;align-self:start!important;
+}
+@media (min-width:641px) and (max-width:1180px){
+  .trip-grid{grid-template-columns:1fr!important}
+  .trip-card{grid-template-columns:150px minmax(0,1fr)!important;overflow:visible!important}
+  .trip-card>img.trip-card-cover{width:150px!important;height:112.5px!important;object-fit:contain!important}
+  .trip-actions-main{grid-template-columns:repeat(3,minmax(0,1fr))!important;width:100%!important}
+  .trip-actions-main button{min-width:0!important;width:100%!important;white-space:normal!important;line-height:1.25!important;padding:10px 6px!important;font-size:13px!important}
+  .trip-actions-main .money-btn{grid-column:auto!important}
+}
+@media(max-width:640px){
+  .trip-card{grid-template-columns:105px minmax(0,1fr)!important;overflow:visible!important}
+  .trip-card>img.trip-card-cover{width:105px!important;height:78.75px!important;object-fit:contain!important;background:#f5f5f5!important;border-radius:15px!important}
+  .trip-actions-main{grid-template-columns:1fr 1fr!important}
+  .trip-actions-main button{min-width:0!important;white-space:normal!important}
+  .trip-actions-main .money-btn{grid-column:1/-1!important}
+}
+</style>
 </head>
 <body>
   <div id="toast" class="toast"></div>
