@@ -941,7 +941,7 @@ document.addEventListener('DOMContentLoaded',()=>{
     try{
       (state.trips||[]).forEach(t=>{
         const src=t.cover_url||t.cover||t.image||t.photo||'';
-        if(src && !getHomeThumb(t.id)) cacheHomeThumb(t.id,src);
+        /* v6.28：正式首頁直接讀原始封面，不再建立/使用舊縮圖快取。 */
       });
     }catch(e){}
 
@@ -972,7 +972,7 @@ document.addEventListener('DOMContentLoaded',()=>{
 
     grid.innerHTML=trips.map(t=>{
       const people=peopleOf(t);
-      const cover=getHomeThumb(t.id)||t.cover_url||fallbackCover;
+      const cover=t.cover_url||t.cover||t.image||t.photo||fallbackCover;
       const locked=!!t.password_hash;
       const lockText=locked?(unlockedTripIds.has(t.id)?'🔓 已解鎖':'🔒 密碼保護'):'';
       return `<article class="trip-card${locked?' is-password-protected':''}" data-trip-id="${esc(t.id)}">
@@ -2925,30 +2925,66 @@ window.loadExportLibs=()=>Promise.all([
 }
 </style>
 
-<style id="v627-cover-tablet-final-fix">
-/* v6.27：最後覆寫首頁卡片。照片完整顯示，不再裁掉人物；平板快捷按鈕不截字。 */
-.trip-card{align-items:start!important}
+<style id="v628-home-cover-tablet-final">
+/* v6.28：最後覆寫。首頁封面直接顯示原圖，避免舊縮圖裁切/黑圖。 */
+.trip-card{
+  align-items:start!important;
+  overflow:visible!important;
+}
 .trip-card>img.trip-card-cover{
-  width:160px!important;height:120px!important;min-height:0!important;
-  aspect-ratio:4/3!important;object-fit:contain!important;object-position:center!important;
-  background:#f5f5f5!important;border-radius:18px!important;align-self:start!important;
+  width:180px!important;
+  height:135px!important;
+  min-width:180px!important;
+  min-height:135px!important;
+  max-width:180px!important;
+  max-height:135px!important;
+  aspect-ratio:4/3!important;
+  object-fit:contain!important;
+  object-position:center center!important;
+  background:#f7f4f2!important;
+  border-radius:18px!important;
+  align-self:start!important;
 }
-@media (min-width:641px) and (max-width:1180px){
+.trip-card-body{min-width:0!important;width:100%!important}
+.trip-actions-main{width:100%!important;min-width:0!important}
+.trip-actions-main button{min-width:0!important;max-width:100%!important;white-space:normal!important;overflow:visible!important;text-overflow:clip!important;line-height:1.25!important}
+
+/* iPad / 平板：一列一張卡，封面固定，不讓快捷按鈕被卡片寬度切掉。 */
+@media (min-width:641px) and (max-width:1100px){
   .trip-grid{grid-template-columns:1fr!important}
-  .trip-card{grid-template-columns:150px minmax(0,1fr)!important;overflow:visible!important}
-  .trip-card>img.trip-card-cover{width:150px!important;height:112.5px!important;object-fit:contain!important}
-  .trip-actions-main{grid-template-columns:repeat(3,minmax(0,1fr))!important;width:100%!important}
-  .trip-actions-main button{min-width:0!important;width:100%!important;white-space:normal!important;line-height:1.25!important;padding:10px 6px!important;font-size:13px!important}
+  .trip-card{grid-template-columns:160px minmax(0,1fr)!important;gap:0!important}
+  .trip-card>img.trip-card-cover{
+    width:160px!important;height:120px!important;min-width:160px!important;min-height:120px!important;max-width:160px!important;max-height:120px!important;
+  }
+  .trip-card-body{padding-left:18px!important}
+  .trip-actions-main{display:grid!important;grid-template-columns:repeat(3,minmax(0,1fr))!important;gap:8px!important}
   .trip-actions-main .money-btn{grid-column:auto!important}
+  .trip-actions-main button{width:100%!important;padding:10px 5px!important;font-size:12px!important}
 }
-@media(max-width:640px){
-  .trip-card{grid-template-columns:105px minmax(0,1fr)!important;overflow:visible!important}
-  .trip-card>img.trip-card-cover{width:105px!important;height:78.75px!important;object-fit:contain!important;background:#f5f5f5!important;border-radius:15px!important}
-  .trip-actions-main{grid-template-columns:1fr 1fr!important}
-  .trip-actions-main button{min-width:0!important;white-space:normal!important}
+
+@media (max-width:640px){
+  .trip-card{grid-template-columns:105px minmax(0,1fr)!important;gap:0!important;align-items:start!important}
+  .trip-card>img.trip-card-cover{
+    width:105px!important;height:79px!important;min-width:105px!important;min-height:79px!important;max-width:105px!important;max-height:79px!important;
+    object-fit:contain!important;border-radius:15px!important;
+  }
+  .trip-card-body{padding-left:12px!important}
+  .trip-actions-main{display:grid!important;grid-template-columns:1fr 1fr!important;gap:7px!important}
   .trip-actions-main .money-btn{grid-column:1/-1!important}
 }
 </style>
+<script id="v628-clear-old-home-thumbs">
+/* 舊版首頁縮圖曾經做中央裁切；只清除縮圖，不碰旅程/行程資料。 */
+(function(){
+  try{
+    for(var i=localStorage.length-1;i>=0;i--){
+      var k=localStorage.key(i)||'';
+      if(k.indexOf('travel_home_thumb_v')===0) localStorage.removeItem(k);
+    }
+  }catch(e){}
+})();
+</script>
+
 </head>
 <body>
   <div id="toast" class="toast"></div>
