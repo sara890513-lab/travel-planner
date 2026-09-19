@@ -2230,12 +2230,14 @@ function renderItinerary(){
       }
 
       const file = $('#tripCoverInput')?.files?.[0];
+      // v6.26：有選封面時先用 blob 預覽立即顯示卡片，
+      // 不等待大照片轉成 dataURL / 雲端同步後才回首頁。
+      let previewObjectUrl = '';
       if(file){
-        if(state.cloud){
-          cover = await uploadPhotoFile(file,id,true);
-        }else{
-          try { cover = await dataURL(file); } catch(e) { console.warn('cover read failed', e); }
-        }
+        try{
+          previewObjectUrl = URL.createObjectURL(file);
+          cover = previewObjectUrl;
+        }catch(e){ console.warn('cover preview failed', e); }
       }
 
       const row = {
@@ -2277,20 +2279,39 @@ function renderItinerary(){
       renderTrips();
       toast(existingId ? '旅程已更新 ♡' : '旅程已新增 ♡');
 
-      // 雲端改成背景同步；不要先等待雲端再顯示卡片。
-      if(state.cloud){
-        cloudPullPausedUntil = Date.now() + 5000;
+      // v6.26：畫面已經先出現；照片轉換與雲端寫入全部放到畫面更新之後。
+      let finalRow = row;
+      if(file){
         try{
-          cloudUpsert('trips',row).catch(cloudErr=>console.error('trip background sync failed',cloudErr));
-          // 畫面與本機已先完成；雲端在背景同步。
+          const finalCover = await dataURL(file);
+          finalRow = {...row, cover_url: finalCover, updated_at:new Date().toISOString()};
+          const idx = state.trips.findIndex(t=>t.id===id);
+          if(idx>=0) state.trips[idx]=finalRow;
           localSave();
-        }catch(cloudErr){
-          console.error('trip cloud sync failed',cloudErr);
-          toast('旅程已先儲存在這台裝置，雲端稍後再同步');
-          try{ if(typeof scheduleCloudSave==='function') scheduleCloudSave(); }catch(e){}
+          // 只換這張卡片的圖片，不重建整個首頁。
+          const card=document.querySelector(`[data-trip-id="${CSS.escape(String(id))}"]`);
+          const img=card?.querySelector('img.trip-card-cover');
+          if(img) img.src=finalCover;
+        }catch(e){
+          console.warn('cover conversion failed',e);
+          finalRow={...row,cover_url:existingTrip?.cover_url||''};
+          const idx=state.trips.findIndex(t=>t.id===id); if(idx>=0)state.trips[idx]=finalRow;
+          localSave();
+        }finally{
+          if(previewObjectUrl) try{URL.revokeObjectURL(previewObjectUrl)}catch(e){}
         }
       }else{
-        // 雲端尚未初始化完成時，也排入背景同步。
+        localSave();
+      }
+
+      if(state.cloud){
+        cloudPullPausedUntil = Date.now() + 5000;
+        cloudUpsert('trips',finalRow).catch(cloudErr=>{
+          console.error('trip background sync failed',cloudErr);
+          toast('旅程已顯示，雲端稍後再同步');
+          try{ if(typeof scheduleCloudSave==='function') scheduleCloudSave(); }catch(e){}
+        });
+      }else{
         try{ if(typeof scheduleCloudSave==='function') scheduleCloudSave(); }catch(e){}
       }
     }catch(err){
@@ -2888,6 +2909,20 @@ window.loadExportLibs=()=>Promise.all([
 </style>
 <style id="v622-multi-user">
 .multi-login-gate{position:fixed;inset:0;z-index:99999;background:linear-gradient(145deg,#fff8f5,#edf6ff);display:none;align-items:center;justify-content:center;padding:20px}.multi-login-gate.show{display:flex}.multi-login-card{width:min(420px,100%);background:#fff;border:1px solid #eee3df;border-radius:28px;padding:30px;box-shadow:0 20px 60px rgba(80,65,60,.14);text-align:center}.login-mark{font-size:42px}.multi-login-card h2{margin:6px 0}.multi-login-card p{color:#8b7e7b;margin:0 0 20px}.multi-login-card label{display:block;text-align:left;font-weight:800;font-size:13px;margin:12px 0}.multi-login-card input{width:100%;box-sizing:border-box;margin-top:7px;border:1px solid #e7ddda;border-radius:14px;padding:13px 14px;font-size:16px;background:#fffaf8}.login-main-btn{width:100%;border:0;border-radius:16px;padding:14px;background:#607d9b;color:white;font-size:16px;font-weight:900;margin-top:8px}.login-main-btn:disabled{opacity:.55}.login-error{min-height:22px;color:#b85d67;font-size:13px}.multi-login-card small{display:block;color:#9a8e8a;margin-top:14px}.login-switch{margin-top:12px;border:0;background:transparent;color:#52789b;font-weight:900;padding:8px 10px;cursor:pointer}.register-fields.hidden{display:none!important}.register-fields{margin-top:4px}.register-title{font-size:13px;color:#8b7e7b;margin:4px 0 10px}.admin-grid{display:grid;gap:12px;margin-top:18px}.admin-grid>div{padding:16px;border-radius:16px;background:#fff8f5;border:1px solid #eee2dd}.admin-grid b,.admin-grid span{display:block}.admin-grid span{margin-top:5px;color:#817875;font-size:13px}
+</style>
+
+<style id="v626-cover-size-fix">
+/* v6.26：首頁封面固定為適中的 4:3，不再被旅程卡內容高度拉長。 */
+.trip-card{align-items:start!important}
+.trip-card>img.trip-card-cover{width:180px!important;height:135px!important;min-height:0!important;aspect-ratio:4/3!important;object-fit:cover!important;object-position:center!important;border-radius:18px!important;align-self:start!important}
+@media(max-width:900px){
+  .trip-card{grid-template-columns:150px minmax(0,1fr)!important}
+  .trip-card>img.trip-card-cover{width:150px!important;height:112.5px!important}
+}
+@media(max-width:640px){
+  .trip-card{grid-template-columns:110px minmax(0,1fr)!important;align-items:start!important;overflow:visible!important}
+  .trip-card>img.trip-card-cover{width:110px!important;height:82.5px!important;min-height:0!important;aspect-ratio:4/3!important;border-radius:16px!important}
+}
 </style>
 </head>
 <body>
