@@ -806,19 +806,37 @@ document.addEventListener('DOMContentLoaded',()=>{
     }
     const {data:{session}}=await state.supabase.auth.getSession();
     if(!session?.user){ state.user=null; state.cloud=false; showLoginGate(); updateAuthUI(); return false; }
-    state.user=session.user; useUserStorage(state.user.id); hideLoginGate();
-    try{ localLoad(); }catch(e){}
+    state.user=session.user; useUserStorage(state.user.id);
     try{
       const {data:profile}=await state.supabase.from('profiles').select('username,display_name,role,status').eq('id',state.user.id).maybeSingle();
       state.profile=profile||null;
       if(profile?.status==='disabled'){ await state.supabase.auth.signOut(); showLoginGate('此帳號已停用'); return false; }
       updateAccountUI();
+
+      // v6.25：跨裝置以「這個帳號的雲端資料」為唯一來源。
+      // 不先讀手機／平板各自的 localStorage，避免同帳號看到不同旅程。
       const {data,error}=await state.supabase.from('user_travel_data').select('data').eq('user_id',state.user.id).maybeSingle();
       if(error)throw error;
-      if(data?.data){ applyCloudData(data.data); }
-      else { await saveCloudSnapshot(false); }
-      state.cloud=true; updateAuthUI(); return true;
-    }catch(err){ console.error('cloud init failed',err); state.cloud=false; updateAuthUI(); return false; }
+      if(data?.data){
+        applyCloudData(data.data);
+      }else{
+        // 新帳號沒有雲端資料時，必須從真正空白開始，不能繼承這台裝置的舊旅程。
+        state.trips=[]; state.itineraries=[]; state.expenses=[]; state.photos=[]; state.currentTripId=null;
+        try{
+          if(typeof globalWishlist!=='undefined')globalWishlist.splice(0);
+          if(typeof quickSplit!=='undefined')quickSplit.splice(0);
+          if(typeof quickPeople!=='undefined')quickPeople.splice(0);
+          if(typeof quickHiddenPeople!=='undefined')quickHiddenPeople.splice(0);
+          if(typeof quickArchives!=='undefined')quickArchives.splice(0);
+        }catch(_){}
+        localSave();
+        await saveCloudSnapshot(false);
+      }
+      state.cloud=true; updateAuthUI();
+      if(typeof renderTrips==='function')renderTrips();
+      hideLoginGate();
+      return true;
+    }catch(err){ console.error('cloud init failed',err); state.cloud=false; updateAuthUI(); showLoginGate('雲端資料讀取失敗，請再登入一次'); return false; }
   }
 
   function updateAuthUI(){
@@ -2371,17 +2389,10 @@ function renderItinerary(){
       const j=await r.json(); if(!r.ok||!j.email)throw new Error(j.error||'帳號或密碼錯誤');
       const {data,error}=await state.supabase.auth.signInWithPassword({email:j.email,password}); if(error)throw error;
       state.user=data.user; useUserStorage(state.user.id);
-      // 第一次登入：保留這台裝置原本 v6.21 的資料給第一個管理員帳號
-      const legacy=localStorage.getItem('cute-travel-planner-v1');
-      const own=localStorage.getItem(LS);
-      if(!own && legacy && j.role==='super_admin')localStorage.setItem(LS,legacy);
-      // 一般使用者在共用裝置登入時，先清空記憶體中的上一位使用者資料；
-      // 若雲端已有自己的資料，initCloud 會立即載回。
-      if(j.role!=='super_admin'){
-        state.trips=[];state.itineraries=[];state.expenses=[];state.photos=[];state.currentTripId=null;
-        try{if(typeof globalWishlist!=='undefined')globalWishlist.splice(0);if(typeof quickSplit!=='undefined')quickSplit.splice(0);if(typeof quickPeople!=='undefined')quickPeople.splice(0);if(typeof quickHiddenPeople!=='undefined')quickHiddenPeople.splice(0);if(typeof quickArchives!=='undefined')quickArchives.splice(0);}catch(_){}
-      }
-      await initCloud(); hideLoginGate(); toast('登入成功 ♡');
+      // v6.25：登入後一律從該帳號的 user_travel_data 載入，
+      // 不再把任何裝置上的舊 localStorage 當成登入資料來源。
+      state.trips=[];state.itineraries=[];state.expenses=[];state.photos=[];state.currentTripId=null;
+      await initCloud(); toast('登入成功 ♡');
     }catch(e){showLoginGate(e?.message==='Invalid login credentials'?'帳號或密碼錯誤':(e?.message||'登入失敗'));}
     finally{$('#loginSubmit').disabled=false;}
   }
@@ -2437,8 +2448,18 @@ function renderItinerary(){
   // v6.8：首頁只由本機資料首畫一次；Supabase 在背景初始化。
   // 雲端完成後不再固定 renderTrips + setView('home')。
   (async()=>{
-    try{ await initCloud(); }
-    catch(e){ console.error('startup cloud load failed',e); }
+    // v6.25：每次重新開啟網站都先停在登入畫面。
+    // 清掉瀏覽器保存的舊 session，避免手機／平板直接進入不同的本機畫面。
+    try{
+      const cfg=window.TRAVEL_SUPABASE||{};
+      if(!window.supabase) await window.loadSupabaseLib();
+      if(!state.supabase && window.supabase?.createClient){
+        state.supabase=window.supabase.createClient(cfg.url,cfg.anonKey,{auth:{persistSession:true,autoRefreshToken:true,detectSessionInUrl:true}});
+      }
+      if(state.supabase) await state.supabase.auth.signOut();
+    }catch(e){ console.warn('startup signout failed',e); }
+    state.user=null; state.profile=null; state.cloud=false;
+    showLoginGate(); updateAuthUI();
     try{
       if(typeof renderWishlist==='function')renderWishlist();
       if(typeof renderQuickSplit==='function')renderQuickSplit();
@@ -2871,7 +2892,7 @@ window.loadExportLibs=()=>Promise.all([
 </head>
 <body>
   <div id="toast" class="toast"></div>
-  <div id="multiLoginGate" class="multi-login-gate">
+  <div id="multiLoginGate" class="multi-login-gate show">
     <div class="multi-login-card">
       <div class="login-mark">✈️</div><h2>我的旅遊計畫</h2><p id="loginGateSubtitle">登入自己的旅行帳本 ♡</p>
       <div id="loginFields">
@@ -2939,9 +2960,9 @@ window.loadExportLibs=()=>Promise.all([
   if(!grid)return;
   var trips=[];
   try{
-    trips=JSON.parse(localStorage.getItem('travel_trip_cards_instant_v1')||'[]')||[];
+    trips=[]; // v6.25：登入前不顯示任何上一位使用者的旅程快取
     if(!trips.length){
-      var full=JSON.parse(localStorage.getItem('cute-travel-planner-v1')||'{}')||{};
+      var full={}; // v6.25：登入前不讀取舊的全域旅程快取
       trips=Array.isArray(full.trips)?full.trips:[];
     }
   }catch(e){trips=[]}
