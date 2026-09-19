@@ -2985,6 +2985,42 @@ window.loadExportLibs=()=>Promise.all([
 })();
 </script>
 
+
+<style id="v629-ipad-topbar-final">
+/* v6.29：只修 iPad／平板上方工具列，其他 v6.28 功能保持不變 */
+@media (min-width:641px) and (max-width:1180px){
+  .topbar{
+    min-height:82px!important;
+    padding-top:14px!important;
+    padding-bottom:14px!important;
+    padding-left:18px!important;
+    padding-right:18px!important;
+    align-items:center!important;
+    overflow:visible!important;
+  }
+  .nav{
+    min-height:54px!important;
+    align-items:stretch!important;
+    overflow:visible!important;
+  }
+  .nav-btn{
+    min-height:54px!important;
+    padding:8px 12px!important;
+    line-height:1.35!important;
+    display:flex!important;
+    flex-direction:column!important;
+    align-items:center!important;
+    justify-content:center!important;
+    overflow:visible!important;
+  }
+  .nav-btn span{
+    display:block!important;
+    font-size:20px!important;
+    line-height:1.15!important;
+    margin-bottom:3px!important;
+  }
+}
+</style>
 </head>
 <body>
   <div id="toast" class="toast"></div>
