@@ -2457,7 +2457,32 @@ function renderItinerary(){
   $('#registerPassword2')?.addEventListener('keydown',e=>{if(e.key==='Enter'&&registerMode)registerUser();});
   $('#logoutBtn')?.addEventListener('click',async()=>{if(state.supabase)await state.supabase.auth.signOut();state.user=null;state.profile=null;state.cloud=false;location.reload();});
   $('#authBtn').onclick=()=>{ if(state.user)openModal('#accountModal'); else showLoginGate(); };
-  $('#adminPanelBtn')?.addEventListener('click',()=>{closeModal('#accountModal');openModal('#adminModal');$('#adminMe').textContent=(state.profile?.display_name||state.profile?.username||'管理員')+'｜'+(state.profile?.role||'');});
+  function adminDate(v){
+    if(!v)return '—';
+    try{return new Intl.DateTimeFormat('zh-TW',{year:'numeric',month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit'}).format(new Date(v));}catch(_){return String(v);}
+  }
+  function adminEsc(v){return String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));}
+  async function loadAdminUsers(){
+    const status=$('#adminUsersStatus'), list=$('#adminUsersList'), refresh=$('#adminRefreshUsers');
+    if(status)status.textContent='讀取使用者中…'; if(list)list.innerHTML=''; if(refresh)refresh.disabled=true;
+    try{
+      const cfg=window.TRAVEL_SUPABASE||{};
+      if(!state.supabase||!state.user)throw new Error('請先登入管理員帳號');
+      const {data:sessionData,error:sessionError}=await state.supabase.auth.getSession();
+      if(sessionError)throw sessionError;
+      const token=sessionData?.session?.access_token;
+      if(!token)throw new Error('登入狀態已失效，請重新登入');
+      const r=await fetch(cfg.url+'/functions/v1/admin-users',{method:'POST',headers:{'Content-Type':'application/json','apikey':cfg.anonKey,'Authorization':'Bearer '+token},body:'{}'});
+      let j={}; try{j=await r.json();}catch(_){throw new Error('管理員服務回應異常');}
+      if(!r.ok||!j.ok)throw new Error(j.error||'無法讀取使用者');
+      const users=Array.isArray(j.users)?j.users:[];
+      if(status)status.textContent='共 '+users.length+' 個帳號';
+      if(list)list.innerHTML=users.map(u=>`<div class="admin-user-row"><div class="admin-user-main"><strong>${adminEsc(u.display_name||u.username||'未命名')}</strong><span>@${adminEsc(u.username||'')}</span></div><div class="admin-user-badges"><span class="admin-badge role">${adminEsc(u.role||'user')}</span><span class="admin-badge ${u.status==='active'?'active':'disabled'}">${u.status==='active'?'使用中':'已停用'}</span></div><div class="admin-user-meta"><span>註冊：${adminEsc(adminDate(u.created_at))}</span><span>最後登入：${adminEsc(adminDate(u.last_login_at))}</span></div></div>`).join('')||'<div class="admin-empty">目前沒有使用者資料</div>';
+    }catch(e){ if(status)status.textContent='讀取失敗：'+(e?.message||'未知錯誤'); if(list)list.innerHTML='<div class="admin-empty">請確認 admin-users 已部署，且目前帳號具有管理員權限。</div>'; }
+    finally{if(refresh)refresh.disabled=false;}
+  }
+  $('#adminPanelBtn')?.addEventListener('click',()=>{closeModal('#accountModal');openModal('#adminModal');$('#adminMe').textContent=(state.profile?.display_name||state.profile?.username||'管理員')+'｜'+(state.profile?.role||'');loadAdminUsers();});
+  $('#adminRefreshUsers')?.addEventListener('click',loadAdminUsers);
   $('#signUpBtn')?.addEventListener('click',()=>{closeModal('#authDialog');showLoginGate();setRegisterMode(true);});
   $('#signInBtn')?.addEventListener('click',()=>showLoginGate());
 
@@ -3021,6 +3046,19 @@ window.loadExportLibs=()=>Promise.all([
   }
 }
 </style>
+
+<style id="v630-admin-users-style">
+.admin-users-card{width:min(760px,calc(100vw - 28px));max-height:min(82vh,760px);overflow:auto}
+.admin-toolbar{display:flex;align-items:center;justify-content:space-between;gap:12px;margin:14px 0 10px;padding:12px 14px;border-radius:16px;background:#fff7fb;border:1px solid #f3dce8}
+.admin-toolbar>div{display:grid;gap:3px}.admin-toolbar small{color:#786b73;font-size:12px}
+.admin-users-status{font-size:13px;color:#756a70;margin:8px 2px 10px}
+.admin-users-list{display:grid;gap:10px}
+.admin-user-row{display:grid;grid-template-columns:minmax(150px,1fr) auto;gap:8px 12px;padding:13px 14px;border:1px solid #eadfe5;border-radius:16px;background:#fff}
+.admin-user-main{display:flex;align-items:baseline;gap:8px;min-width:0}.admin-user-main strong{font-size:15px}.admin-user-main span{font-size:12px;color:#8a7d84;overflow:hidden;text-overflow:ellipsis}
+.admin-user-badges{display:flex;gap:6px;justify-content:flex-end;flex-wrap:wrap}.admin-badge{font-size:11px;padding:4px 8px;border-radius:999px;background:#f2edf0}.admin-badge.role{background:#f5ecff;color:#6d4c8d}.admin-badge.active{background:#eaf8ef;color:#287244}.admin-badge.disabled{background:#fff0f0;color:#a23d3d}
+.admin-user-meta{grid-column:1/-1;display:flex;gap:14px;flex-wrap:wrap;font-size:11px;color:#8b7f85}.admin-empty{padding:22px;text-align:center;color:#81757b;background:#faf7f9;border-radius:16px}
+@media(max-width:700px){.admin-toolbar{align-items:flex-start}.admin-user-row{grid-template-columns:1fr}.admin-user-badges{justify-content:flex-start}.admin-user-meta{grid-column:1;display:grid;gap:4px}}
+</style>
 </head>
 <body>
   <div id="toast" class="toast"></div>
@@ -3045,11 +3083,11 @@ window.loadExportLibs=()=>Promise.all([
     </div>
   </div>
   <div id="accountModal" class="modal"><div class="modal-card small"><button class="modal-x" data-close="#accountModal">×</button><h2>👤 我的帳號</h2><p id="accountWho"></p><div style="display:grid;gap:10px;margin-top:16px"><button id="adminPanelBtn" class="primary" style="display:none">👑 管理後台</button><button id="logoutBtn" class="secondary">登出</button></div></div></div>
-  <div id="adminModal" class="modal"><div class="modal-card"><button class="modal-x" data-close="#adminModal">×</button><h2>👑 管理後台</h2><p id="adminMe"></p><div class="admin-grid"><div><b>帳號管理</b><span>你的 Super Admin 權限已啟用</span></div><div><b>資料隔離</b><span>每位使用者只會讀寫自己的旅遊資料</span></div><div><b>下一階段</b><span>新增使用者、停用帳號、重設密碼會接管理員 Edge Function</span></div></div></div></div>
+  <div id="adminModal" class="modal"><div class="modal-card admin-users-card"><button class="modal-x" data-close="#adminModal">×</button><h2>👑 管理後台</h2><p id="adminMe"></p><div class="admin-toolbar"><div><b>使用者帳號</b><small>只顯示帳號管理資料，不讀取私人旅程內容</small></div><button id="adminRefreshUsers" type="button" class="secondary">↻ 重新整理</button></div><div id="adminUsersStatus" class="admin-users-status">準備讀取使用者…</div><div id="adminUsersList" class="admin-users-list"></div></div></div>
   <header class="topbar">
     <button class="brand" data-action="home" aria-label="回首頁">
       <span class="brand-icon">🗺️</span>
-      <span><strong>我的旅遊計畫</strong><small>TRAVEL PLANNER · v6.24 多人登入＋自行註冊版</small></span>
+      <span><strong>我的旅遊計畫</strong><small>TRAVEL PLANNER · v6.30 管理員使用者列表版</small></span>
       <span class="heart">♥</span>
     </button>
     <nav class="nav" aria-label="主選單">
