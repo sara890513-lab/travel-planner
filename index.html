@@ -2522,10 +2522,27 @@ function renderItinerary(){
         headers:{'Content-Type':'application/json','apikey':cfg.anonKey,'Authorization':'Bearer '+token},
         body:JSON.stringify(body)
       });
-      let j={}; try{j=await r.json();}catch(_){throw new Error('管理操作服務回應異常');}
-      if(!r.ok||!j.ok)throw new Error(j.error||'管理操作失敗');
-      toast(j.message||'操作完成');
+      const raw=await r.text();
+      let j={};
+      try{j=raw?JSON.parse(raw):{};}catch(_){throw new Error('管理操作服務回應不是有效 JSON：'+raw.slice(0,160));}
+      if(!r.ok||j.ok===false)throw new Error(j.error||j.message||('管理操作失敗（HTTP '+r.status+'）'));
+
+      // v6.32：後端回 200 不代表狀態真的有改；重新讀取管理清單並驗證。
+      await new Promise(resolve=>setTimeout(resolve,250));
       await loadAdminUsers();
+      if(action==='disable'||action==='enable'){
+        const expected=action==='disable'?'disabled':'active';
+        const statusEl=document.querySelector(`[data-user-id="${CSS.escape(String(userId))}"]`)?.closest('.admin-user-row')?.querySelector('.admin-badge.active,.admin-badge.disabled');
+        const actual=statusEl?.classList.contains('disabled')?'disabled':statusEl?.classList.contains('active')?'active':'';
+        if(actual!==expected){
+          const msg=action==='disable'
+            ? '後端有收到停用要求，但帳號狀態仍是「使用中」。請更新 admin-user-actions Edge Function。'
+            : '後端有收到恢復要求，但帳號狀態仍是「已停用」。請更新 admin-user-actions Edge Function。';
+          alert(msg);
+          throw new Error(msg);
+        }
+      }
+      toast(j.message||(action==='disable'?'帳號已停用':action==='enable'?'帳號已恢復':'密碼已重設'));
     }catch(e){
       alert(e?.message||'管理操作失敗');
     }finally{
@@ -3147,7 +3164,7 @@ window.loadExportLibs=()=>Promise.all([
   <header class="topbar">
     <button class="brand" data-action="home" aria-label="回首頁">
       <span class="brand-icon">🗺️</span>
-      <span><strong>我的旅遊計畫</strong><small>TRAVEL PLANNER · v6.31 管理員帳號操作版</small></span>
+      <span><strong>我的旅遊計畫</strong><small>TRAVEL PLANNER · v6.32 停用帳號驗證修正版</small></span>
       <span class="heart">♥</span>
     </button>
     <nav class="nav" aria-label="主選單">
