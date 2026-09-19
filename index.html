@@ -2477,12 +2477,67 @@ function renderItinerary(){
       if(!r.ok||!j.ok)throw new Error(j.error||'無法讀取使用者');
       const users=Array.isArray(j.users)?j.users:[];
       if(status)status.textContent='共 '+users.length+' 個帳號';
-      if(list)list.innerHTML=users.map(u=>`<div class="admin-user-row"><div class="admin-user-main"><strong>${adminEsc(u.display_name||u.username||'未命名')}</strong><span>@${adminEsc(u.username||'')}</span></div><div class="admin-user-badges"><span class="admin-badge role">${adminEsc(u.role||'user')}</span><span class="admin-badge ${u.status==='active'?'active':'disabled'}">${u.status==='active'?'使用中':'已停用'}</span></div><div class="admin-user-meta"><span>註冊：${adminEsc(adminDate(u.created_at))}</span><span>最後登入：${adminEsc(adminDate(u.last_login_at))}</span></div></div>`).join('')||'<div class="admin-empty">目前沒有使用者資料</div>';
+      if(list)list.innerHTML=users.map(u=>{
+        const isSelf=String(u.id||'')===String(state.user?.id||'');
+        const protectedUser=u.role==='super_admin' || isSelf;
+        const actionButtons=protectedUser
+          ? `<div class="admin-user-protected">${u.role==='super_admin'?'🔒 最高管理員帳號受到保護':'🔒 目前登入帳號'}</div>`
+          : `<div class="admin-user-actions">
+              <button type="button" class="${u.status==='active'?'admin-danger':'admin-enable'}" data-admin-action="${u.status==='active'?'disable':'enable'}" data-user-id="${adminEsc(u.id||'')}" data-user-name="${adminEsc(u.display_name||u.username||'使用者')}">${u.status==='active'?'停用帳號':'恢復帳號'}</button>
+              <button type="button" class="admin-reset" data-admin-action="reset_password" data-user-id="${adminEsc(u.id||'')}" data-user-name="${adminEsc(u.display_name||u.username||'使用者')}">重設臨時密碼</button>
+            </div>`;
+        return `<div class="admin-user-row"><div class="admin-user-main"><strong>${adminEsc(u.display_name||u.username||'未命名')}</strong><span>@${adminEsc(u.username||'')}</span></div><div class="admin-user-badges"><span class="admin-badge role">${adminEsc(u.role||'user')}</span><span class="admin-badge ${u.status==='active'?'active':'disabled'}">${u.status==='active'?'使用中':'已停用'}</span></div><div class="admin-user-meta"><span>註冊：${adminEsc(adminDate(u.created_at))}</span><span>最後登入：${adminEsc(adminDate(u.last_login_at))}</span></div>${actionButtons}</div>`;
+      }).join('')||'<div class="admin-empty">目前沒有使用者資料</div>';
     }catch(e){ if(status)status.textContent='讀取失敗：'+(e?.message||'未知錯誤'); if(list)list.innerHTML='<div class="admin-empty">請確認 admin-users 已部署，且目前帳號具有管理員權限。</div>'; }
     finally{if(refresh)refresh.disabled=false;}
   }
   $('#adminPanelBtn')?.addEventListener('click',()=>{closeModal('#accountModal');openModal('#adminModal');$('#adminMe').textContent=(state.profile?.display_name||state.profile?.username||'管理員')+'｜'+(state.profile?.role||'');loadAdminUsers();});
   $('#adminRefreshUsers')?.addEventListener('click',loadAdminUsers);
+
+  async function runAdminUserAction(action,userId,userName){
+    if(!state.supabase||!state.user){toast('請先登入管理員帳號');return;}
+    let body={action,user_id:userId};
+    if(action==='disable'){
+      if(!confirm(`確定要停用「${userName}」嗎？\n停用後將無法再次登入。`))return;
+    }else if(action==='enable'){
+      if(!confirm(`確定要恢復「${userName}」的帳號嗎？`))return;
+    }else if(action==='reset_password'){
+      const temporaryPassword=prompt(`請輸入「${userName}」的新臨時密碼\n至少 8 個字元：`,'');
+      if(temporaryPassword===null)return;
+      if(temporaryPassword.length<8){toast('臨時密碼至少需要 8 個字元');return;}
+      if(!confirm(`確定要重設「${userName}」的密碼嗎？`))return;
+      body.temporary_password=temporaryPassword;
+    }else{return;}
+
+    const buttons=[...document.querySelectorAll('[data-admin-action]')];
+    buttons.forEach(b=>b.disabled=true);
+    try{
+      const cfg=window.TRAVEL_SUPABASE||{};
+      const {data:sessionData,error:sessionError}=await state.supabase.auth.getSession();
+      if(sessionError)throw sessionError;
+      const token=sessionData?.session?.access_token;
+      if(!token)throw new Error('登入狀態已失效，請重新登入');
+      const r=await fetch(cfg.url+'/functions/v1/admin-user-actions',{
+        method:'POST',
+        headers:{'Content-Type':'application/json','apikey':cfg.anonKey,'Authorization':'Bearer '+token},
+        body:JSON.stringify(body)
+      });
+      let j={}; try{j=await r.json();}catch(_){throw new Error('管理操作服務回應異常');}
+      if(!r.ok||!j.ok)throw new Error(j.error||'管理操作失敗');
+      toast(j.message||'操作完成');
+      await loadAdminUsers();
+    }catch(e){
+      alert(e?.message||'管理操作失敗');
+    }finally{
+      buttons.forEach(b=>b.disabled=false);
+    }
+  }
+
+  $('#adminUsersList')?.addEventListener('click',e=>{
+    const btn=e.target.closest('[data-admin-action]');
+    if(!btn)return;
+    runAdminUserAction(btn.dataset.adminAction,btn.dataset.userId,btn.dataset.userName||'使用者');
+  });
   $('#signUpBtn')?.addEventListener('click',()=>{closeModal('#authDialog');showLoginGate();setRegisterMode(true);});
   $('#signInBtn')?.addEventListener('click',()=>showLoginGate());
 
@@ -3058,6 +3113,11 @@ window.loadExportLibs=()=>Promise.all([
 .admin-user-badges{display:flex;gap:6px;justify-content:flex-end;flex-wrap:wrap}.admin-badge{font-size:11px;padding:4px 8px;border-radius:999px;background:#f2edf0}.admin-badge.role{background:#f5ecff;color:#6d4c8d}.admin-badge.active{background:#eaf8ef;color:#287244}.admin-badge.disabled{background:#fff0f0;color:#a23d3d}
 .admin-user-meta{grid-column:1/-1;display:flex;gap:14px;flex-wrap:wrap;font-size:11px;color:#8b7f85}.admin-empty{padding:22px;text-align:center;color:#81757b;background:#faf7f9;border-radius:16px}
 @media(max-width:700px){.admin-toolbar{align-items:flex-start}.admin-user-row{grid-template-columns:1fr}.admin-user-badges{justify-content:flex-start}.admin-user-meta{grid-column:1;display:grid;gap:4px}}
+.admin-user-actions{grid-column:1/-1;display:flex;gap:8px;flex-wrap:wrap;margin-top:4px;padding-top:10px;border-top:1px dashed #eadfe5}
+.admin-user-actions button{border:0;border-radius:12px;padding:9px 12px;font-weight:800;cursor:pointer}
+.admin-user-actions button:disabled{opacity:.55;cursor:wait}
+.admin-danger{background:#fff0f0;color:#a23d3d}.admin-enable{background:#eaf8ef;color:#287244}.admin-reset{background:#eef5ff;color:#42688f}
+.admin-user-protected{grid-column:1/-1;margin-top:4px;padding-top:9px;border-top:1px dashed #eadfe5;color:#8a7d84;font-size:12px;font-weight:700}
 </style>
 </head>
 <body>
@@ -3087,7 +3147,7 @@ window.loadExportLibs=()=>Promise.all([
   <header class="topbar">
     <button class="brand" data-action="home" aria-label="回首頁">
       <span class="brand-icon">🗺️</span>
-      <span><strong>我的旅遊計畫</strong><small>TRAVEL PLANNER · v6.30 管理員使用者列表版</small></span>
+      <span><strong>我的旅遊計畫</strong><small>TRAVEL PLANNER · v6.31 管理員帳號操作版</small></span>
       <span class="heart">♥</span>
     </button>
     <nav class="nav" aria-label="主選單">
