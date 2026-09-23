@@ -1002,6 +1002,13 @@ document.addEventListener('DOMContentLoaded',()=>{
       });
       saveSharedTripsCache(rows||[],members||[]);
       localSave();
+      // v6.41：共同行程雲端資料回來後，若使用者正在旅程頁，立即刷新住宿／交通等內容。
+      const ct=(state.trips||[]).find(t=>String(t.id)===String(state.currentTripId));
+      if(ct?._sharedOwnerId){
+        try{ if(typeof renderTrip==='function')renderTrip(); }catch(e){}
+        try{ if(typeof renderStayTop==='function')renderStayTop(); }catch(e){}
+        try{ if(typeof renderMajorTransports==='function')renderMajorTransports(); }catch(e){}
+      }
     }catch(e){console.warn('shared trips load failed',e);}
   }
   async function saveAllSharedTrips(){
@@ -1021,8 +1028,18 @@ document.addEventListener('DOMContentLoaded',()=>{
     const t=(state.trips||[]).find(x=>String(x.id)===String(tripId));
     if(!t?._sharedOwnerId || t._sharedPermission==='view' || !state.supabase)return false;
     const payload=sharedTripPayload(tripId); if(!payload)return false;
-    const {error}=await state.supabase.from('shared_trips').update({data:payload,updated_at:new Date().toISOString()}).eq('trip_id',tripId);
+    const now=new Date().toISOString();
+    const {data,error}=await state.supabase.from('shared_trips')
+      .update({data:payload,updated_at:now})
+      .eq('trip_id',tripId)
+      .select('trip_id,owner_id,data,updated_at')
+      .maybeSingle();
     if(error)throw error;
+    if(!data)throw new Error('共同行程沒有成功寫入 shared_trips');
+    // v6.41：以資料庫實際回傳內容覆蓋本機，確保住宿／交通新增與刪除真的已寫入共同資料。
+    const meta=sharedTripMeta.get(String(tripId))||{owner_id:t._sharedOwnerId,permission:t._sharedPermission||'edit'};
+    applySharedTrip(data,{permission:meta.permission||t._sharedPermission||'edit'});
+    localSave();
     return true;
   }
   function canEditTrip(t){return !t?false:(!t._sharedOwnerId||t._sharedPermission!=='view');}
@@ -4525,9 +4542,17 @@ document.addEventListener('click', async function(e){
       const rows = (typeof window.transportStore==='function') ? window.transportStore() : [];
       const i = rows.findIndex(x=>x.id===id);
       if(i>=0){
-        rows.splice(i,1);
-        if(typeof window.saveTripObject==='function') window.saveTripObject(currentTrip());
+        const removed=rows.splice(i,1)[0];
+        let ok=true;
+        if(typeof window.saveTripObject==='function') ok=await window.saveTripObject(currentTrip());
+        if(ok===false){
+          // 寫入失敗就還原，避免畫面看似刪除但另一個帳號仍存在。
+          rows.splice(i,0,removed);
+          alert('交通刪除同步失敗，資料已還原，請再試一次。');
+          return;
+        }
         if(typeof window.renderMajorTransports==='function') window.renderMajorTransports();
+        if(typeof toast==='function')toast('交通資訊已刪除並同步');
       }
     }catch(err){ console.error(err); alert('刪除失敗，請再試一次。'); }
     return;
