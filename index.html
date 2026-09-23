@@ -682,11 +682,21 @@ document.addEventListener('DOMContentLoaded',()=>{
   function applyCloudData(payload){
     if(!payload || typeof payload!=='object')return;
     const p=payload.planner||payload;
-    state.trips=Array.isArray(p.trips)?p.trips:[];
-    state.itineraries=Array.isArray(p.itineraries)?p.itineraries:[];
-    state.expenses=Array.isArray(p.expenses)?p.expenses:[];
-    state.photos=Array.isArray(p.photos)?p.photos:[];
-    state.currentTripId=p.currentTripId||null;
+    // v6.39：個人雲端資料回來時，不能把已載入的「共同行程」整批洗掉。
+    // 先保留共同行程及其子資料，再更新私人資料，最後合併回去。
+    const sharedTripsKeep=(state.trips||[]).filter(t=>t&&t._sharedOwnerId);
+    const sharedIdsKeep=new Set(sharedTripsKeep.map(t=>String(t.id)));
+    const sharedItinerariesKeep=(state.itineraries||[]).filter(x=>sharedIdsKeep.has(String(x.trip_id)));
+    const sharedExpensesKeep=(state.expenses||[]).filter(x=>sharedIdsKeep.has(String(x.trip_id)));
+    const sharedPhotosKeep=(state.photos||[]).filter(x=>sharedIdsKeep.has(String(x.trip_id)));
+    const privateTrips=Array.isArray(p.trips)?p.trips:[];
+    const privateIds=new Set(privateTrips.map(t=>String(t.id)));
+    state.trips=privateTrips.concat(sharedTripsKeep.filter(t=>!privateIds.has(String(t.id))));
+    state.itineraries=(Array.isArray(p.itineraries)?p.itineraries:[]).concat(sharedItinerariesKeep);
+    state.expenses=(Array.isArray(p.expenses)?p.expenses:[]).concat(sharedExpensesKeep);
+    state.photos=(Array.isArray(p.photos)?p.photos:[]).concat(sharedPhotosKeep);
+    // 正在看的共同行程要保持，不要被個人快照的 currentTripId 蓋掉。
+    if(!sharedIdsKeep.has(String(state.currentTripId||''))) state.currentTripId=p.currentTripId||null;
     // v6.4：雲端最新資料一收到就寫回完整本機快取，供下一次首屏 0 等待顯示。
     try{
       localStorage.setItem(LS,JSON.stringify({
