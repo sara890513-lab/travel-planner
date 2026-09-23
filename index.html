@@ -880,7 +880,8 @@ document.addEventListener('DOMContentLoaded',()=>{
         applyCloudData(data.data);
         cloudLastLoadedAt=Date.now();
       }
-      applySharedTripsCache();
+      // v6.46：已登入後的背景同步不可先套用舊的 shared cache。
+      // Safari 關閉 confirm() 會觸發 focus；若此時先套舊快取，剛刪除的住宿／交通會立刻被復活，甚至再寫回雲端。
       await loadSharedTrips();
       state.cloud=true;
       updateAuthUI();
@@ -4652,7 +4653,7 @@ document.addEventListener('DOMContentLoaded',function(){
     }catch(e){ console.warn('auto cloud pull failed',e); }
     finally{ pulling=false; }
   }
-  window.addEventListener('focus',pullLatest);
+  // v6.46：不要監聽 window focus。iPhone Safari 關閉 confirm/alert 也會觸發 focus，會造成刪除時誤拉舊資料。
   document.addEventListener('visibilitychange',()=>{ if(!document.hidden)pullLatest(); });
   window.addEventListener('online',pullLatest);
   setInterval(pullLatest,12000);
