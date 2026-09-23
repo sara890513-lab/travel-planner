@@ -4,7 +4,7 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
   <meta name="theme-color" content="#fff8f4" />
-  <title>我的旅遊計畫｜Travel Planner</title>
+  <title>我的旅遊計畫｜Travel Planner v6.37</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link rel="preload" href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;600;700;800&display=swap" as="style" onload="this.onload=null;this.rel='stylesheet'">
@@ -646,6 +646,7 @@ document.addEventListener('DOMContentLoaded',()=>{
       const payload=collectCloudData();
       const {error}=await state.supabase.from('user_travel_data').upsert({user_id:state.user.id,data:payload},{onConflict:'user_id'});
       if(error)throw error;
+      await saveAllSharedTrips();
       cloudLastLoadedAt=Date.now();
       state.cloud=true;
       updateAuthUI();
@@ -764,6 +765,7 @@ document.addEventListener('DOMContentLoaded',()=>{
         .from('user_travel_data')
         .upsert({user_id:state.user.id,data:payload},{onConflict:'user_id'});
       if(error)throw error;
+      await saveAllSharedTrips();
       state.cloud=true;
       cloudLastLoadedAt=Date.now();
       updateAuthUI();
@@ -832,6 +834,7 @@ document.addEventListener('DOMContentLoaded',()=>{
         localSave();
         await saveCloudSnapshot(false);
       }
+      await loadSharedTrips();
       state.cloud=true; updateAuthUI();
       if(typeof renderTrips==='function')renderTrips();
       hideLoginGate();
@@ -864,6 +867,7 @@ document.addEventListener('DOMContentLoaded',()=>{
         applyCloudData(data.data);
         cloudLastLoadedAt=Date.now();
       }
+      await loadSharedTrips();
       state.cloud=true;
       updateAuthUI();
       // v6.16：背景／手動 pull 不讓首頁突然換位。
@@ -936,6 +940,106 @@ document.addEventListener('DOMContentLoaded',()=>{
 
 
 
+  // v6.37：每趟旅程可邀請好友共同編輯
+  const sharedTripMeta=new Map();
+  function sharedTripPayload(tripId){
+    const trip=state.trips.find(t=>String(t.id)===String(tripId));
+    if(!trip)return null;
+    const cleanTrip={...trip}; delete cleanTrip._sharedOwnerId; delete cleanTrip._sharedPermission; delete cleanTrip._sharedOwnerName;
+    return {
+      version:1, trip:cleanTrip,
+      itineraries:(state.itineraries||[]).filter(x=>String(x.trip_id)===String(tripId)),
+      expenses:(state.expenses||[]).filter(x=>String(x.trip_id)===String(tripId)),
+      photos:(state.photos||[]).filter(x=>String(x.trip_id)===String(tripId)),
+      updated_at:new Date().toISOString()
+    };
+  }
+  function applySharedTrip(row,meta={}){
+    const d=row?.data||{}; const t=d.trip; if(!t?.id)return;
+    const trip={...t,_sharedOwnerId:row.owner_id,_sharedPermission:meta.permission||'owner',_sharedOwnerName:meta.ownerName||''};
+    const i=state.trips.findIndex(x=>String(x.id)===String(t.id)); if(i>=0)state.trips[i]=trip; else state.trips.unshift(trip);
+    state.itineraries=(state.itineraries||[]).filter(x=>String(x.trip_id)!==String(t.id)).concat(Array.isArray(d.itineraries)?d.itineraries:[]);
+    state.expenses=(state.expenses||[]).filter(x=>String(x.trip_id)!==String(t.id)).concat(Array.isArray(d.expenses)?d.expenses:[]);
+    state.photos=(state.photos||[]).filter(x=>String(x.trip_id)!==String(t.id)).concat(Array.isArray(d.photos)?d.photos:[]);
+    sharedTripMeta.set(String(t.id),{owner_id:row.owner_id,permission:meta.permission||'owner'});
+  }
+  async function loadSharedTrips(){
+    if(!state.supabase||!state.user)return;
+    try{
+      const {data:members,error:me}=await state.supabase.from('trip_members').select('trip_id,owner_id,member_id,permission').or(`owner_id.eq.${state.user.id},member_id.eq.${state.user.id}`);
+      if(me)throw me;
+      const memberMap=new Map((members||[]).map(m=>[String(m.trip_id),m]));
+      const {data:rows,error}=await state.supabase.from('shared_trips').select('trip_id,owner_id,data,updated_at');
+      if(error)throw error;
+      (rows||[]).forEach(row=>{
+        const m=memberMap.get(String(row.trip_id));
+        const permission=String(row.owner_id)===String(state.user.id)?'owner':(m?.permission||'view');
+        applySharedTrip(row,{permission});
+      });
+      localSave();
+    }catch(e){console.warn('shared trips load failed',e);}
+  }
+  async function saveAllSharedTrips(){
+    if(!state.supabase||!state.user)return;
+    const list=(state.trips||[]).filter(t=>t._sharedOwnerId);
+    for(const t of list){
+      const meta=sharedTripMeta.get(String(t.id))||{owner_id:t._sharedOwnerId,permission:t._sharedPermission};
+      if(meta.permission==='view')continue;
+      const payload=sharedTripPayload(t.id); if(!payload)continue;
+      try{
+        const {error}=await state.supabase.from('shared_trips').update({data:payload,updated_at:new Date().toISOString()}).eq('trip_id',t.id);
+        if(error)throw error;
+      }catch(e){console.warn('shared trip save failed',t.id,e);}
+    }
+  }
+  function canEditTrip(t){return !t?false:(!t._sharedOwnerId||t._sharedPermission!=='view');}
+  function canManageShare(t){return !!(t&&state.user&&(!t._sharedOwnerId||String(t._sharedOwnerId)===String(state.user.id)));}
+  async function openShareDialog(tripId){
+    const t=state.trips.find(x=>String(x.id)===String(tripId)); if(!t)return;
+    window.__shareTripId=String(tripId);
+    $('#shareTripName').textContent=`旅程：${t.name||'未命名旅程'}`;
+    const owner=canManageShare(t); $('#shareOwnerOnly').classList.toggle('hidden',!owner); $('#shareReadOnlyNote').classList.toggle('hidden',owner);
+    $('#shareUsername').value=''; await renderShareMembers(); openModal('#shareTripDialog');
+  }
+  async function renderShareMembers(){
+    const tripId=window.__shareTripId; const box=$('#shareMemberList'); if(!box||!tripId)return;
+    box.innerHTML='<div class="helper">讀取中…</div>';
+    try{
+      const {data,error}=await state.supabase.from('trip_members').select('id,trip_id,owner_id,member_id,permission,created_at').eq('trip_id',tripId);
+      if(error)throw error;
+      if(!data?.length){box.innerHTML='<div class="helper">目前還沒有邀請好友。</div>';return;}
+      const rows=[];
+      for(const m of data){
+        let label='好友';
+        try{const {data:p}=await state.supabase.rpc('find_user_by_username',{lookup_username:'__never_match__'});}catch(_){ }
+        rows.push(`<div class="share-member"><div><strong>好友</strong><small>${m.permission==='edit'?'可共同編輯':'僅查看'}</small></div>${canManageShare(state.trips.find(t=>String(t.id)===String(tripId)))?`<div class="share-member-actions"><button type="button" class="share-remove" data-share-remove="${esc(m.id)}">移除</button></div>`:''}</div>`);
+      }
+      box.innerHTML=rows.join('');
+      box.querySelectorAll('[data-share-remove]').forEach(b=>b.onclick=()=>removeSharedMember(b.dataset.shareRemove));
+    }catch(e){box.innerHTML='<div class="helper">成員讀取失敗</div>';console.warn(e);}
+  }
+  async function inviteSharedMember(){
+    const tripId=window.__shareTripId; const t=state.trips.find(x=>String(x.id)===String(tripId)); if(!t||!canManageShare(t))return;
+    const username=($('#shareUsername').value||'').trim().toLowerCase(); const permission=$('#sharePermission').value||'edit';
+    if(!username){alert('請輸入好友帳號');return;}
+    const btn=$('#shareInviteBtn'); btn.disabled=true; btn.textContent='邀請中…';
+    try{
+      const {data:found,error:fe}=await state.supabase.rpc('find_user_by_username',{lookup_username:username}); if(fe)throw fe;
+      const friend=Array.isArray(found)?found[0]:found; if(!friend?.id){alert('找不到這個帳號，請確認好友帳號是否正確。');return;}
+      const ownerId=state.user.id; const payload=sharedTripPayload(tripId);
+      const {error:se}=await state.supabase.from('shared_trips').upsert({trip_id:tripId,owner_id:ownerId,data:payload,updated_at:new Date().toISOString()},{onConflict:'trip_id'}); if(se)throw se;
+      const {error:me}=await state.supabase.from('trip_members').upsert({trip_id:tripId,owner_id:ownerId,member_id:friend.id,permission},{onConflict:'trip_id,member_id'}); if(me)throw me;
+      t._sharedOwnerId=ownerId;t._sharedPermission='owner';sharedTripMeta.set(String(tripId),{owner_id:ownerId,permission:'owner'});localSave();
+      $('#shareUsername').value=''; toast(`已邀請 ${friend.display_name||friend.username} ♡`); await renderShareMembers(); window.__forceTripRender=true;renderTrips();window.__forceTripRender=false;
+    }catch(e){console.error(e);alert('邀請失敗：'+(e?.message||String(e)));}
+    finally{btn.disabled=false;btn.textContent='＋ 邀請';}
+  }
+  async function removeSharedMember(id){
+    if(!confirm('確定要移除這位共同編輯成員嗎？'))return;
+    try{const {error}=await state.supabase.from('trip_members').delete().eq('id',id);if(error)throw error;toast('已移除成員');await renderShareMembers();}catch(e){alert('移除失敗：'+(e?.message||String(e)));}
+  }
+  window.openShareDialog=openShareDialog;
+
   function renderTrips(){
     // 背景建立首頁小縮圖，不阻塞旅程卡顯示。
     try{
@@ -978,6 +1082,7 @@ document.addEventListener('DOMContentLoaded',()=>{
       return `<article class="trip-card${locked?' is-password-protected':''}" data-trip-id="${esc(t.id)}">
         <img class="trip-card-cover" src="${esc(cover)}" alt="${esc(t.name||'旅程')}" />
         <div class="trip-card-body">
+          ${t._sharedOwnerId?`<span class="shared-badge">👥 ${t._sharedPermission==='owner'?'我建立的共享旅程':(t._sharedPermission==='edit'?'共同編輯':'僅查看')}</span>`:''}
           ${locked?`<span class="trip-lock-badge">${lockText}</span>`:''}
           <h3>${esc(t.name||'未命名旅程')}</h3>
           <div class="trip-info">
@@ -992,6 +1097,7 @@ document.addEventListener('DOMContentLoaded',()=>{
           </div>
           <div class="trip-actions" style="margin-top:8px">
             <button type="button" class="ghost trip-edit-home" data-trip-edit="${esc(t.id)}">✏️ 編輯旅程</button>
+            <button type="button" class="ghost share-btn" data-trip-share="${esc(t.id)}">👥 共同編輯</button>
             <button type="button" class="ghost trip-delete-home" data-trip-delete="${esc(t.id)}">🗑️ 刪除旅程</button>
           </div>
         </div>
@@ -1028,6 +1134,7 @@ document.addEventListener('DOMContentLoaded',()=>{
         openTripDialog(t);
       };
     });
+    grid.querySelectorAll('[data-trip-share]').forEach(btn=>{btn.onclick=()=>openShareDialog(btn.dataset.tripShare);});
     grid.querySelectorAll('[data-trip-delete]').forEach(btn=>{
       btn.onclick=()=>deleteTrip(btn.dataset.tripDelete);
     });
@@ -2215,6 +2322,8 @@ function renderItinerary(){
       }
 
       const existingId = $('#tripId')?.value || '';
+      const existingSharedTrip=existingId?state.trips.find(t=>String(t.id)===String(existingId)):null;
+      if(existingSharedTrip && !canEditTrip(existingSharedTrip)){alert('這趟旅程是「僅查看」，不能修改。');return;}
       const id = existingId || ('trip-' + Date.now() + '-' + Math.random().toString(36).slice(2,8));
       const existingTrip = state.trips.find(t=>t.id===id);
       let cover = existingTrip?.cover_url || '';
@@ -2327,6 +2436,9 @@ function renderItinerary(){
   $('#tripPasswordCancel').onclick=()=>finishPasswordUnlock(false);
   $('#tripPasswordCancelX').onclick=()=>finishPasswordUnlock(false);
 
+  $('#shareInviteBtn')?.addEventListener('click',inviteSharedMember);
+  $('#shareTripDialog')?.querySelector('[data-share-close]')?.addEventListener('click',()=>closeModal('#shareTripDialog'));
+
   const saveTripBtn = $('#saveTripBtn');
   if(saveTripBtn){
     saveTripBtn.addEventListener('click', async()=>{
@@ -2345,7 +2457,7 @@ function renderItinerary(){
   }
 
   $$('.tab').forEach(b=>b.onclick=()=>setTab(b.dataset.tab));
-  $('#editTripBtn').onclick=()=>openTripDialog(currentTrip());$('#addItineraryBtn').onclick=()=>openItineraryDialog();$('#exportImageBtn').onclick=()=>exportItinerary('image');$('#exportPdfBtn').onclick=()=>exportItinerary('pdf');$('#addExpenseBtn').onclick=()=>{if(!peopleOf(currentTrip()).length){toast('請先在旅程中加入同行朋友');return}openExpenseDialog();};
+  $('#editTripBtn').onclick=()=>{const t=currentTrip();if(!canEditTrip(t)){alert('這趟旅程是「僅查看」。');return;}openTripDialog(t);}$('#addItineraryBtn').onclick=()=>openItineraryDialog();$('#exportImageBtn').onclick=()=>exportItinerary('image');$('#exportPdfBtn').onclick=()=>exportItinerary('pdf');$('#addExpenseBtn').onclick=()=>{if(!peopleOf(currentTrip()).length){toast('請先在旅程中加入同行朋友');return}openExpenseDialog();};
   $('#itineraryForm').addEventListener('submit',async e=>{e.preventDefault();try{await saveItinerary();closeModal('#itineraryDialog');}catch(err){console.error(err);toast('儲存失敗');}});
   $('#expenseForm').addEventListener('submit',async e=>{e.preventDefault();try{if(await saveExpense())closeModal('#expenseDialog');}catch(err){console.error(err);toast('儲存失敗');}});
   $('#photoInput').addEventListener('change',async e=>{await addPhotos([...e.target.files]);e.target.value='';});
@@ -3141,6 +3253,14 @@ window.loadExportLibs=()=>Promise.all([
 .admin-danger{background:#fff0f0;color:#a23d3d}.admin-enable{background:#eaf8ef;color:#287244}.admin-reset{background:#eef5ff;color:#42688f}
 .admin-user-protected{grid-column:1/-1;margin-top:4px;padding-top:9px;border-top:1px dashed #eadfe5;color:#8a7d84;font-size:12px;font-weight:700}
 </style>
+
+<style>
+/* v6.37 好友共同編輯 */
+.shared-badge{display:inline-flex;align-items:center;gap:5px;background:#eef7ff;color:#416d99;border:1px solid #d7e7f4;border-radius:999px;padding:5px 9px;font-size:12px;font-weight:900;margin-bottom:7px}
+.share-btn{background:#edf8f3!important;color:#39705c!important;border:1px solid #d6eadf!important}
+.share-member-list{display:grid;gap:9px}.share-member{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:11px 12px;background:#f8fafc;border:1px solid #e6ebf0;border-radius:14px}.share-member small{display:block;color:#87909c}.share-member-actions{display:flex;gap:6px}.share-member-actions button{border:0;border-radius:10px;padding:7px 9px;cursor:pointer}.share-remove{background:#fff0f1;color:#b44850}.share-invite-grid{display:grid;grid-template-columns:1fr 150px auto;gap:8px;align-items:end}.share-note{color:#7f8791;font-size:13px;line-height:1.6}.shared-readonly{background:#fff6e9;color:#95662f;border:1px solid #f1ddbd;border-radius:12px;padding:9px 11px;font-size:13px;font-weight:800}
+@media(max-width:650px){.share-invite-grid{grid-template-columns:1fr}.share-invite-grid button{width:100%}}
+</style>
 </head>
 <body>
   <div id="toast" class="toast"></div>
@@ -3592,6 +3712,24 @@ window.loadExportLibs=()=>Promise.all([
   </main>
 
   <div id="exportSheet" class="export-sheet" aria-hidden="true"></div>
+
+
+  <div id="shareTripDialog" class="modal" role="dialog" aria-modal="true">
+    <div class="modal-card">
+      <div class="modal-head"><h2>👥 共同編輯旅程</h2><button type="button" class="icon-btn" data-share-close>✕</button></div>
+      <p id="shareTripName" class="helper"></p>
+      <div id="shareOwnerOnly">
+        <div class="share-invite-grid">
+          <label>好友帳號<input id="shareUsername" autocomplete="off" autocapitalize="none" placeholder="例如：test01"></label>
+          <label>權限<select id="sharePermission"><option value="edit">可共同編輯</option><option value="view">僅查看</option></select></label>
+          <button type="button" class="primary" id="shareInviteBtn">＋ 邀請</button>
+        </div>
+        <p class="share-note">請輸入好友完整帳號。共同編輯者可以修改這趟旅程；僅查看者只能閱讀。</p>
+      </div>
+      <div id="shareReadOnlyNote" class="shared-readonly hidden">你是這趟旅程的受邀成員，只有旅程建立者可以管理共同編輯成員。</div>
+      <div><strong>目前成員</strong><div id="shareMemberList" class="share-member-list" style="margin-top:10px"></div></div>
+    </div>
+  </div>
 
   <div id="tripDialog" class="modal" role="dialog" aria-modal="true">
     <form id="tripForm" class="modal-card">
