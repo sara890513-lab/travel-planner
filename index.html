@@ -663,10 +663,10 @@ document.addEventListener('DOMContentLoaded',()=>{
       version:1,
       updated_at:new Date().toISOString(),
       planner:{
-        trips:state.trips||[],
-        itineraries:state.itineraries||[],
-        expenses:state.expenses||[],
-        photos:state.photos||[],
+        trips:(state.trips||[]).filter(t=>!t._sharedOwnerId),
+        itineraries:(state.itineraries||[]).filter(x=>{const t=(state.trips||[]).find(t=>String(t.id)===String(x.trip_id));return !t||!t._sharedOwnerId;}),
+        expenses:(state.expenses||[]).filter(x=>{const t=(state.trips||[]).find(t=>String(t.id)===String(x.trip_id));return !t||!t._sharedOwnerId;}),
+        photos:(state.photos||[]).filter(x=>{const t=(state.trips||[]).find(t=>String(t.id)===String(x.trip_id));return !t||!t._sharedOwnerId;}),
         currentTripId:state.currentTripId||null
       },
       globalWishlist:(typeof globalWishlist!=='undefined'?globalWishlist:[]),
@@ -834,10 +834,12 @@ document.addEventListener('DOMContentLoaded',()=>{
         localSave();
         await saveCloudSnapshot(false);
       }
-      await loadSharedTrips();
+      // v6.38：先顯示上次共同行程快取，再背景抓最新共享資料。
+      applySharedTripsCache();
       state.cloud=true; updateAuthUI();
       if(typeof renderTrips==='function')renderTrips();
       hideLoginGate();
+      loadSharedTrips().then(()=>{if(typeof renderTrips==='function')renderTrips();}).catch(e=>console.warn('background shared load failed',e));
       return true;
     }catch(err){ console.error('cloud init failed',err); state.cloud=false; updateAuthUI(); showLoginGate('雲端資料讀取失敗，請再登入一次'); return false; }
   }
@@ -867,6 +869,7 @@ document.addEventListener('DOMContentLoaded',()=>{
         applyCloudData(data.data);
         cloudLastLoadedAt=Date.now();
       }
+      applySharedTripsCache();
       await loadSharedTrips();
       state.cloud=true;
       updateAuthUI();
@@ -940,7 +943,7 @@ document.addEventListener('DOMContentLoaded',()=>{
 
 
 
-  // v6.37：每趟旅程可邀請好友共同編輯
+  // v6.38：共同編輯同步＋共同行程快取加速
   const sharedTripMeta=new Map();
   function sharedTripPayload(tripId){
     const trip=state.trips.find(t=>String(t.id)===String(tripId));
@@ -963,6 +966,17 @@ document.addEventListener('DOMContentLoaded',()=>{
     state.photos=(state.photos||[]).filter(x=>String(x.trip_id)!==String(t.id)).concat(Array.isArray(d.photos)?d.photos:[]);
     sharedTripMeta.set(String(t.id),{owner_id:row.owner_id,permission:meta.permission||'owner'});
   }
+  function sharedCacheKey(){return 'travel_shared_trips_v1:'+String(state.user?.id||'guest');}
+  function saveSharedTripsCache(rows,members){try{localStorage.setItem(sharedCacheKey(),JSON.stringify({rows:rows||[],members:members||[],saved_at:Date.now()}));}catch(e){}}
+  function applySharedTripsCache(){
+    try{
+      const c=JSON.parse(localStorage.getItem(sharedCacheKey())||'null');
+      if(!c||!Array.isArray(c.rows))return false;
+      const memberMap=new Map((c.members||[]).map(m=>[String(m.trip_id),m]));
+      c.rows.forEach(row=>{const m=memberMap.get(String(row.trip_id));const permission=String(row.owner_id)===String(state.user.id)?'owner':(m?.permission||'view');applySharedTrip(row,{permission});});
+      return c.rows.length>0;
+    }catch(e){return false;}
+  }
   async function loadSharedTrips(){
     if(!state.supabase||!state.user)return;
     try{
@@ -976,6 +990,7 @@ document.addEventListener('DOMContentLoaded',()=>{
         const permission=String(row.owner_id)===String(state.user.id)?'owner':(m?.permission||'view');
         applySharedTrip(row,{permission});
       });
+      saveSharedTripsCache(rows||[],members||[]);
       localSave();
     }catch(e){console.warn('shared trips load failed',e);}
   }
@@ -991,6 +1006,14 @@ document.addEventListener('DOMContentLoaded',()=>{
         if(error)throw error;
       }catch(e){console.warn('shared trip save failed',t.id,e);}
     }
+  }
+  async function saveSharedTripNow(tripId){
+    const t=(state.trips||[]).find(x=>String(x.id)===String(tripId));
+    if(!t?._sharedOwnerId || t._sharedPermission==='view' || !state.supabase)return false;
+    const payload=sharedTripPayload(tripId); if(!payload)return false;
+    const {error}=await state.supabase.from('shared_trips').update({data:payload,updated_at:new Date().toISOString()}).eq('trip_id',tripId);
+    if(error)throw error;
+    return true;
   }
   function canEditTrip(t){return !t?false:(!t._sharedOwnerId||t._sharedPermission!=='view');}
   function canManageShare(t){return !!(t&&state.user&&(!t._sharedOwnerId||String(t._sharedOwnerId)===String(state.user.id)));}
@@ -2280,7 +2303,12 @@ function renderItinerary(){
     toast('行程已儲存');
     if(state.supabase){
       clearTimeout(cloudSaveTimer);
-      cloudSaveTimer=setTimeout(()=>saveCloudSnapshot(false).catch(e=>console.warn('background itinerary sync failed',e)),80);
+      const trip=(state.trips||[]).find(t=>String(t.id)===String(state.currentTripId));
+      if(trip?._sharedOwnerId){
+        saveSharedTripNow(state.currentTripId).catch(e=>console.warn('background shared itinerary sync failed',e));
+      }else{
+        cloudSaveTimer=setTimeout(()=>saveCloudSnapshot(false).catch(e=>console.warn('background itinerary sync failed',e)),80);
+      }
     }
   }
   async function saveExpense(){const participants=$$('#participantChecks input:checked').map(x=>x.value);if(!participants.length){toast('至少選一位分帳成員');return false}const row={id:$('#expenseId').value||uid(),trip_id:state.currentTripId,item:$('#exItem').value.trim(),amount:Number($('#exAmount').value),payer:$('#exPayer').value,participants,note:$('#exNote').value.trim()};if(state.cloud){await cloudUpsert('expenses',row);await loadCloud();}else{const i=state.expenses.findIndex(x=>x.id===row.id);if(i>=0)state.expenses[i]=row;else state.expenses.unshift(row);persist();renderExpenses();}toast('支出已儲存');return true;}
