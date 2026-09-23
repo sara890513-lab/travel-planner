@@ -2410,11 +2410,14 @@ function renderItinerary(){
       const j=await r.json(); if(!r.ok||!j.email)throw new Error(j.error||'帳號或密碼錯誤');
       const {data,error}=await state.supabase.auth.signInWithPassword({email:j.email,password}); if(error)throw error;
       state.user=data.user; useUserStorage(state.user.id);
-      // v6.33：只有真正完成帳號密碼登入時才記錄最後登入時間；重新整理頁面不會重算。
+      // v6.34：真正完成帳號密碼登入後，寫入最後登入時間，並驗證 RPC 是否成功。
       try{
         const {error:lastLoginError}=await state.supabase.rpc('mark_last_login');
-        if(lastLoginError)console.warn('last login update failed',lastLoginError);
-      }catch(lastLoginErr){console.warn('last login update failed',lastLoginErr);}
+        if(lastLoginError)throw lastLoginError;
+      }catch(lastLoginErr){
+        console.error('mark_last_login failed',lastLoginErr);
+        toast('登入成功，但最後登入時間更新失敗');
+      }
       // v6.25：登入後一律從該帳號的 user_travel_data 載入，
       // 不再把任何裝置上的舊 localStorage 當成登入資料來源。
       state.trips=[];state.itineraries=[];state.expenses=[];state.photos=[];state.currentTripId=null;
@@ -3169,7 +3172,7 @@ window.loadExportLibs=()=>Promise.all([
   <header class="topbar">
     <button class="brand" data-action="home" aria-label="回首頁">
       <span class="brand-icon">🗺️</span>
-      <span><strong>我的旅遊計畫</strong><small>TRAVEL PLANNER · v6.33 最後登入時間版</small></span>
+      <span><strong>我的旅遊計畫</strong><small>TRAVEL PLANNER · v6.34 最後登入修正版</small></span>
       <span class="heart">♥</span>
     </button>
     <nav class="nav" aria-label="主選單">
