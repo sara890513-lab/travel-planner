@@ -1751,8 +1751,11 @@ document.addEventListener('DOMContentLoaded',()=>{
     t.stay_checkout=timeFromSelects('stayCheckoutHour','stayCheckoutMinute');
     t.stay_note=$('#stayNote').value.trim();
     t.updated_at=new Date().toISOString();
-    // v6.40：住宿若屬於共同行程，直接寫 shared_trips，避免個人雲端 pull 把內容蓋掉。
+    // v6.43：先更新畫面，再同步雲端；手機上不必等網路回應才看到結果。
     localSave();
+    renderStayTop();
+    closeModal('#stayDialog');
+    toast('住宿資訊已儲存，正在同步…');
     if(t._sharedOwnerId){
       if(t._sharedPermission==='view'){
         alert('這趟旅程目前是「僅查看」，不能修改住宿資訊。');
@@ -1766,9 +1769,20 @@ document.addEventListener('DOMContentLoaded',()=>{
     }else{
       persist();
     }
-    renderStayTop();
-    closeModal('#stayDialog');
-    toast('住宿資訊已儲存');
+    toast('住宿資訊已同步');
+  }
+
+
+  async function deleteStayInfo(){
+    const t=currentTrip(); if(!t)return;
+    if(t._sharedOwnerId && t._sharedPermission==='view'){alert('這趟旅程目前是「僅查看」，不能刪除住宿資訊。');return;}
+    if(!confirm('確定刪除住宿資訊嗎？'))return;
+    const backup={stay_name:t.stay_name,stay_address:t.stay_address,stay_landmark:t.stay_landmark,stay_checkin:t.stay_checkin,stay_checkout:t.stay_checkout,stay_note:t.stay_note};
+    t.stay_name='';t.stay_address='';t.stay_landmark='';t.stay_checkin='';t.stay_checkout='';t.stay_note='';
+    localSave(); renderStayTop(); toast('住宿已刪除，正在同步…');
+    const ok=await saveTripObject(t);
+    if(ok===false){Object.assign(t,backup);localSave();renderStayTop();alert('住宿刪除同步失敗，資料已還原，請再試一次。');return;}
+    toast('住宿已刪除並同步');
   }
 
 
@@ -1859,18 +1873,24 @@ document.addEventListener('DOMContentLoaded',()=>{
       note:$('#transportNote').value.trim()
     };
     const i=rows.findIndex(x=>x.id===id);
+    const backup=i>=0?{...rows[i]}:null;
     if(i>=0)rows[i]=row; else rows.push(row);
+    localSave(); renderMajorTransports(); closeModal('#transportDialog'); toast('交通資訊已儲存，正在同步…');
     const ok=await saveTripObject(t);
-    if(ok===false && t._sharedOwnerId)return;
-    renderMajorTransports();
-    closeModal('#transportDialog');
-    toast('交通資訊已儲存');
+    if(ok===false && t._sharedOwnerId){
+      const now=rows.findIndex(x=>x.id===id);
+      if(backup){ if(now>=0)rows[now]=backup; else rows.push(backup); }
+      else if(now>=0)rows.splice(now,1);
+      localSave();renderMajorTransports();alert('交通同步失敗，資料已還原，請再試一次。');return;
+    }
+    toast('交通資訊已同步');
   }
 
 
   // v2.5: expose accommodation / transport actions to toolbar hooks
   window.openStayDialog = openStayDialog;
   window.saveStayInfo = saveStayInfo;
+  window.deleteStayInfo = deleteStayInfo;
   window.openTransportDialog = openTransportDialog;
   window.saveTransportInfo = saveTransportInfo;
   window.transportStore = transportStore;
@@ -3680,7 +3700,10 @@ window.loadExportLibs=()=>Promise.all([
               <h3>🏠 住宿資訊</h3>
               <p class="helper">住宿地點、附近地標、入住／退房時間與注意事項</p>
             </div>
-            <button type="button" class="ghost" id="editStayBtn">✏️ 新增／編輯住宿</button>
+            <div style="display:flex;gap:8px;flex-wrap:wrap;justify-content:flex-end">
+              <button type="button" class="ghost" id="editStayBtn">✏️ 新增／編輯住宿</button>
+              <button type="button" class="ghost" id="deleteStayBtn" style="background:#fff0f0;color:#b44850;border-color:#f3cfd2">🗑️ 刪除住宿</button>
+            </div>
           </div>
           <div id="stayTopContent"></div>
         </div>
@@ -4432,6 +4455,8 @@ document.addEventListener('click', function(e){
 document.addEventListener('DOMContentLoaded',function(){
   const edit=document.getElementById('editStayBtn');
   if(edit) edit.addEventListener('click',function(){ if(typeof window.openStayDialog==='function') window.openStayDialog(); });
+  const del=document.getElementById('deleteStayBtn');
+  if(del) del.addEventListener('click',function(){ if(typeof window.deleteStayInfo==='function') window.deleteStayInfo(); });
   const form=document.getElementById('stayForm');
   if(form) form.addEventListener('submit',function(e){
     e.preventDefault();
@@ -4458,7 +4483,7 @@ document.addEventListener('DOMContentLoaded',function(){
       const r=window.transportStore().find(x=>x.id===edit.dataset.editTransport);
       if(r) window.openTransportDialog(r);
     }
-    const del=e.target.closest('[data-del-transport]');
+    const del=e.target.closest('[data-del-transport-legacy-disabled]');
     if(del && typeof window.transportStore==='function'){
       const rows=window.transportStore();
       const i=rows.findIndex(x=>x.id===del.dataset.delTransport);
@@ -4545,6 +4570,8 @@ document.addEventListener('click', async function(e){
       const i = rows.findIndex(x=>x.id===id);
       if(i>=0){
         const removed=rows.splice(i,1)[0];
+        if(typeof window.renderMajorTransports==='function') window.renderMajorTransports();
+        if(typeof toast==='function')toast('交通已刪除，正在同步…');
         let ok=true;
         if(typeof window.saveTripObject==='function') { const t=(typeof window.currentTrip==='function'?window.currentTrip():(window.state?.trips||[]).find(x=>String(x.id)===String(window.state?.currentTripId))); ok=await window.saveTripObject(t); }
         if(ok===false){
