@@ -4,7 +4,7 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
   <meta name="theme-color" content="#fff8f4" />
-  <title>我的旅遊計畫｜Travel Planner v6.42</title>
+  <title>我的旅遊計畫｜Travel Planner v6.44</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link rel="preload" href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;600;700;800&display=swap" as="style" onload="this.onload=null;this.rel='stylesheet'">
@@ -956,6 +956,9 @@ document.addEventListener('DOMContentLoaded',()=>{
 
   // v6.38：共同編輯同步＋共同行程快取加速
   const sharedTripMeta=new Map();
+  // v6.44：記錄共同行程最後一次本機修改時間，避免較早開始的雲端讀取把剛刪除/新增的內容蓋回來。
+  const sharedLocalMutationAt=new Map();
+  function markSharedLocalMutation(tripId){ sharedLocalMutationAt.set(String(tripId),Date.now()); }
   function sharedTripPayload(tripId){
     const trip=state.trips.find(t=>String(t.id)===String(tripId));
     if(!trip)return null;
@@ -990,6 +993,8 @@ document.addEventListener('DOMContentLoaded',()=>{
   }
   async function loadSharedTrips(){
     if(!state.supabase||!state.user)return;
+    // 這次讀取開始後若本機有修改，就不能再套用這次較舊的回傳資料。
+    const pullStartedAt=Date.now();
     try{
       const {data:members,error:me}=await state.supabase.from('trip_members').select('trip_id,owner_id,member_id,permission').or(`owner_id.eq.${state.user.id},member_id.eq.${state.user.id}`);
       if(me)throw me;
@@ -997,7 +1002,11 @@ document.addEventListener('DOMContentLoaded',()=>{
       const {data:rows,error}=await state.supabase.from('shared_trips').select('trip_id,owner_id,data,updated_at');
       if(error)throw error;
       (rows||[]).forEach(row=>{
-        const m=memberMap.get(String(row.trip_id));
+        const tripId=String(row.trip_id);
+        const mutatedAt=sharedLocalMutationAt.get(tripId)||0;
+        // 若這趟旅程在本次 request 發出後已被新增/刪除/修改，忽略這筆舊回傳，防止資料復活。
+        if(mutatedAt>pullStartedAt)return;
+        const m=memberMap.get(tripId);
         const permission=String(row.owner_id)===String(state.user.id)?'owner':(m?.permission||'view');
         applySharedTrip(row,{permission});
       });
@@ -1040,6 +1049,7 @@ document.addEventListener('DOMContentLoaded',()=>{
     // v6.41：以資料庫實際回傳內容覆蓋本機，確保住宿／交通新增與刪除真的已寫入共同資料。
     const meta=sharedTripMeta.get(String(tripId))||{owner_id:t._sharedOwnerId,permission:t._sharedPermission||'edit'};
     applySharedTrip(data,{permission:meta.permission||t._sharedPermission||'edit'});
+    markSharedLocalMutation(tripId);
     localSave();
     return true;
   }
@@ -1751,6 +1761,8 @@ document.addEventListener('DOMContentLoaded',()=>{
     t.stay_checkout=timeFromSelects('stayCheckoutHour','stayCheckoutMinute');
     t.stay_note=$('#stayNote').value.trim();
     t.updated_at=new Date().toISOString();
+    // v6.44：先標記本機修改，避免背景中較舊的 shared_trips 讀取把新資料蓋回來。
+    if(t._sharedOwnerId)markSharedLocalMutation(t.id);
     // v6.43：先更新畫面，再同步雲端；手機上不必等網路回應才看到結果。
     localSave();
     renderStayTop();
@@ -1779,6 +1791,7 @@ document.addEventListener('DOMContentLoaded',()=>{
     if(!confirm('確定刪除住宿資訊嗎？'))return;
     const backup={stay_name:t.stay_name,stay_address:t.stay_address,stay_landmark:t.stay_landmark,stay_checkin:t.stay_checkin,stay_checkout:t.stay_checkout,stay_note:t.stay_note};
     t.stay_name='';t.stay_address='';t.stay_landmark='';t.stay_checkin='';t.stay_checkout='';t.stay_note='';
+    if(t._sharedOwnerId)markSharedLocalMutation(t.id);
     localSave(); renderStayTop(); toast('住宿已刪除，正在同步…');
     const ok=await saveTripObject(t);
     if(ok===false){Object.assign(t,backup);localSave();renderStayTop();alert('住宿刪除同步失敗，資料已還原，請再試一次。');return;}
@@ -1794,6 +1807,7 @@ document.addEventListener('DOMContentLoaded',()=>{
   async function saveTripObject(t){
     if(!t)return false;
     t.updated_at=new Date().toISOString();
+    if(t._sharedOwnerId)markSharedLocalMutation(t.id);
     localSave();
     // v6.40：交通等「存在 trip 物件內」的資料，共同行程直接存 shared_trips。
     if(t._sharedOwnerId){
