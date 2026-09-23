@@ -2410,14 +2410,11 @@ function renderItinerary(){
       const j=await r.json(); if(!r.ok||!j.email)throw new Error(j.error||'帳號或密碼錯誤');
       const {data,error}=await state.supabase.auth.signInWithPassword({email:j.email,password}); if(error)throw error;
       state.user=data.user; useUserStorage(state.user.id);
-      // v6.34：真正完成帳號密碼登入後，寫入最後登入時間，並驗證 RPC 是否成功。
+      // v6.33：只有真正完成帳號密碼登入時才記錄最後登入時間；重新整理頁面不會重算。
       try{
         const {error:lastLoginError}=await state.supabase.rpc('mark_last_login');
-        if(lastLoginError)throw lastLoginError;
-      }catch(lastLoginErr){
-        console.error('mark_last_login failed',lastLoginErr);
-        toast('登入成功，但最後登入時間更新失敗');
-      }
+        if(lastLoginError)console.warn('last login update failed',lastLoginError);
+      }catch(lastLoginErr){console.warn('last login update failed',lastLoginErr);}
       // v6.25：登入後一律從該帳號的 user_travel_data 載入，
       // 不再把任何裝置上的舊 localStorage 當成登入資料來源。
       state.trips=[];state.itineraries=[];state.expenses=[];state.photos=[];state.currentTripId=null;
@@ -3172,7 +3169,7 @@ window.loadExportLibs=()=>Promise.all([
   <header class="topbar">
     <button class="brand" data-action="home" aria-label="回首頁">
       <span class="brand-icon">🗺️</span>
-      <span><strong>我的旅遊計畫</strong><small>TRAVEL PLANNER · v6.34 最後登入修正版</small></span>
+      <span><strong>我的旅遊計畫</strong><small>TRAVEL PLANNER · v6.35 分帳成員修正版</small></span>
       <span class="heart">♥</span>
     </button>
     <nav class="nav" aria-label="主選單">
@@ -3408,7 +3405,7 @@ window.loadExportLibs=()=>Promise.all([
             <div class="quick-add-person-title">👥 分帳成員</div>
             <div class="quick-add-person-row">
               <input id="qNewPerson" type="text" placeholder="輸入朋友名字">
-              <button type="button" class="primary" id="qAddPersonBtn">＋ 加入人物</button>
+              <button type="button" class="primary" id="qAddPersonBtn" onclick="window.quickAddPersonFromInput && window.quickAddPersonFromInput()">＋ 加入人物</button>
             </div>
             <div id="qPeopleRoster" class="quick-people-roster"></div>
             <small>按名字旁的 × 可刪除人物；刪除後會從下方選單一起消失，需要時再重新加入即可。</small>
@@ -3811,6 +3808,17 @@ function addQuickPerson(name){
   fillQuickPeople();
   return true;
 }
+window.quickAddPersonFromInput=function(){
+  const input=document.getElementById('qNewPerson');
+  const name=String(input?.value||'').trim();
+  if(!name){alert('請先輸入名字');input?.focus();return false;}
+  addQuickPerson(name);
+  if(input)input.value='';
+  const payer=document.getElementById('qPayer');
+  if(payer && !payer.value)payer.value=name;
+  return true;
+};
+
 function removeQuickPerson(name){
   name=String(name||'').trim();
   if(!name)return;
