@@ -1732,14 +1732,18 @@ document.addEventListener('DOMContentLoaded',()=>{
     t.stay_checkout=timeFromSelects('stayCheckoutHour','stayCheckoutMinute');
     t.stay_note=$('#stayNote').value.trim();
     t.updated_at=new Date().toISOString();
-    if(state.cloud){
-      try{
-        await cloudUpsert('trips',t);
-        await loadCloud();
-      }catch(e){
-        toast('住宿資訊已保留在目前裝置');
-        persist();
+    // v6.40：住宿若屬於共同行程，直接寫 shared_trips，避免個人雲端 pull 把內容蓋掉。
+    localSave();
+    if(t._sharedOwnerId){
+      if(t._sharedPermission==='view'){
+        alert('這趟旅程目前是「僅查看」，不能修改住宿資訊。');
+        return;
       }
+      try{ await saveSharedTripNow(t.id); }
+      catch(e){ console.warn('shared stay sync failed',e); toast('住宿資訊同步失敗，請再試一次'); return; }
+    }else if(state.cloud){
+      try{ await cloudUpsert('trips',t); }
+      catch(e){ toast('住宿資訊已保留在目前裝置'); persist(); }
     }else{
       persist();
     }
@@ -1754,10 +1758,24 @@ document.addEventListener('DOMContentLoaded',()=>{
     if(!Array.isArray(t.major_transports)) t.major_transports=[];
     return t.major_transports;
   }
-  function saveTripObject(t){
+  async function saveTripObject(t){
+    if(!t)return false;
+    t.updated_at=new Date().toISOString();
+    localSave();
+    // v6.40：交通等「存在 trip 物件內」的資料，共同行程直接存 shared_trips。
+    if(t._sharedOwnerId){
+      if(t._sharedPermission==='view'){
+        alert('這趟旅程目前是「僅查看」，不能修改交通資訊。');
+        return false;
+      }
+      try{ await saveSharedTripNow(t.id); return true; }
+      catch(e){ console.warn('shared trip object sync failed',e); toast('共同行程同步失敗，請再試一次'); return false; }
+    }
     if(state.cloud){
-      cloudUpsert('trips',t).then(()=>loadCloud()).catch(()=>{persist();});
-    }else persist();
+      try{ await cloudUpsert('trips',t); return true; }
+      catch(e){ persist(); return false; }
+    }
+    persist(); return true;
   }
   function fmtDT(v){
     if(!v)return '';
@@ -1804,7 +1822,10 @@ document.addEventListener('DOMContentLoaded',()=>{
     $('#transportNote').value=r?.note||'';
     openModal('#transportDialog');
   }
-  function saveTransportInfo(){
+  async function saveTransportInfo(){
+    const t=currentTrip();
+    if(!t)return;
+    if(t._sharedOwnerId && t._sharedPermission==='view'){alert('這趟旅程目前是「僅查看」，不能修改交通資訊。');return;}
     const rows=transportStore();
     const id=$('#transportEditId').value||uid();
     const row={
@@ -1820,7 +1841,8 @@ document.addEventListener('DOMContentLoaded',()=>{
     };
     const i=rows.findIndex(x=>x.id===id);
     if(i>=0)rows[i]=row; else rows.push(row);
-    saveTripObject(currentTrip());
+    const ok=await saveTripObject(t);
+    if(ok===false && t._sharedOwnerId)return;
     renderMajorTransports();
     closeModal('#transportDialog');
     toast('交通資訊已儲存');
@@ -4422,9 +4444,12 @@ document.addEventListener('DOMContentLoaded',function(){
       const rows=window.transportStore();
       const i=rows.findIndex(x=>x.id===del.dataset.delTransport);
       if(i>=0 && confirm('確定刪除這筆交通資訊嗎？')){
+        const t=currentTrip();
+        if(t?._sharedOwnerId && t?._sharedPermission==='view'){alert('這趟旅程目前是「僅查看」，不能刪除交通資訊。');return;}
         rows.splice(i,1);
-        window.saveTripObject(currentTrip());
-        window.renderMajorTransports();
+        Promise.resolve(window.saveTripObject(t)).then(ok=>{
+          if(ok!==false){ window.renderMajorTransports(); if(typeof toast==='function')toast('交通資訊已刪除'); }
+        });
       }
     }
   });
