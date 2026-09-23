@@ -724,14 +724,14 @@ document.addEventListener('DOMContentLoaded',()=>{
         quickSplit.splice(0,quickSplit.length,...payload.quickSplit);
         localStorage.setItem('travel_quick_split_v1',JSON.stringify(quickSplit));
       }
-      if(typeof quickPeople!=='undefined' && Array.isArray(payload.quickPeople)){
-        quickPeople.splice(0,quickPeople.length,...payload.quickPeople);
-        localStorage.setItem('travel_quick_people_v1',JSON.stringify(quickPeople));
+      if(Array.isArray(window.travelQuickPeople) && Array.isArray(payload.quickPeople)){
+        window.travelQuickPeople.splice(0,window.travelQuickPeople.length,...payload.quickPeople);
+        localStorage.setItem('travel_quick_people_v1',JSON.stringify(window.travelQuickPeople));
       }
-      if(typeof quickHiddenPeople!=='undefined' && Array.isArray(payload.quickHiddenPeople)){
-        const mergedHidden=[...new Set([...(quickHiddenPeople||[]),...payload.quickHiddenPeople].map(x=>String(x||'').trim()).filter(Boolean))];
-        quickHiddenPeople.splice(0,quickHiddenPeople.length,...mergedHidden);
-        localStorage.setItem('travel_quick_hidden_people_v1',JSON.stringify(quickHiddenPeople));
+      if(Array.isArray(window.travelQuickHiddenPeople) && Array.isArray(payload.quickHiddenPeople)){
+        const mergedHidden=[...new Set([...(window.travelQuickHiddenPeople||[]),...payload.quickHiddenPeople].map(x=>String(x||'').trim()).filter(Boolean))];
+        window.travelQuickHiddenPeople.splice(0,window.travelQuickHiddenPeople.length,...mergedHidden);
+        localStorage.setItem('travel_quick_hidden_people_v1',JSON.stringify(window.travelQuickHiddenPeople));
       }
       if(typeof quickArchives!=='undefined' && Array.isArray(payload.quickArchives)){
         quickArchives.splice(0,quickArchives.length,...payload.quickArchives);
@@ -3169,7 +3169,7 @@ window.loadExportLibs=()=>Promise.all([
   <header class="topbar">
     <button class="brand" data-action="home" aria-label="回首頁">
       <span class="brand-icon">🗺️</span>
-      <span><strong>我的旅遊計畫</strong><small>TRAVEL PLANNER · v6.35 分帳成員修正版</small></span>
+      <span><strong>我的旅遊計畫</strong><small>TRAVEL PLANNER · v6.36 分帳成員修正版</small></span>
       <span class="heart">♥</span>
     </button>
     <nav class="nav" aria-label="主選單">
@@ -3405,7 +3405,7 @@ window.loadExportLibs=()=>Promise.all([
             <div class="quick-add-person-title">👥 分帳成員</div>
             <div class="quick-add-person-row">
               <input id="qNewPerson" type="text" placeholder="輸入朋友名字">
-              <button type="button" class="primary" id="qAddPersonBtn" onclick="window.quickAddPersonFromInput && window.quickAddPersonFromInput()">＋ 加入人物</button>
+              <button type="button" class="primary" id="qAddPersonBtn">＋ 加入人物</button>
             </div>
             <div id="qPeopleRoster" class="quick-people-roster"></div>
             <small>按名字旁的 × 可刪除人物；刪除後會從下方選單一起消失，需要時再重新加入即可。</small>
@@ -3792,6 +3792,8 @@ let quickPeople=[];
 let quickHiddenPeople=[];
 try{quickPeople=JSON.parse(localStorage.getItem(QUICK_PEOPLE_KEY)||'[]')||[]}catch(e){quickPeople=[]}
 try{quickHiddenPeople=JSON.parse(localStorage.getItem(QUICK_HIDDEN_PEOPLE_KEY)||'[]')||[]}catch(e){quickHiddenPeople=[]}
+window.travelQuickPeople=quickPeople;
+window.travelQuickHiddenPeople=quickHiddenPeople;
 function saveQuickPeople(){
   try{
     localStorage.setItem(QUICK_PEOPLE_KEY,JSON.stringify(quickPeople));
@@ -3803,7 +3805,9 @@ function addQuickPerson(name){
   name=String(name||'').trim();
   if(!name)return false;
   quickHiddenPeople=quickHiddenPeople.filter(x=>x!==name);
+  window.travelQuickHiddenPeople=quickHiddenPeople;
   if(!quickPeople.includes(name)) quickPeople.push(name);
+  window.travelQuickPeople=quickPeople;
   saveQuickPeople();
   fillQuickPeople();
   return true;
@@ -3825,7 +3829,9 @@ function removeQuickPerson(name){
 
   cloudPullPausedUntil=Date.now()+8000;
   quickPeople=quickPeople.filter(x=>String(x||'').trim()!==name);
+  window.travelQuickPeople=quickPeople;
   if(!quickHiddenPeople.includes(name))quickHiddenPeople.push(name);
+  window.travelQuickHiddenPeople=quickHiddenPeople;
 
   try{
     localStorage.setItem('travel_quick_people_v1',JSON.stringify(quickPeople));
@@ -3859,7 +3865,7 @@ async function removeQuickPersonByName(name){
 }
 
 window.removeQuickPersonByName=removeQuickPersonByName;
-window.deleteChecklistItem=deleteChecklistItem;
+// v6.36: deleteChecklistItem belongs to the main app scope; do not reference it here.
 
 function getQuickKnownPeople(){
   const names=[];
@@ -4041,6 +4047,14 @@ document.addEventListener('click',e=>{
     }
   }
 });
+// v6.36：用事件代理處理「加入人物」，避免 iPhone / iPad 因載入順序漏綁按鈕。
+document.addEventListener('click',function(e){
+  const btn=e.target.closest?.('#qAddPersonBtn');
+  if(!btn)return;
+  e.preventDefault(); e.stopPropagation();
+  window.quickAddPersonFromInput?.();
+},true);
+
 document.addEventListener('DOMContentLoaded',()=>{
   fillQuickPeople();
   renderQuickSplit();
