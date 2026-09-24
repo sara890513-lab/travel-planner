@@ -2406,7 +2406,30 @@ function renderItinerary(){
       }
     }
   }
-  async function saveExpense(){const participants=$$('#participantChecks input:checked').map(x=>x.value);if(!participants.length){toast('至少選一位分帳成員');return false}const row={id:$('#expenseId').value||uid(),trip_id:state.currentTripId,item:$('#exItem').value.trim(),amount:Number($('#exAmount').value),payer:$('#exPayer').value,participants,note:$('#exNote').value.trim()};if(state.cloud){await cloudUpsert('expenses',row);await loadCloud();}else{const i=state.expenses.findIndex(x=>x.id===row.id);if(i>=0)state.expenses[i]=row;else state.expenses.unshift(row);persist();renderExpenses();}toast('支出已儲存');return true;}
+  async function saveExpense(){
+    const participants=$$('#participantChecks input:checked').map(x=>x.value);
+    if(!participants.length){toast('至少選一位分帳成員');return false;}
+    const trip=currentTrip();
+    if(!trip)return false;
+    if(trip._sharedOwnerId && trip._sharedPermission==='view'){alert('這趟旅程目前是「僅查看」，不能新增支出。');return false;}
+    const row={id:$('#expenseId').value||uid(),trip_id:state.currentTripId,item:$('#exItem').value.trim(),amount:Number($('#exAmount').value),payer:$('#exPayer').value,participants,note:$('#exNote').value.trim()};
+    const i=state.expenses.findIndex(x=>String(x.id)===String(row.id));
+    const backup=i>=0?{...state.expenses[i]}:null;
+    if(i>=0)state.expenses[i]=row;else state.expenses.unshift(row);
+    localSave();renderExpenses();
+    if(trip._sharedOwnerId){
+      try{await saveSharedTripNow(trip.id);toast('支出已儲存並同步');return true;}
+      catch(e){
+        console.warn('shared expense sync failed',e);
+        const now=state.expenses.findIndex(x=>String(x.id)===String(row.id));
+        if(backup){if(now>=0)state.expenses[now]=backup;else state.expenses.unshift(backup);}else if(now>=0)state.expenses.splice(now,1);
+        localSave();renderExpenses();alert('支出同步失敗，請再試一次。');return false;
+      }
+    }
+    if(state.cloud){clearTimeout(cloudSaveTimer);cloudSaveTimer=setTimeout(()=>saveCloudSnapshot(false).catch(e=>console.warn('expense sync failed',e)),80);}
+    else persist();
+    toast('支出已儲存');return true;
+  }
   async function removeRecord(table,id){
   if(!confirm('確定要刪除嗎？'))return;
   if(!Array.isArray(state[table]))return;
@@ -2420,7 +2443,13 @@ function renderItinerary(){
   }
   if(state.cloud){
     cloudPullPausedUntil=Date.now()+8000;
-    await forceCloudWriteLatest();
+    const trip=currentTrip();
+    if(trip?._sharedOwnerId){
+      if(trip._sharedPermission==='view'){alert('這趟旅程目前是「僅查看」，不能刪除資料。');return;}
+      try{await saveSharedTripNow(trip.id);}catch(e){console.warn('shared delete sync failed',e);toast('刪除同步失敗，請重新整理後再試');return;}
+    }else{
+      await forceCloudWriteLatest();
+    }
   }else persist();
   toast('已刪除');
 }
