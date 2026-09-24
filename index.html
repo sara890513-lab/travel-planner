@@ -2614,26 +2614,42 @@ function renderItinerary(){
   $$('.tab').forEach(b=>b.onclick=()=>setTab(b.dataset.tab));
   $('#editTripBtn').onclick=()=>{const t=currentTrip();if(!canEditTrip(t)){alert('這趟旅程是「僅查看」。');return;}openTripDialog(t);};$('#addItineraryBtn').onclick=()=>openItineraryDialog();$('#exportImageBtn').onclick=()=>exportItinerary('image');$('#exportPdfBtn').onclick=()=>exportItinerary('pdf');$('#addExpenseBtn').onclick=()=>{if(!peopleOf(currentTrip()).length){toast('請先在旅程中加入同行朋友');return}openExpenseDialog();};
   $('#itineraryForm').addEventListener('submit',async e=>{e.preventDefault();try{await saveItinerary();closeModal('#itineraryDialog');}catch(err){console.error(err);toast('儲存失敗');}});
-  $('#expenseForm').addEventListener('submit',async e=>{
-    e.preventDefault();
-    const form=e.currentTarget;
-    const btn=form.querySelector('button[type="submit"]');
-    if(form.dataset.saving==='1')return;
-    form.dataset.saving='1';
-    if(btn)btn.disabled=true;
+  // v6.50：Safari 不再走 form submit；按鈕直接儲存、立即關閉，再背景同步。
+  async function commitExpenseDirect(){
+    const form=$('#expenseForm'), btn=$('#saveExpenseBtn');
+    if(!form || form.dataset.saving==='1')return;
+    const item=($('#exItem')?.value||'').trim();
+    const amount=Number($('#exAmount')?.value||0);
+    const payer=$('#exPayer')?.value||'';
+    const participants=$$('#participantChecks input:checked').map(x=>x.value);
+    if(!item){toast('請填寫支出項目');$('#exItem')?.focus();return;}
+    if(!Number.isFinite(amount)||amount<=0){toast('請填寫正確金額');$('#exAmount')?.focus();return;}
+    if(!payer){toast('請選擇誰付錢');return;}
+    if(!participants.length){toast('至少選一位分帳成員');return;}
+    const trip=currentTrip(); if(!trip)return;
+    if(trip._sharedOwnerId && trip._sharedPermission==='view'){alert('這趟旅程目前是「僅查看」，不能新增支出。');return;}
+    form.dataset.saving='1'; if(btn){btn.disabled=true;btn.textContent='儲存中…';}
     try{
-      const ok=await saveExpense();
-      if(ok){
-        try{document.activeElement?.blur();}catch(_){}
-        closeModal('#expenseDialog');
-      }
-    }catch(err){
-      console.error(err);toast('儲存失敗');
-    }finally{
-      form.dataset.saving='0';
-      if(btn)btn.disabled=false;
-    }
-  });
+      const row={id:$('#expenseId')?.value||uid(),trip_id:state.currentTripId,item,amount,payer,participants,note:($('#exNote')?.value||'').trim()};
+      const i=state.expenses.findIndex(x=>String(x.id)===String(row.id));
+      if(i>=0)state.expenses[i]=row; else state.expenses.unshift(row);
+      try{localSave();}catch(err){console.warn('expense local save warning',err);}
+      renderExpenses();
+      try{document.activeElement?.blur();}catch(_){}
+      closeModal('#expenseDialog');
+      toast('支出已儲存');
+      if(trip._sharedOwnerId){
+        try{if(typeof markSharedLocalMutation==='function')markSharedLocalMutation(trip.id);}catch(_){}
+        setTimeout(()=>{try{Promise.resolve(saveSharedTripNow(trip.id)).catch(err=>console.warn('shared expense sync failed',err));}catch(err){console.warn(err);}},0);
+      }else if(state.cloud){
+        clearTimeout(cloudSaveTimer);
+        cloudSaveTimer=setTimeout(()=>saveCloudSnapshot(false).catch(e=>console.warn('expense sync failed',e)),80);
+      }else{try{persist();}catch(_){}}
+    }catch(err){console.error('expense direct save failed',err);toast('儲存失敗，請再試一次');}
+    finally{form.dataset.saving='0';if(btn){btn.disabled=false;btn.textContent='儲存支出';}}
+  }
+  $('#saveExpenseBtn')?.addEventListener('click',commitExpenseDirect);
+  $('#expenseForm')?.addEventListener('submit',e=>{e.preventDefault();commitExpenseDirect();});
   $('#photoInput').addEventListener('change',async e=>{await addPhotos([...e.target.files]);e.target.value='';});
 
   $('#addPackingBtn')?.addEventListener('click',()=>addChecklistItem('packing'));
@@ -4064,7 +4080,7 @@ window.loadExportLibs=()=>Promise.all([
       <div class="two-col"><label>金額<input id="exAmount" type="number" min="0" step="1" required /></label><label>誰付錢<select id="exPayer" required></select></label></div>
       <fieldset><legend>這筆費用要分給誰</legend><div id="participantChecks" class="checks"></div></fieldset>
       <label>備註<textarea id="exNote" rows="2"></textarea></label>
-      <div class="modal-actions"><button type="button" class="ghost" data-close>取消</button><button class="primary" type="submit">儲存支出</button></div>
+      <div class="modal-actions"><button type="button" class="ghost" data-close>取消</button><button class="primary" type="button" id="saveExpenseBtn">儲存支出</button></div>
     </form>
   </div>
 
