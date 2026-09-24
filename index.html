@@ -2418,13 +2418,16 @@ function renderItinerary(){
     if(i>=0)state.expenses[i]=row;else state.expenses.unshift(row);
     localSave();renderExpenses();
     if(trip._sharedOwnerId){
-      try{await saveSharedTripNow(trip.id);toast('支出已儲存並同步');return true;}
-      catch(e){
-        console.warn('shared expense sync failed',e);
-        const now=state.expenses.findIndex(x=>String(x.id)===String(row.id));
-        if(backup){if(now>=0)state.expenses[now]=backup;else state.expenses.unshift(backup);}else if(now>=0)state.expenses.splice(now,1);
-        localSave();renderExpenses();alert('支出同步失敗，請再試一次。');return false;
-      }
+      // v6.49：共同行程的旅程分帳先立即完成 UI，再背景同步。
+      // 不再 await 網路，因此按下儲存後視窗會立刻關閉、紀錄也立刻出現。
+      markSharedLocalMutation?.(trip.id);
+      Promise.resolve(saveSharedTripNow(trip.id))
+        .then(()=>{ if(typeof toast==='function')toast('支出已同步'); })
+        .catch(e=>{
+          console.warn('shared expense background sync failed',e);
+          if(typeof toast==='function')toast('支出已先保存在本機，雲端同步稍後再試');
+        });
+      toast('支出已儲存');return true;
     }
     if(state.cloud){clearTimeout(cloudSaveTimer);cloudSaveTimer=setTimeout(()=>saveCloudSnapshot(false).catch(e=>console.warn('expense sync failed',e)),80);}
     else persist();
@@ -2611,7 +2614,26 @@ function renderItinerary(){
   $$('.tab').forEach(b=>b.onclick=()=>setTab(b.dataset.tab));
   $('#editTripBtn').onclick=()=>{const t=currentTrip();if(!canEditTrip(t)){alert('這趟旅程是「僅查看」。');return;}openTripDialog(t);};$('#addItineraryBtn').onclick=()=>openItineraryDialog();$('#exportImageBtn').onclick=()=>exportItinerary('image');$('#exportPdfBtn').onclick=()=>exportItinerary('pdf');$('#addExpenseBtn').onclick=()=>{if(!peopleOf(currentTrip()).length){toast('請先在旅程中加入同行朋友');return}openExpenseDialog();};
   $('#itineraryForm').addEventListener('submit',async e=>{e.preventDefault();try{await saveItinerary();closeModal('#itineraryDialog');}catch(err){console.error(err);toast('儲存失敗');}});
-  $('#expenseForm').addEventListener('submit',async e=>{e.preventDefault();try{if(await saveExpense())closeModal('#expenseDialog');}catch(err){console.error(err);toast('儲存失敗');}});
+  $('#expenseForm').addEventListener('submit',async e=>{
+    e.preventDefault();
+    const form=e.currentTarget;
+    const btn=form.querySelector('button[type="submit"]');
+    if(form.dataset.saving==='1')return;
+    form.dataset.saving='1';
+    if(btn)btn.disabled=true;
+    try{
+      const ok=await saveExpense();
+      if(ok){
+        try{document.activeElement?.blur();}catch(_){}
+        closeModal('#expenseDialog');
+      }
+    }catch(err){
+      console.error(err);toast('儲存失敗');
+    }finally{
+      form.dataset.saving='0';
+      if(btn)btn.disabled=false;
+    }
+  });
   $('#photoInput').addEventListener('change',async e=>{await addPhotos([...e.target.files]);e.target.value='';});
 
   $('#addPackingBtn')?.addEventListener('click',()=>addChecklistItem('packing'));
