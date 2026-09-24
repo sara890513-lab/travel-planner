@@ -4378,36 +4378,39 @@ document.addEventListener('DOMContentLoaded',()=>{
 
   const save=document.getElementById('qSave');
   if(save)save.onclick=async()=>{
+    if(save.dataset.saving==='1')return;
     const item=document.getElementById('qItem').value.trim();
     const amount=Number(document.getElementById('qAmount').value);
     const payer=document.getElementById('qPayer').value;
     const currency=document.getElementById('qCurrency')?.value||'TWD';
-    let people=[...document.querySelectorAll('#qPeopleChecks input:checked')].map(x=>x.value);
-    if(!item||!amount||!payer){alert('請填寫項目、金額和誰付錢');return}
+    const people=[...document.querySelectorAll('#qPeopleChecks input:checked')].map(x=>x.value);
+    if(!item||!Number.isFinite(amount)||amount<=0||!payer){alert('請填寫項目、金額和誰付錢');return}
     if(!people.length){alert('請至少選擇一位一起分的人');return}
-    const fxRate=await updateQuickFxPreview(false);
-    if(fxRate===null){alert('目前無法取得匯率，請按「更新匯率」後再試。');return}
-    const twdAmount=Math.round(amount*fxRate*100)/100;
-    const row={item,amount,currency,fxRate,twdAmount,payer,people,created_at:new Date().toISOString()};
-    if(quickEditIndex>=0){
-      row.created_at=quickSplit[quickEditIndex]?.created_at||row.created_at;
-      quickSplit[quickEditIndex]=row;
-      quickEditIndex=-1;
-    }else{
-      quickSplit.unshift(row);
-    }
-    document.getElementById('qItem').value='';
-    document.getElementById('qAmount').value='';
-    if(document.getElementById('qCurrency'))document.getElementById('qCurrency').value='TWD';
-    updateQuickFxPreview(false);
-    document.getElementById('qPayer').value='';
-    document.querySelectorAll('#qPeopleChecks input').forEach(x=>x.checked=false);
-    saveQuickSplit();
-    fillQuickPeople();
-    save.textContent='儲存這筆分帳';
+    save.dataset.saving='1'; save.disabled=true; save.textContent='儲存中…';
+    try{
+      let fxRate=1;
+      if(currency!=='TWD'){
+        const cached=getCachedFx(currency);
+        fxRate=cached?.rate?Number(cached.rate):await fetchFxToTwd(currency,false);
+        if(!Number.isFinite(fxRate)||fxRate<=0)throw new Error('FX');
+      }
+      const twdAmount=Math.round(amount*fxRate*100)/100;
+      const row={item,amount,currency,fxRate,twdAmount,payer,people,created_at:new Date().toISOString()};
+      if(quickEditIndex>=0){row.created_at=quickSplit[quickEditIndex]?.created_at||row.created_at;quickSplit[quickEditIndex]=row;quickEditIndex=-1;}else quickSplit.unshift(row);
+      try{localStorage.setItem(QUICK_SPLIT_KEY,JSON.stringify(quickSplit))}catch(e){}
+      renderQuickSplit();
+      document.getElementById('qItem').value=''; document.getElementById('qAmount').value='';
+      if(document.getElementById('qCurrency'))document.getElementById('qCurrency').value='TWD';
+      document.getElementById('qPayer').value=''; document.querySelectorAll('#qPeopleChecks input').forEach(x=>x.checked=false);
+      fillQuickPeople(); updateQuickFxPreview(false);
+      try{document.activeElement?.blur();}catch(e){}
+      if(window.queueCloudSave){try{window.queueCloudSave();}catch(e){console.warn(e)}}
+      if(typeof toast==='function')toast('分帳已新增');
+    }catch(err){console.error(err);alert(currency==='TWD'?'新增失敗，請再試一次。':'匯率取得失敗，請按「更新匯率」後再試。');}
+    finally{save.dataset.saving='0';save.disabled=false;save.textContent='儲存這筆分帳';}
   };
   const add=document.getElementById('quickAddExpense');
-  if(add)add.onclick=()=>document.getElementById('qItem')?.focus();
+  if(add)add.onclick=()=>{const item=document.getElementById('qItem');if(item){item.scrollIntoView({behavior:'smooth',block:'center'});setTimeout(()=>item.focus({preventScroll:true}),180);}};
 });
 
 </script>
