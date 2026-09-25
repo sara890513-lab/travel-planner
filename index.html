@@ -4,7 +4,7 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
   <meta name="theme-color" content="#fff8f4" />
-  <title>我的旅遊計畫｜Travel Planner v6.59</title>
+  <title>我的旅遊計畫｜Travel Planner v6.60</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link rel="preload" href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;600;700;800&display=swap" as="style" onload="this.onload=null;this.rel='stylesheet'">
@@ -5516,6 +5516,37 @@ document.addEventListener('DOMContentLoaded',()=>{
   }
   #homeView .trip-card-body{min-height:132px!important}
   #homeView .trip-card-body>h3{font-size:15px!important}
+}
+</style>
+
+
+<style id="v660-home-font-title-fix">
+/* v6.60：首頁旅程卡片字體放大、旅程標題靠左；不更動功能 */
+@media(max-width:760px){
+  #homeView .trip-card-body{ text-align:left!important; }
+  #homeView .trip-card-body>h3{
+    text-align:left!important;
+    font-size:19px!important;
+    line-height:1.28!important;
+    font-weight:800!important;
+    margin:0 0 6px!important;
+  }
+  #homeView .trip-card-body>.trip-info{
+    font-size:12.5px!important;
+    line-height:1.38!important;
+    gap:2px!important;
+    text-align:left!important;
+  }
+  #homeView .trip-card-body>.shared-badge,
+  #homeView .trip-card-body>.trip-lock-badge{font-size:10px!important;}
+  #homeView .trip-actions-main .it-btn{font-size:13px!important;}
+  #homeView .trip-actions-main .money-btn,
+  #homeView .trip-actions-main .quick-home-btn{font-size:10.5px!important;}
+  #homeView .trip-card-body>.trip-actions:not(.trip-actions-main) button{font-size:10px!important;}
+}
+@media(max-width:390px){
+  #homeView .trip-card-body>h3{font-size:18px!important;}
+  #homeView .trip-card-body>.trip-info{font-size:11.8px!important;}
 }
 </style>
 
