@@ -4,7 +4,7 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
   <meta name="theme-color" content="#fff8f4" />
-  <title>我的旅遊計畫｜Travel Planner v6.62</title>
+  <title>我的旅遊計畫｜Travel Planner v6.64</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link rel="preload" href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;600;700;800&display=swap" as="style" onload="this.onload=null;this.rel='stylesheet'">
@@ -5616,6 +5616,38 @@ document.addEventListener('DOMContentLoaded',()=>{
   #homeView .trip-card-body>h3,.home-trip-card .home-trip-title,.trip-card-v2 .trip-name,.trip-card h3{font-size:25px!important;}
   #homeView .trip-card-body>.trip-info,.trip-info{font-size:17px!important;}
   .v652-filter{font-size:14px!important;}
+}
+</style>
+
+<style id="v664-home-balance-fix">
+/* v6.64：首頁字體比例重新平衡；日期固定單行 */
+@media(max-width:700px){
+  #homeView .section-head h1{font-size:34px!important;line-height:1.15!important;}
+  #homeView .section-head p{font-size:17px!important;line-height:1.45!important;}
+  .v652-filter{font-size:12.5px!important;font-weight:800!important;padding:12px 13px!important;}
+  #homeView .trip-card-body>h3,
+  .home-trip-card .home-trip-title,
+  .trip-card-v2 .trip-name,
+  #homeView .trip-card h3{font-size:22px!important;line-height:1.25!important;}
+  #homeView .trip-card-body>.trip-info,
+  .home-trip-card .trip-card-info,
+  .home-trip-card .trip-meta-line,
+  .trip-card-v2 .trip-meta,
+  .trip-card-v2 .trip-people,
+  #homeView .trip-info{font-size:16px!important;line-height:1.42!important;}
+  #homeView .trip-info>div:first-child{white-space:nowrap!important;font-size:15px!important;letter-spacing:-.25px!important;}
+  #homeView .trip-card-body>.shared-badge,#homeView .trip-card-body>.trip-lock-badge{font-size:11.5px!important;}
+  #homeView .trip-actions-main .it-btn{font-size:15px!important;}
+  #homeView .trip-actions-main .money-btn,#homeView .trip-actions-main .quick-home-btn{font-size:13px!important;}
+  #homeView .trip-card-body>.trip-actions:not(.trip-actions-main) button{font-size:12px!important;}
+  .topbar .nav-btn{font-size:13px!important;}
+}
+@media(max-width:390px){
+  #homeView .section-head h1{font-size:32px!important;}
+  .v652-filter{font-size:11.5px!important;padding-left:10px!important;padding-right:10px!important;}
+  #homeView .trip-card-body>h3,#homeView .trip-card h3{font-size:21px!important;}
+  #homeView .trip-card-body>.trip-info,#homeView .trip-info{font-size:15px!important;}
+  #homeView .trip-info>div:first-child{font-size:13.5px!important;}
 }
 </style>
 </body>
