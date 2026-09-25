@@ -4,7 +4,7 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
   <meta name="theme-color" content="#fff8f4" />
-  <title>我的旅遊計畫｜Travel Planner v6.69</title>
+  <title>我的旅遊計畫｜Travel Planner v6.70</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link rel="preload" href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;600;700;800&display=swap" as="style" onload="this.onload=null;this.rel='stylesheet'">
@@ -5618,72 +5618,56 @@ document.addEventListener('DOMContentLoaded',()=>{
 
 
 
-<script id="v669-trip-filter-final">
-/* v6.69
-   主程式的 state 宣告在 DOMContentLoaded 的 IIFE 內，但同時有 window.state=state。
-   因此首頁外掛分類必須讀 window.state，而不是直接讀 state。
-*/
+
+<script id="v670-card-date-filter">
 (function(){
-  let activeKind=0;
+  let active=0;
+  const buttons=()=>[...document.querySelectorAll('.v652-filter')];
+
   function pad(n){return String(n).padStart(2,'0')}
-  function ymd(d){return d.getFullYear()+'-'+pad(d.getMonth()+1)+'-'+pad(d.getDate())}
-  function norm(v){
-    const m=String(v||'').match(/^(\d{4})-(\d{2})-(\d{2})/);
-    return m?m[1]+'-'+m[2]+'-'+m[3]:'';
-  }
-  function setCard(card,visible){
-    if(visible) card.style.removeProperty('display');
-    else card.style.setProperty('display','none','important');
+  function ymd(d){return `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`}
+  function datesFromCard(card){
+    const line=card.querySelector('.trip-info > div:first-child')?.textContent||'';
+    const found=[...line.matchAll(/(\d{4})[-\/](\d{1,2})[-\/](\d{1,2})/g)]
+      .map(m=>`${m[1]}-${pad(m[2])}-${pad(m[3])}`);
+    return {start:found[0]||'',end:found[1]||found[0]||''};
   }
   function apply(kind){
-    activeKind=Number(kind)||0;
-    const grid=document.getElementById('tripGrid');
-    if(!grid)return;
-
+    active=Number(kind)||0;
     const now=new Date(); now.setHours(12,0,0,0);
-    const end30=new Date(now); end30.setDate(end30.getDate()+30);
-    const today=ymd(now), limit=ymd(end30);
-    const trips=(window.state && Array.isArray(window.state.trips))?window.state.trips:[];
+    const max=new Date(now); max.setDate(max.getDate()+30);
+    const today=ymd(now), limit=ymd(max);
 
-    grid.querySelectorAll('.trip-card').forEach(card=>{
-      const id=String(card.getAttribute('data-trip-id')||'');
-      const t=trips.find(x=>String(x.id)===id);
-      if(!t){setCard(card,activeKind===0);return}
-
-      const start=norm(t.start_date);
-      const end=norm(t.end_date||t.start_date);
-      let visible=true;
-
-      if(activeKind===1){
-        // 即將出發：開始日在今天～未來30天內，而且旅程尚未結束
-        visible=!!start && start>=today && start<=limit && !!end && end>=today;
-      }else if(activeKind===2){
-        // 已結束：結束日期早於今天
-        visible=!!end && end<today;
-      }
-      setCard(card,visible);
+    document.querySelectorAll('#tripGrid .trip-card').forEach(card=>{
+      const {start,end}=datesFromCard(card);
+      let show=true;
+      if(active===1) show=!!start && start>=today && start<=limit && end>=today;
+      if(active===2) show=!!end && end<today;
+      if(show) card.style.setProperty('display','grid','important');
+      else card.style.setProperty('display','none','important');
     });
   }
-  function init(){
-    const buttons=[...document.querySelectorAll('.v652-filter')];
-    if(buttons.length<4)return;
 
-    buttons[0].onclick=e=>{e.preventDefault();buttons.forEach(b=>b.classList.remove('active'));buttons[0].classList.add('active');apply(0)};
-    buttons[1].onclick=e=>{e.preventDefault();buttons.forEach(b=>b.classList.remove('active'));buttons[1].classList.add('active');apply(1)};
-    buttons[2].onclick=e=>{e.preventDefault();buttons.forEach(b=>b.classList.remove('active'));buttons[2].classList.add('active');apply(2)};
-
-    // 旅程卡片因登入/同步重新 render 後，保持目前分類
+  function bind(){
+    const bs=buttons();
+    if(bs.length<4)return;
+    [0,1,2].forEach(i=>{
+      bs[i].onclick=function(e){
+        e.preventDefault();
+        bs.forEach(b=>b.classList.remove('active'));
+        bs[i].classList.add('active');
+        apply(i);
+      };
+    });
     const grid=document.getElementById('tripGrid');
-    if(grid)new MutationObserver(()=>{
-      clearTimeout(window.__v669t);
-      window.__v669t=setTimeout(()=>apply(activeKind),25);
-    }).observe(grid,{childList:true});
-
+    if(grid)new MutationObserver(()=>setTimeout(()=>apply(active),0))
+      .observe(grid,{childList:true,subtree:false});
     apply(0);
   }
-  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',init);
-  else init();
-  window.applyHomeTripFilter=apply;
+
+  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',bind);
+  else bind();
+  window.TRAVEL_PLANNER_VERSION='v6.70';
 })();
 </script>
 
