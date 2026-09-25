@@ -4,7 +4,7 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
   <meta name="theme-color" content="#fff8f4" />
-  <title>我的旅遊計畫｜Travel Planner v6.66</title>
+  <title>我的旅遊計畫｜Travel Planner v6.67</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link rel="preload" href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;600;700;800&display=swap" as="style" onload="this.onload=null;this.rel='stylesheet'">
@@ -4861,7 +4861,7 @@ document.addEventListener('DOMContentLoaded',function(){
       const rows=window.transportStore();
       const i=rows.findIndex(x=>x.id===del.dataset.delTransport);
       if(i>=0 && confirm('確定刪除這筆交通資訊嗎？')){
-        const t=(typeof window.currentTrip==='function'?window.currentTrip():(window.state?.trips||[]).find(x=>String(x.id)===String(window.state?.currentTripId)));
+        const t=(typeof window.currentTrip==='function'?window.currentTrip():(state?.trips||[]).find(x=>String(x.id)===String(window.state?.currentTripId)));
         if(t?._sharedOwnerId && t?._sharedPermission==='view'){alert('這趟旅程目前是「僅查看」，不能刪除交通資訊。');return;}
         rows.splice(i,1);
         Promise.resolve(window.saveTripObject(t)).then(ok=>{
@@ -4946,7 +4946,7 @@ document.addEventListener('click', async function(e){
         if(typeof window.renderMajorTransports==='function') window.renderMajorTransports();
         if(typeof toast==='function')toast('交通已刪除，正在同步…');
         let ok=true;
-        if(typeof window.saveTripObject==='function') { const t=(typeof window.currentTrip==='function'?window.currentTrip():(window.state?.trips||[]).find(x=>String(x.id)===String(window.state?.currentTripId))); ok=await window.saveTripObject(t); }
+        if(typeof window.saveTripObject==='function') { const t=(typeof window.currentTrip==='function'?window.currentTrip():(state?.trips||[]).find(x=>String(x.id)===String(window.state?.currentTripId))); ok=await window.saveTripObject(t); }
         if(ok===false){
           // 寫入失敗就還原，避免畫面看似刪除但另一個帳號仍存在。
           rows.splice(i,0,removed);
@@ -5016,7 +5016,7 @@ document.addEventListener('click',async function(e){
   if(!btn)return;
   const card=btn.closest('.trip-card');
   const title=card?.querySelector('h3')?.textContent?.trim()||'';
-  const t=window.state?.trips?.find(x=>x.name===title);
+  const t=state?.trips?.find(x=>x.name===title);
   if(!t?.password_hash)return;
   if(typeof window.ensureTripUnlocked!=='function')return;
   if(window.__tripGatePass===t.id){window.__tripGatePass='';return;}
@@ -5099,7 +5099,7 @@ document.addEventListener('DOMContentLoaded',()=>{
     const today=new Date(); today.setHours(0,0,0,0);
     [...grid.querySelectorAll('.trip-card')].forEach(card=>{
       const id=card.getAttribute('data-trip-id');
-      const t=(window.state?.trips||[]).find(x=>String(x.id)===String(id));
+      const t=(state?.trips||[]).find(x=>String(x.id)===String(id));
       let show=true;
       if(t){
         const end=t.end_date?new Date(t.end_date+'T23:59:59'):null;
@@ -5682,7 +5682,7 @@ document.addEventListener('DOMContentLoaded',()=>{
 
     const today = localYMD(new Date());
     const limit = addDaysYMD(30);
-    const trips = (window.state && Array.isArray(window.state.trips)) ? window.state.trips : [];
+    const trips = (typeof state!=='undefined' && Array.isArray(state.trips)) ? state.trips : [];
 
     grid.querySelectorAll('.trip-card').forEach(card=>{
       const id = String(card.getAttribute('data-trip-id')||'');
@@ -5791,7 +5791,7 @@ document.addEventListener('DOMContentLoaded',()=>{
 
     const today=ymdToday();
     const limit=ymdPlus(30);
-    const trips=window.state?.trips||[];
+    const trips=state?.trips||[];
 
     grid.querySelectorAll('.trip-card').forEach(card=>{
       const t=trips.find(x=>String(x.id)===String(card.dataset.tripId||''));
@@ -5843,5 +5843,9 @@ document.addEventListener('DOMContentLoaded',()=>{
 })();
 </script>
 
+<script id="v667-version-marker">
+window.TRAVEL_PLANNER_VERSION='v6.67';
+console.log('Travel Planner v6.67 - filter now reads state.trips');
+</script>
 </body>
 </html>
