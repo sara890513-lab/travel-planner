@@ -4,7 +4,7 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
   <meta name="theme-color" content="#fff8f4" />
-  <title>我的旅遊計畫｜Travel Planner v6.60</title>
+  <title>我的旅遊計畫｜Travel Planner v6.61</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link rel="preload" href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;600;700;800&display=swap" as="style" onload="this.onload=null;this.rel='stylesheet'">
@@ -5547,6 +5547,17 @@ document.addEventListener('DOMContentLoaded',()=>{
 @media(max-width:390px){
   #homeView .trip-card-body>h3{font-size:18px!important;}
   #homeView .trip-card-body>.trip-info{font-size:11.8px!important;}
+}
+
+/* v6.61 手機首頁字體與標題對齊修正 */
+@media(max-width:700px){
+  .home-trip-card .home-trip-title,
+  .trip-card-v2 .trip-name,
+  .trip-card h3{font-size:25px!important;line-height:1.25!important;text-align:left!important;justify-self:start!important;margin-left:0!important;margin-right:0!important;width:100%!important;}
+  .home-trip-card .trip-card-info, .home-trip-card .trip-meta-line,
+  .trip-card-v2 .trip-meta, .trip-card-v2 .trip-people,
+  .trip-info{font-size:17px!important;line-height:1.55!important;}
+  .home-trip-card button,.trip-card-v2 button,.trip-card button{font-size:16px!important;}
 }
 </style>
 
