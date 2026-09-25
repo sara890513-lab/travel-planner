@@ -4,7 +4,7 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
   <meta name="theme-color" content="#fff8f4" />
-  <title>我的旅遊計畫｜Travel Planner v6.65</title>
+  <title>我的旅遊計畫｜Travel Planner v6.66</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link rel="preload" href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;600;700;800&display=swap" as="style" onload="this.onload=null;this.rel='stylesheet'">
@@ -5751,6 +5751,95 @@ document.addEventListener('DOMContentLoaded',()=>{
 
   window.applyTripDateFilterV665 = applyTripDateFilter;
   window.refreshTripDateFilterV665 = refresh;
+})();
+</script>
+
+
+<script id="v666-date-filter-important-fix">
+/* v6.66：真正修正分類沒有變化。
+   原因：手機版 .trip-card 有 display:grid!important，
+   舊篩選用普通 inline display:none 會被 !important 蓋掉。 */
+(function(){
+  let activeKind = 0;
+
+  function pad(n){ return String(n).padStart(2,'0'); }
+  function ymdToday(){
+    const d=new Date();
+    return d.getFullYear()+'-'+pad(d.getMonth()+1)+'-'+pad(d.getDate());
+  }
+  function ymdPlus(days){
+    const d=new Date();
+    d.setHours(12,0,0,0);
+    d.setDate(d.getDate()+days);
+    return d.getFullYear()+'-'+pad(d.getMonth()+1)+'-'+pad(d.getDate());
+  }
+  function cleanDate(v){
+    const m=String(v||'').match(/^(\d{4})-(\d{2})-(\d{2})/);
+    return m ? `${m[1]}-${m[2]}-${m[3]}` : '';
+  }
+  function setVisible(card,show){
+    if(show){
+      card.style.removeProperty('display');
+    }else{
+      card.style.setProperty('display','none','important');
+    }
+  }
+  function apply(kind){
+    activeKind=Number(kind)||0;
+    const grid=document.getElementById('tripGrid');
+    if(!grid)return;
+
+    const today=ymdToday();
+    const limit=ymdPlus(30);
+    const trips=window.state?.trips||[];
+
+    grid.querySelectorAll('.trip-card').forEach(card=>{
+      const t=trips.find(x=>String(x.id)===String(card.dataset.tripId||''));
+      if(!t){ setVisible(card,activeKind===0); return; }
+
+      const start=cleanDate(t.start_date);
+      const end=cleanDate(t.end_date||t.start_date);
+      let show=true;
+
+      if(activeKind===1){
+        // 今天～未來30天「開始」的旅程
+        show=!!start && start>=today && start<=limit && (!end || end>=today);
+      }else if(activeKind===2){
+        // 結束日期早於今天
+        show=!!end && end<today;
+      }
+      setVisible(card,show);
+    });
+  }
+
+  function bind(){
+    const filters=[...document.querySelectorAll('.v652-filter')];
+    filters.forEach((btn,i)=>{
+      if(btn.dataset.v666Bound)return;
+      btn.dataset.v666Bound='1';
+      btn.addEventListener('click',function(e){
+        if(i===3)return; // 管理設定沿用原功能
+        e.preventDefault();
+        e.stopImmediatePropagation();
+        filters.forEach(x=>x.classList.remove('active'));
+        btn.classList.add('active');
+        apply(i);
+      },true);
+    });
+  }
+
+  document.addEventListener('DOMContentLoaded',()=>{
+    bind();
+    apply(0);
+    const grid=document.getElementById('tripGrid');
+    if(grid){
+      new MutationObserver(()=>{
+        clearTimeout(window.__v666Timer);
+        window.__v666Timer=setTimeout(()=>apply(activeKind),40);
+      }).observe(grid,{childList:true});
+    }
+  });
+  window.applyTripDateFilterV666=apply;
 })();
 </script>
 
