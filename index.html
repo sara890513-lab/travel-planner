@@ -3511,6 +3511,72 @@ window.loadExportLibs=()=>Promise.all([
 }
 </style>
 
+
+<style id="v652-figure1-fullscreen">
+/* v6.52：依圖一完整重製首頁畫面；僅覆寫視覺，原功能與同步程式保留 */
+:root{--v652-navy:#263b5c;--v652-muted:#7c8491;--v652-coral:#ff858f;--v652-cream:#fffaf4}
+body{background:#fffaf4!important}
+#homeView{background:radial-gradient(circle at 12% 4%,#fff7f0 0,#fffaf5 36%,#fffdf9 100%)!important}
+#homeView .content-section{max-width:1050px!important;padding:34px 28px 145px!important}
+#homeView .section-head{position:relative;display:block!important;margin:0 0 22px!important;padding:0 8px!important}
+#homeView .section-head h1{font-size:44px!important;line-height:1.08!important;letter-spacing:1px!important;margin:0!important;color:var(--v652-navy)!important;font-weight:900!important}
+#homeView .section-head p{font-size:19px!important;color:#8a8f99!important;margin:10px 0 0!important}
+#homeView .section-head>.primary{position:fixed!important;right:max(24px,calc((100vw - 1050px)/2 + 18px))!important;bottom:104px!important;width:70px!important;height:70px!important;border-radius:50%!important;padding:0!important;font-size:0!important;z-index:35!important;background:linear-gradient(145deg,#ff8d96,#ff737f)!important;box-shadow:0 13px 28px rgba(255,115,127,.34)!important}
+#homeView .section-head>.primary:after{content:'＋';font-size:43px!important;font-weight:300!important;line-height:1;color:#fff}
+.v652-head-tools{position:absolute;right:6px;top:4px;display:flex;gap:12px}
+.v652-head-tools button{width:52px;height:52px;border-radius:18px;border:1px solid #eee6df;background:rgba(255,255,255,.72);font-size:25px;color:#4b515a;box-shadow:0 6px 18px rgba(80,65,55,.05)}
+.v652-filters{display:flex;gap:12px;overflow:auto;padding:26px 4px 20px;scrollbar-width:none}.v652-filters::-webkit-scrollbar{display:none}
+.v652-filter{flex:0 0 auto;border:1px solid #eee6df;background:rgba(255,255,255,.78);color:#7a7d83;border-radius:999px;padding:13px 20px;font-size:15px;font-weight:800;box-shadow:0 5px 16px rgba(80,65,55,.04)}
+.v652-filter.active{background:linear-gradient(135deg,#ff8e98,#ff7885);border-color:transparent;color:#fff;box-shadow:0 9px 22px rgba(255,126,138,.24)}
+#homeView .trip-grid{gap:24px!important}
+#homeView .trip-card{grid-template-columns:38% minmax(0,1fr)!important;gap:28px!important;padding:22px!important;border-radius:31px!important;border:1px solid #eee6df!important;box-shadow:0 12px 34px rgba(82,65,52,.075)!important;background:rgba(255,255,255,.92)!important}
+#homeView .trip-card>img.trip-card-cover{aspect-ratio:4/5!important;min-height:360px!important;border-radius:24px!important;object-fit:cover!important}
+#homeView .trip-card-body h3{font-size:31px!important;margin:7px 0 10px!important;color:#213957!important}
+#homeView .trip-info{font-size:18px!important;gap:7px!important;color:#727983!important}
+#homeView .shared-badge{background:#e8f5ff!important;color:#3977aa!important;border-color:#cae4f7!important}
+#homeView .trip-actions-main{gap:10px!important;padding-top:17px!important}
+#homeView .trip-actions-main .it-btn{min-height:60px!important;font-size:19px!important;background:linear-gradient(135deg,#ff8c96,#ff7e89)!important;border-radius:20px!important}
+#homeView .trip-actions-main .money-btn,#homeView .trip-actions-main .quick-home-btn{min-height:52px!important;font-size:16px!important;border-radius:18px!important}
+#homeView .trip-card-body>.trip-actions:not(.trip-actions-main){margin-top:14px!important;padding-top:13px!important;gap:8px!important}
+#homeView .trip-card-body>.trip-actions:not(.trip-actions-main) button{min-height:43px!important;border-radius:15px!important;font-size:14px!important;font-weight:800!important}
+/* 底部導覽改成圖一的浮白導覽感 */
+@media(max-width:900px){
+ .topbar{position:fixed!important;left:0!important;right:0!important;top:auto!important;bottom:0!important;height:86px!important;padding:7px 8px calc(8px + env(safe-area-inset-bottom))!important;background:rgba(255,253,250,.96)!important;border-top:1px solid #eee7e2!important;border-bottom:0!important;box-shadow:0 -8px 24px rgba(70,58,48,.05)!important;display:block!important;z-index:40!important}
+ .topbar>.brand,.topbar>#authBtn{display:none!important}
+ .topbar .nav{position:static!important;height:100%!important;border:0!important;background:transparent!important;padding:0!important;display:grid!important;grid-template-columns:repeat(4,1fr)!important;align-items:center!important;gap:2px!important}
+ .topbar .nav-btn{background:transparent!important;color:#58667c!important;border-radius:14px!important;font-size:11px!important;padding:5px 2px!important;font-weight:800!important}
+ .topbar .nav-btn span{font-size:22px!important;margin-bottom:3px!important}
+ .topbar .nav-btn.active{color:#ff7f8a!important}
+}
+@media(max-width:760px){
+ #homeView .content-section{padding:24px 16px 130px!important}
+ #homeView .section-head{padding:0 4px!important}
+ #homeView .section-head h1{font-size:38px!important;padding-right:120px!important}
+ #homeView .section-head p{font-size:16px!important;padding-right:70px!important}
+ .v652-head-tools{right:2px;top:0}.v652-head-tools button{width:45px;height:45px;border-radius:16px;font-size:22px}
+ .v652-filters{padding:23px 0 18px;gap:9px}.v652-filter{padding:11px 16px;font-size:14px}
+ #homeView .trip-card{grid-template-columns:39% minmax(0,1fr)!important;gap:14px!important;padding:14px!important;border-radius:26px!important}
+ #homeView .trip-card>img.trip-card-cover{min-height:0!important;aspect-ratio:3/4!important;border-radius:21px!important}
+ #homeView .trip-card-body h3{font-size:23px!important;margin:4px 0 8px!important}
+ #homeView .trip-info{font-size:14px!important;gap:5px!important}
+ #homeView .trip-actions-main .it-btn{min-height:51px!important;font-size:16px!important}
+ #homeView .trip-actions-main .money-btn,#homeView .trip-actions-main .quick-home-btn{min-height:45px!important;font-size:13px!important}
+ #homeView .section-head>.primary{right:18px!important;bottom:98px!important;width:66px!important;height:66px!important}
+}
+@media(max-width:480px){
+ #homeView .content-section{padding-left:12px!important;padding-right:12px!important}
+ #homeView .section-head h1{font-size:34px!important}
+ #homeView .section-head p{font-size:14px!important}
+ #homeView .trip-card{grid-template-columns:38% minmax(0,1fr)!important;gap:11px!important;padding:12px!important}
+ #homeView .trip-card-body h3{font-size:20px!important}
+ #homeView .trip-info{font-size:12.5px!important}
+ #homeView .trip-actions-main{gap:7px!important}
+ #homeView .trip-actions-main .it-btn{font-size:15px!important}
+ #homeView .trip-card-body>.trip-actions:not(.trip-actions-main){gap:5px!important}
+ #homeView .trip-card-body>.trip-actions:not(.trip-actions-main) button{font-size:10.5px!important;padding:7px 2px!important}
+}
+</style>
+
 </head>
 <body>
   <div id="toast" class="toast"></div>
@@ -3570,6 +3636,8 @@ window.loadExportLibs=()=>Promise.all([
             <h1>🧳 我的旅程</h1>
             <p>記錄每一次出發，收藏每一段美好 ♡</p>
           </div>
+          <div class="v652-head-tools"><button type="button" aria-label="搜尋" onclick="document.getElementById('tripGrid')?.scrollIntoView({behavior:'smooth'})">⌕</button><button type="button" aria-label="更多">•••</button></div>
+          <div class="v652-filters"><button class="v652-filter active" type="button">✈️ 全部旅程</button><button class="v652-filter" type="button">🧳 即將出發</button><button class="v652-filter" type="button">★ 已結束</button><button class="v652-filter" type="button">♥ 我的最愛</button></div>
           <button class="primary" data-action="new-trip">＋ 新增旅程</button>
         </div>
         <div id="tripGrid" class="trip-grid"></div>
