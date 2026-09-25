@@ -4,7 +4,7 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
   <meta name="theme-color" content="#fff8f4" />
-  <title>我的旅遊計畫｜Travel Planner v6.61</title>
+  <title>我的旅遊計畫｜Travel Planner v6.62</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link rel="preload" href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;600;700;800&display=swap" as="style" onload="this.onload=null;this.rel='stylesheet'">
@@ -3701,6 +3701,32 @@ body{background:#fffaf4!important}
  #homeView .trip-card-body>.trip-actions:not(.trip-actions-main) button{font-size:9px!important}
 }
 </style>
+<style id="v662-home-font-settings-final">
+/* v6.62：首頁文字放大、30天即將出發、管理設定、移除右下新增鍵 */
+@media(max-width:760px){
+  #homeView .section-head>.primary{display:none!important}
+  #homeView .content-section{padding-bottom:145px!important}
+  #homeView .section-head h1{font-size:34px!important;line-height:1.18!important}
+  #homeView .section-head p{font-size:16px!important;line-height:1.5!important}
+  .v652-filters{gap:7px!important;padding-top:18px!important;padding-bottom:18px!important}
+  .v652-filter{font-size:13px!important;line-height:1.25!important;padding:12px 3px!important;font-weight:800!important}
+  #homeView .trip-card-body>h3{font-size:22px!important;line-height:1.28!important;text-align:left!important}
+  #homeView .trip-card-body>.trip-info{font-size:14px!important;line-height:1.42!important;gap:5px!important}
+  #homeView .shared-badge,#homeView .trip-lock-badge{font-size:12px!important}
+  #homeView .trip-actions-main .it-btn{font-size:17px!important}
+  #homeView .trip-actions-main .money-btn,#homeView .trip-actions-main .quick-home-btn{font-size:14px!important}
+  #homeView .trip-card-body>.trip-actions:not(.trip-actions-main) button{font-size:12px!important;font-weight:800!important}
+  .nav-btn{font-size:13px!important;font-weight:800!important}
+  .nav-btn span{font-size:22px!important}
+}
+@media(max-width:390px){
+  #homeView .section-head h1{font-size:32px!important}
+  #homeView .section-head p{font-size:15px!important}
+  .v652-filter{font-size:12px!important;padding-left:1px!important;padding-right:1px!important}
+  #homeView .trip-card-body>h3{font-size:20px!important}
+  #homeView .trip-card-body>.trip-info{font-size:13px!important}
+}
+</style>
 </head>
 <body>
   <div id="toast" class="toast"></div>
@@ -3760,7 +3786,7 @@ body{background:#fffaf4!important}
             <h1>🧳 我的旅程</h1>
             <p>記錄每一次出發，收藏每一段美好 ♡</p>
           </div>
-          <div class="v652-filters"><button class="v652-filter active" type="button">✈️ 全部旅程</button><button class="v652-filter" type="button">🧳 即將出發</button><button class="v652-filter" type="button">★ 已結束</button><button class="v652-filter" type="button">♥ 我的最愛</button></div>
+          <div class="v652-filters"><button class="v652-filter active" type="button">✈️ 全部旅程</button><button class="v652-filter" type="button">🧳 即將出發</button><button class="v652-filter" type="button">★ 已結束</button><button class="v652-filter" type="button">⚙️ 管理設定</button></div>
           <button class="primary" data-action="new-trip">＋ 新增旅程</button>
         </div>
         <div id="tripGrid" class="trip-grid"></div>
@@ -5078,14 +5104,24 @@ document.addEventListener('DOMContentLoaded',()=>{
       if(t){
         const end=t.end_date?new Date(t.end_date+'T23:59:59'):null;
         const start=t.start_date?new Date(t.start_date+'T00:00:00'):null;
-        if(kind===1) show=!end||end>=today;
+        if(kind===1){
+          const limit=new Date(today); limit.setDate(limit.getDate()+30);
+          show=!!start && start>=today && start<=limit;
+        }
         if(kind===2) show=!!end&&end<today;
-        if(kind===3) show=!!(t.favorite||t.is_favorite);
+        if(kind===3) show=true;
       }
       card.style.display=show?'grid':'none';
     });
   }
-  filters.forEach((b,i)=>b.addEventListener('click',()=>{filters.forEach(x=>x.classList.remove('active'));b.classList.add('active');applyFilter(i)}));
+  filters.forEach((b,i)=>b.addEventListener('click',()=>{
+    if(i===3){
+      const auth=document.getElementById('authBtn');
+      if(auth) auth.click();
+      return;
+    }
+    filters.forEach(x=>x.classList.remove('active'));b.classList.add('active');applyFilter(i);
+  }));
 });
 </script>
 
