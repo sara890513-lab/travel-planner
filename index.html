@@ -4,7 +4,7 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
   <meta name="theme-color" content="#fff8f4" />
-  <title>我的旅遊計畫｜Travel Planner v6.45</title>
+  <title>我的旅遊計畫｜Travel Planner v6.51</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link rel="preload" href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;600;700;800&display=swap" as="style" onload="this.onload=null;this.rel='stylesheet'">
@@ -3451,6 +3451,66 @@ window.loadExportLibs=()=>Promise.all([
 .share-member-list{display:grid;gap:9px}.share-member{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:11px 12px;background:#f8fafc;border:1px solid #e6ebf0;border-radius:14px}.share-member small{display:block;color:#87909c}.share-member-actions{display:flex;gap:6px}.share-member-actions button{border:0;border-radius:10px;padding:7px 9px;cursor:pointer}.share-remove{background:#fff0f1;color:#b44850}.share-invite-grid{display:grid;grid-template-columns:1fr 150px auto;gap:8px;align-items:end}.share-note{color:#7f8791;font-size:13px;line-height:1.6}.shared-readonly{background:#fff6e9;color:#95662f;border:1px solid #f1ddbd;border-radius:12px;padding:9px 11px;font-size:13px;font-weight:800}
 @media(max-width:650px){.share-invite-grid{grid-template-columns:1fr}.share-invite-grid button{width:100%}}
 </style>
+
+<style id="v651-home-redesign">
+/* v6.51 首頁視覺改版：只改首頁外觀，不碰資料、同步與按鈕事件 */
+#homeView{background:linear-gradient(180deg,#fffaf6 0%,#fffdfb 58%,#fff8f4 100%);min-height:100vh}
+#homeView .hero-wrap{display:none!important}
+#homeView .content-section{max-width:1120px;padding-top:34px;padding-bottom:120px}
+#homeView .section-head{margin-bottom:24px;align-items:flex-end}
+#homeView .section-head h1{font-size:clamp(30px,4vw,46px);font-weight:900;letter-spacing:.02em;color:#263957}
+#homeView .section-head p{font-size:16px;color:#8a92a1;margin-top:7px}
+#homeView .section-head>.primary{box-shadow:0 10px 25px rgba(255,128,139,.24)}
+#homeView .trip-grid{grid-template-columns:1fr!important;gap:24px;margin-top:0}
+#homeView .trip-card{position:relative;display:grid!important;grid-template-columns:clamp(220px,34%,340px) minmax(0,1fr)!important;gap:28px!important;padding:22px!important;border:1px solid #eee4de!important;border-radius:30px!important;background:rgba(255,255,255,.96)!important;box-shadow:0 14px 38px rgba(66,52,48,.08)!important;overflow:hidden!important;align-items:stretch!important}
+#homeView .trip-card>img.trip-card-cover{width:100%!important;height:100%!important;min-width:0!important;min-height:260px!important;max-width:none!important;max-height:none!important;aspect-ratio:4/3!important;object-fit:cover!important;object-position:center!important;border-radius:24px!important;background:#f4f1ef!important;align-self:stretch!important}
+#homeView .trip-card-body{display:flex;flex-direction:column;padding:4px 0 0!important;min-width:0!important}
+#homeView .trip-card-body h3{font-size:clamp(25px,3vw,34px)!important;line-height:1.25;margin:8px 0 12px!important;font-weight:900;color:#263957;white-space:normal!important;overflow:visible!important}
+#homeView .trip-info{gap:8px!important;font-size:17px!important;line-height:1.45;color:#727b89!important}
+#homeView .shared-badge,#homeView .trip-lock-badge{display:inline-flex!important;align-items:center;width:max-content;max-width:100%;padding:7px 12px!important;border-radius:999px!important;font-size:13px!important;font-weight:900!important;margin:0 7px 2px 0!important}
+#homeView .shared-badge{background:#eaf6ff!important;color:#3974a4!important;border:1px solid #cfe5f7!important}
+#homeView .trip-actions-main{display:grid!important;grid-template-columns:1fr 1fr!important;gap:10px!important;margin-top:auto!important;padding-top:18px!important}
+#homeView .trip-actions-main .it-btn{grid-column:1/-1!important;background:linear-gradient(135deg,#ff8993,#ff9ca4)!important;color:white!important;font-size:17px!important;padding:14px 12px!important;border-radius:18px!important;box-shadow:0 8px 20px rgba(255,137,147,.18)}
+#homeView .trip-actions-main .money-btn{grid-column:1!important;grid-row:2!important;background:#e2f2ff!important;color:#176ca7!important}
+#homeView .trip-actions-main .quick-home-btn{grid-column:2!important;grid-row:2!important;background:#f0eaff!important;color:#655a96!important}
+#homeView .trip-actions-main button{min-height:48px!important;border-radius:17px!important;font-size:15px!important;font-weight:900!important;padding:11px 10px!important}
+#homeView .trip-card-body>.trip-actions:not(.trip-actions-main){display:grid!important;grid-template-columns:repeat(3,minmax(0,1fr))!important;gap:8px!important;margin-top:14px!important;padding-top:13px!important;border-top:1px dashed #e8e2de!important}
+#homeView .trip-card-body>.trip-actions:not(.trip-actions-main) button{width:100%!important;min-width:0!important;padding:9px 6px!important;border-radius:14px!important;background:#fff!important;border:1px solid #ece6e2!important;font-size:13px!important;box-shadow:none!important;color:#485365!important}
+#homeView .trip-card-body>.trip-actions:not(.trip-actions-main) .share-btn{background:#edf8f4!important;color:#39735f!important;border-color:#d6ebe2!important}
+#homeView .trip-card-body>.trip-actions:not(.trip-actions-main) .trip-delete-home{color:#a94e55!important;background:#fff8f8!important}
+#homeView #emptyTrips{border-radius:30px;background:#fff}
+@media(max-width:760px){
+ #homeView .content-section{padding:26px 14px 112px!important}
+ #homeView .section-head{align-items:flex-start!important;margin-bottom:20px}
+ #homeView .section-head h1{font-size:32px!important}
+ #homeView .section-head p{font-size:14px!important}
+ #homeView .trip-grid{gap:20px!important}
+ #homeView .trip-card{grid-template-columns:42% minmax(0,1fr)!important;gap:14px!important;padding:14px!important;border-radius:25px!important;align-items:start!important}
+ #homeView .trip-card>img.trip-card-cover{width:100%!important;height:auto!important;min-height:0!important;max-width:none!important;max-height:none!important;aspect-ratio:4/5!important;border-radius:20px!important;align-self:start!important}
+ #homeView .trip-card-body{padding:0!important}
+ #homeView .trip-card-body h3{font-size:22px!important;margin:5px 0 9px!important}
+ #homeView .trip-info{font-size:14px!important;gap:5px!important}
+ #homeView .shared-badge,#homeView .trip-lock-badge{font-size:11px!important;padding:5px 8px!important}
+ #homeView .trip-actions-main{grid-column:1/-1!important;margin-top:14px!important;padding-top:0!important}
+ #homeView .trip-card{grid-template-areas:'photo body' 'actions actions'}
+ #homeView .trip-card>img.trip-card-cover{grid-area:photo}
+ #homeView .trip-card-body{grid-area:body;display:contents!important}
+ #homeView .trip-card-body>h3,#homeView .trip-card-body>.trip-info,#homeView .trip-card-body>.shared-badge,#homeView .trip-card-body>.trip-lock-badge{grid-column:2;min-width:0}
+ #homeView .trip-card-body>.trip-actions-main{grid-area:actions!important}
+ #homeView .trip-card-body>.trip-actions:not(.trip-actions-main){grid-column:1/-1!important;grid-row:auto!important}
+ #homeView .trip-actions-main .it-btn{font-size:16px!important}
+ #homeView .trip-actions-main button{font-size:13px!important;min-height:44px!important}
+ #homeView .trip-card-body>.trip-actions:not(.trip-actions-main) button{font-size:12px!important}
+}
+@media(max-width:430px){
+ #homeView .trip-card{grid-template-columns:38% minmax(0,1fr)!important;gap:12px!important;padding:12px!important}
+ #homeView .trip-card-body h3{font-size:20px!important}
+ #homeView .trip-info{font-size:13px!important}
+ #homeView .trip-card-body>.trip-actions:not(.trip-actions-main){gap:6px!important}
+ #homeView .trip-card-body>.trip-actions:not(.trip-actions-main) button{padding:8px 3px!important;font-size:11px!important}
+}
+</style>
+
 </head>
 <body>
   <div id="toast" class="toast"></div>
