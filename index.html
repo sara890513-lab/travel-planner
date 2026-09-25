@@ -4,7 +4,7 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
   <meta name="theme-color" content="#fff8f4" />
-  <title>我的旅遊計畫｜Travel Planner v6.70</title>
+  <title>我的旅遊計畫｜Travel Planner v6.71</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link rel="preload" href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;600;700;800&display=swap" as="style" onload="this.onload=null;this.rel='stylesheet'">
@@ -5659,6 +5659,12 @@ document.addEventListener('DOMContentLoaded',()=>{
         apply(i);
       };
     });
+    // 第 4 顆按鈕：管理設定。沿用原本 authBtn 的設定/帳號管理入口。
+    bs[3].onclick=function(e){
+      e.preventDefault();
+      const auth=document.getElementById('authBtn');
+      if(auth) auth.click();
+    };
     const grid=document.getElementById('tripGrid');
     if(grid)new MutationObserver(()=>setTimeout(()=>apply(active),0))
       .observe(grid,{childList:true,subtree:false});
@@ -5667,7 +5673,7 @@ document.addEventListener('DOMContentLoaded',()=>{
 
   if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',bind);
   else bind();
-  window.TRAVEL_PLANNER_VERSION='v6.70';
+  window.TRAVEL_PLANNER_VERSION='v6.71';
 })();
 </script>
 
