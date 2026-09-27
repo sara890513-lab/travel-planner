@@ -4,7 +4,7 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
   <meta name="theme-color" content="#fff8f4" />
-  <title>我的旅遊計畫｜Travel Planner v6.77</title>
+  <title>我的旅遊計畫｜Travel Planner v6.78</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link rel="preload" href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;600;700;800&display=swap" as="style" onload="this.onload=null;this.rel='stylesheet'">
@@ -3875,6 +3875,24 @@ body{background:#fffaf4!important}
 }
 </style>
 
+
+<style id="v678-hide-quick-memo-hero">
+#openQuickMemoBtn,
+button#openQuickMemoBtn,
+.quick-memo-hero,
+#itineraryTab .quick-memo-hero{
+  display:none!important;
+  visibility:hidden!important;
+  height:0!important;
+  min-height:0!important;
+  max-height:0!important;
+  margin:0!important;
+  padding:0!important;
+  border:0!important;
+  overflow:hidden!important;
+}
+</style>
+
 </head>
 <body>
   <div id="toast" class="toast"></div>
@@ -5821,7 +5839,7 @@ document.addEventListener('click',async function(e){
     if(tab)tab.click();
   },50);
 },true);
-window.TRAVEL_PLANNER_VERSION='v6.77';
+window.TRAVEL_PLANNER_VERSION='v6.78';
 </script>
 
 </body>
