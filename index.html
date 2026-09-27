@@ -4,7 +4,7 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
   <meta name="theme-color" content="#fff8f4" />
-  <title>我的旅遊計畫｜Travel Planner v6.71</title>
+  <title>我的旅遊計畫｜Travel Planner v6.73</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link rel="preload" href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;600;700;800&display=swap" as="style" onload="this.onload=null;this.rel='stylesheet'">
@@ -1164,7 +1164,6 @@ document.addEventListener('DOMContentLoaded',()=>{
           <div class="trip-actions trip-actions-main">
             <button type="button" class="it-btn" data-trip-open="${esc(t.id)}">📑 查看行程</button>
             <button type="button" class="quick-home-btn" data-trip-quick="${esc(t.id)}">📱 行程快捷</button>
-            <button type="button" class="money-btn" data-trip-money="${esc(t.id)}">＄ 快速分帳</button>
           </div>
           <div class="trip-actions" style="margin-top:8px">
             <button type="button" class="ghost trip-edit-home" data-trip-edit="${esc(t.id)}">✏️ 編輯旅程</button>
@@ -3727,6 +3726,63 @@ body{background:#fffaf4!important}
   #homeView .trip-card-body>.trip-info{font-size:13px!important}
 }
 </style>
+
+<style id="home-card-actions-no-money">
+/* 首頁旅程卡：移除卡片內「快速分帳」，只保留 查看行程＋行程快捷 */
+#homeView .trip-actions-main{
+  display:grid!important;
+  grid-template-columns:minmax(0,1.35fr) minmax(0,1fr)!important;
+  gap:9px!important;
+  width:100%!important;
+}
+#homeView .trip-actions-main .it-btn,
+#homeView .trip-actions-main .quick-home-btn{
+  grid-column:auto!important;
+  width:100%!important;
+  min-width:0!important;
+  min-height:48px!important;
+  margin:0!important;
+}
+#homeView .trip-actions-main .it-btn{
+  font-size:16px!important;
+}
+#homeView .trip-actions-main .quick-home-btn{
+  font-size:15px!important;
+}
+#homeView .trip-card-body > .trip-actions:not(.trip-actions-main){
+  display:grid!important;
+  grid-template-columns:repeat(3,minmax(0,1fr))!important;
+  gap:8px!important;
+  width:100%!important;
+}
+#homeView .trip-card-body > .trip-actions:not(.trip-actions-main) button{
+  width:100%!important;
+  min-width:0!important;
+  margin:0!important;
+}
+@media(max-width:640px){
+  #homeView .trip-actions-main{
+    grid-template-columns:minmax(0,1.25fr) minmax(0,1fr)!important;
+    gap:7px!important;
+  }
+  #homeView .trip-actions-main .it-btn,
+  #homeView .trip-actions-main .quick-home-btn{
+    min-height:45px!important;
+    padding:9px 6px!important;
+  }
+  #homeView .trip-actions-main .it-btn{font-size:14px!important}
+  #homeView .trip-actions-main .quick-home-btn{font-size:13px!important}
+  #homeView .trip-card-body > .trip-actions:not(.trip-actions-main){
+    gap:6px!important;
+  }
+  #homeView .trip-card-body > .trip-actions:not(.trip-actions-main) button{
+    padding:9px 4px!important;
+    font-size:12px!important;
+    white-space:nowrap!important;
+  }
+}
+</style>
+
 </head>
 <body>
   <div id="toast" class="toast"></div>
@@ -3838,7 +3894,7 @@ body{background:#fffaf4!important}
         '<div class="trip-actions trip-actions-main">'+
           '<button type="button" class="it-btn" data-trip-open="'+esc(t.id)+'">📑 查看行程</button>'+
           '<button type="button" class="quick-home-btn" data-trip-quick="'+esc(t.id)+'">📱 行程快捷</button>'+
-          '<button type="button" class="money-btn" data-trip-money="'+esc(t.id)+'">＄ 快速分帳</button>'+
+
         '</div>'+
       '</div>'+
     '</article>';
