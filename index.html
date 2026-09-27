@@ -4,7 +4,7 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
   <meta name="theme-color" content="#fff8f4" />
-  <title>我的旅遊計畫｜Travel Planner v6.75</title>
+  <title>我的旅遊計畫｜Travel Planner v6.76</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link rel="preload" href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;600;700;800&display=swap" as="style" onload="this.onload=null;this.rel='stylesheet'">
@@ -5212,32 +5212,6 @@ document.addEventListener('DOMContentLoaded',()=>{
 </script>
 
 
-<script id="v615-instant-card-handoff">
-document.addEventListener('DOMContentLoaded',function(){
-  var grid=document.getElementById('tripGrid');
-  if(!grid)return;
-  grid.addEventListener('click',function(e){
-    var b=e.target.closest('[data-trip-open],[data-trip-quick],[data-trip-money]');
-    if(!b)return;
-    var id=b.getAttribute('data-trip-open')||b.getAttribute('data-trip-quick')||b.getAttribute('data-trip-money');
-    if(!id)return;
-    if(b.hasAttribute('data-trip-open')){
-      if(typeof window.openTrip==='function')window.openTrip(id);
-    }else if(b.hasAttribute('data-trip-quick')){
-      var real=[].slice.call(document.querySelectorAll('[data-quick-trip]')).find(function(x){return String(x.dataset.quickTrip)===String(id)});
-      if(real)real.click();
-      else if(typeof window.openTrip==='function')window.openTrip(id);
-    }else if(b.hasAttribute('data-trip-money')){
-      var money=[].slice.call(document.querySelectorAll('[data-money-trip]')).find(function(x){return String(x.dataset.moneyTrip)===String(id)});
-      if(money)money.click();
-      else{
-        try{ state.currentTripId=id; if(typeof setView==='function')setView('quickSplit'); }catch(err){}
-      }
-    }
-  });
-});
-</script>
-
 <style id="v655-home-final-fix">
 /* v6.55：iPhone 實機首頁最終排版修正 */
 @media(max-width:760px){
@@ -5823,6 +5797,35 @@ document.addEventListener('DOMContentLoaded',()=>{
   else bind();
   window.TRAVEL_PLANNER_VERSION='v6.71';
 })();
+</script>
+
+
+<script id="v676-quickview-direct-fix">
+document.addEventListener('click',async function(e){
+  const btn=e.target.closest('#tripGrid [data-trip-quick]');
+  if(!btn)return;
+  e.preventDefault();
+  e.stopImmediatePropagation();
+  const id=btn.getAttribute('data-trip-quick');
+  if(!id)return;
+  const t=(window.state?.trips||[]).find(x=>String(x.id)===String(id));
+  try{
+    if(typeof window.ensureTripUnlocked==='function' && !(await window.ensureTripUnlocked(t)))return;
+  }catch(_){}
+  if(window.state)window.state.currentTripId=id;
+  if(typeof window.openTrip==='function'){
+    await window.openTrip(id,'quickview');
+    return;
+  }
+  /* fallback：若 openTrip 尚未掛上 window，先點查看行程，再切真正的 quickview tab */
+  const openBtn=document.querySelector('#tripGrid [data-trip-open="'+CSS.escape(id)+'"]');
+  if(openBtn)openBtn.click();
+  setTimeout(()=>{
+    const tab=document.querySelector('.tab[data-tab="quickview"]');
+    if(tab)tab.click();
+  },50);
+},true);
+window.TRAVEL_PLANNER_VERSION='v6.76';
 </script>
 
 </body>
