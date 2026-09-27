@@ -4,7 +4,7 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
   <meta name="theme-color" content="#fff8f4" />
-  <title>我的旅遊計畫｜Travel Planner v6.73</title>
+  <title>我的旅遊計畫｜Travel Planner v6.74</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link rel="preload" href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;600;700;800&display=swap" as="style" onload="this.onload=null;this.rel='stylesheet'">
@@ -3780,6 +3780,60 @@ body{background:#fffaf4!important}
     font-size:12px!important;
     white-space:nowrap!important;
   }
+}
+</style>
+
+
+<style id="v674-home-card-layout">
+/* v6.74 手機首頁旅程卡重新排版：
+   查看行程＋行程快捷固定同一排，避免右側單獨懸空 */
+@media(max-width:700px){
+  #homeView .trip-actions-main{
+    display:grid!important;
+    grid-template-columns:minmax(0,1.35fr) minmax(0,.9fr)!important;
+    gap:8px!important;
+    align-items:stretch!important;
+    margin-top:12px!important;
+  }
+  #homeView .trip-actions-main .it-btn,
+  #homeView .trip-actions-main .quick-home-btn{
+    grid-column:auto!important;
+    width:100%!important;
+    min-width:0!important;
+    min-height:48px!important;
+    margin:0!important;
+    padding:10px 8px!important;
+    border-radius:15px!important;
+    display:flex!important;
+    align-items:center!important;
+    justify-content:center!important;
+    white-space:nowrap!important;
+  }
+  #homeView .trip-actions-main .it-btn{font-size:15px!important}
+  #homeView .trip-actions-main .quick-home-btn{font-size:14px!important}
+
+  #homeView .trip-card-body>.trip-actions:not(.trip-actions-main){
+    margin-top:12px!important;
+    padding-top:11px!important;
+    border-top:1px dashed #eadfd9!important;
+    display:grid!important;
+    grid-template-columns:repeat(3,minmax(0,1fr))!important;
+    gap:7px!important;
+  }
+  #homeView .trip-card-body>.trip-actions:not(.trip-actions-main) button{
+    min-height:42px!important;
+    padding:8px 3px!important;
+    font-size:12px!important;
+    white-space:nowrap!important;
+  }
+}
+@media(max-width:390px){
+  #homeView .trip-actions-main{
+    grid-template-columns:minmax(0,1.25fr) minmax(0,.95fr)!important;
+    gap:6px!important;
+  }
+  #homeView .trip-actions-main .it-btn{font-size:14px!important}
+  #homeView .trip-actions-main .quick-home-btn{font-size:13px!important}
 }
 </style>
 
