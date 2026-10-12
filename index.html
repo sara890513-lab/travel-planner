@@ -4,7 +4,7 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
   <meta name="theme-color" content="#fff8f4" />
-  <title>我的旅遊計畫｜Travel Planner v6.78</title>
+  <title>我的旅遊計畫｜Travel Planner v6.90</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link rel="preload" href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;600;700;800&display=swap" as="style" onload="this.onload=null;this.rel='stylesheet'">
@@ -556,6 +556,30 @@ html,body{max-width:100%;overflow-x:hidden}
 .export-subplace{display:flex;flex-wrap:wrap;gap:5px 10px;background:#fffaf6;border:1px solid #eee5df;border-radius:12px;padding:9px 11px;font-size:16px}
 .export-subplace strong{width:100%;font-size:17px}.export-subplace span{color:#657080}.export-substars{color:#d99b2b!important}
 
+
+/* v6.79 自由文字排行程 */
+.free-plan{background:#fff;border:1px solid #e7e5f0;border-radius:22px;padding:18px;margin:20px 0;box-shadow:var(--shadow)}
+.free-plan h3{margin:0 0 5px}.free-plan p{color:#778093;margin:0 0 12px;font-size:13px}
+.free-plan textarea{width:100%;min-height:220px;resize:vertical;border:1px solid #dedee8;border-radius:16px;padding:15px;line-height:1.9;font-size:16px;background:#fffdfb;color:var(--ink)}
+.free-actions{display:flex;gap:9px;flex-wrap:wrap;margin-top:12px}.free-actions button{flex:1;min-width:120px}
+.free-preview{margin-top:15px;display:grid;gap:9px}.free-preview-day{font-size:18px;font-weight:800;margin:10px 0 2px}.free-preview-item{padding:10px 13px;border:1px solid #ece8e3;border-radius:12px;background:#fffaf8}.free-preview-child{margin:6px 0 0 18px;border-left:3px solid #d9eafa;padding-left:10px;font-size:14px}.free-preview-review{color:#86677a;font-size:13px;white-space:pre-wrap}.free-help{font-size:12px;color:#7a8290;line-height:1.8;margin-top:9px}
+@media(max-width:560px){.free-plan{padding:13px}.free-actions button{min-width:100%}}
+
+/* v6.80 主景點快速文字新增 */
+.quick-child-editor{margin-top:12px;padding:13px;border:1px solid #dce8f3;border-radius:16px;background:#f7fbff}
+.quick-child-editor textarea{display:block;width:100%;min-height:116px;resize:vertical;padding:11px;border:1px solid #d5e2ed;border-radius:12px;background:white;color:var(--ink);font:inherit;line-height:1.65}
+.quick-child-editor p{font-size:12px;color:#697d8d;margin:6px 0 10px;line-height:1.6}
+.quick-child-buttons{display:flex;gap:8px;flex-wrap:wrap}.quick-child-buttons button{flex:1;min-width:110px}
+.quick-child-toggle{background:#eaf4ff!important;color:#34658c!important;border-color:#d0e4f7!important}
+
+/* v6.90 trip overview and checked places */
+.v690-overview-control{margin:18px 0}.v690-overview-control button{width:100%;background:#edf7ff;border-color:#d3e7f5;color:#37627e;font-size:16px}
+.v690-overview{padding:16px;border:1px solid #e5e5f0;border-radius:20px;background:#fff;margin-bottom:18px}
+.v690-overview-head{display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap}.v690-overview-head h3{margin:0}.v690-overview-head span{font-size:13px;color:#63816e;font-weight:800}
+.v690-day{margin:16px 0;border:1px solid #ede8e7;border-radius:16px;overflow:hidden}.v690-day h4{background:#eff7fc;padding:12px;margin:0;font-size:16px}
+.v690-item{display:flex;align-items:flex-start;justify-content:space-between;gap:8px;padding:11px 10px;border-top:1px solid #f2eded}.v690-child{margin-left:16px;background:#fffcfa;border-left:3px solid #dcecf6}.v690-main{flex:1;min-width:0;overflow-wrap:anywhere}.v690-main strong{font-size:15px}.v690-time{color:#6582a0;margin-right:8px}.v690-stars{display:block;color:#d99b2b}.v690-review{white-space:pre-wrap;font-size:12px;color:#777;margin-top:4px}
+.v690-check{display:inline-flex;align-items:center;gap:5px;border:1px solid #dfe9e4;background:#f7fbf8;border-radius:999px;padding:5px 8px;font-size:12px;font-weight:800;white-space:nowrap;cursor:pointer;flex-shrink:0}.v690-check input{width:18px;height:18px;accent-color:#4b9871;margin:0}.v690-check.is-done{background:#e9f7ef;color:#387752}.timeline-item.v690-done .timeline-card h3,.subplace-card.v690-done .subplace-main strong{color:#8c9990;text-decoration:line-through}.v690-done .v690-main strong{color:#8c9990;text-decoration:line-through}.timeline-card>.v690-check{margin:0 0 8px}.subplace-card>.v690-check{align-self:center}
+@media(max-width:560px){.v690-overview{padding:11px}.v690-check span{font-size:11px}.v690-item{gap:4px;padding:10px 7px}.v690-child{margin-left:8px}.v690-main strong{font-size:14px}}
 </style>
 <script>window.TRAVEL_SUPABASE={url:"https://lfvzobfvotcehkkjkgdc.supabase.co",anonKey:"sb_publishable_iwDwCSXNjpVLJyl16mKDyw_NcFqrAoW"};</script>
 <script>
@@ -767,7 +791,12 @@ document.addEventListener('DOMContentLoaded',()=>{
   }
 
   async function saveCloudSnapshot(showToast=false){
-    if(!state.supabase || cloudBusy)return false;
+    if(!state.supabase)return false;
+    // Wait for an earlier save instead of treating an overlapping request as failure.
+    if(cloudBusy){
+      for(let i=0;i<50&&cloudBusy;i++)await new Promise(resolve=>setTimeout(resolve,120));
+      if(cloudBusy)return false;
+    }
     cloudBusy=true;
     try{
       localSave();
@@ -1295,7 +1324,7 @@ document.addEventListener('DOMContentLoaded',()=>{
     setView('trip'); setTab(tab); window.scrollTo({top:0,behavior:'smooth'});
   }
   function renderTrip(){
-    const t=currentTrip(); if(!t){setView('home');return} $('#tripTitle').textContent=t.name; $('#tripMeta').textContent=`${t.start_date||''}${t.end_date?` ～ ${t.end_date}`:''}　📍 ${t.location||'未設定'}　👥 ${peopleOf(t).join('、')||'尚未加入朋友'}`; renderStayTop(); renderMajorTransports(); renderItinerary(); renderExpenses(); renderPacking(); renderPhotos();
+    const t=currentTrip(); if(!t){setView('home');return} $('#tripTitle').textContent=t.name; $('#tripMeta').textContent=`${t.start_date||''}${t.end_date?` ～ ${t.end_date}`:''}　📍 ${t.location||'未設定'}　👥 ${peopleOf(t).join('、')||'尚未加入朋友'}`; renderStayTop(); renderMajorTransports(); freeDraftLoad(); v688RenderTools(); renderItinerary(); renderExpenses(); renderPacking(); renderPhotos();
   }
 
 
@@ -1939,6 +1968,7 @@ async function deleteMainItineraryById(id){
     return xid!==id && !childIds.includes(xid);
   });
 
+  freeUpdateAfterItineraryEdit();
   localSave();
   renderItinerary();
   if(typeof renderQuickItinerary==='function')renderQuickItinerary();
@@ -1958,14 +1988,398 @@ async function deleteMainItineraryById(id){
   }
 }
 
-function renderItinerary(){
+
+  // v6.89: independent daily editors, while retaining the legacy combined text for cloud compatibility.
+  let freeDraftTripId='',freePreviewRows=[];
+  let freeActiveDate='',freeDayNotes={},freeDayTripId='';
+  function freeSplitDays(text,t){
+    const dates=v688Dates(t),fallback=dates[0]||t.start_date||new Date().toISOString().slice(0,10);
+    const out={};let date=fallback;
+    for(const line of String(text||'').split(/\r?\n/)){
+      const heading=freeDateFromHeading(line.trim(),t);
+      if(heading){date=heading;continue;}
+      out[date]=(out[date]||'')+line+'\n';
+    }
+    for(const d of Object.keys(out))out[d]=out[d].trim();
+    return out;
+  }
+  function freeCombined(t){
+    const dates=v688Dates(t),all=[...new Set([...dates,...Object.keys(freeDayNotes)])].sort();
+    return all.filter(d=>String(freeDayNotes[d]||'').trim()).map(d=>d+'\n'+freeDayNotes[d].trim()).join('\n\n');
+  }
+  function freeDaySaveEditor(){
+    const t=currentTrip();if(!t||!freeActiveDate||freeDayTripId!==String(t.id))return;
+    freeDayNotes[freeActiveDate]=$('#freePlanText').value;
+    t.free_plan_text=freeCombined(t);
+  }
+  function freeDraftLoad(){
+    const t=currentTrip(),area=$('#freePlanText');if(!t||!area)return;
+    if(freeDayTripId!==String(t.id)){
+      freeDayTripId=String(t.id);freeDraftTripId=String(t.id);
+      freeDayNotes=freeSplitDays(t.free_plan_text||'',t);
+      freeActiveDate=v688Dates(t)[0]||t.start_date||new Date().toISOString().slice(0,10);
+      v688ChosenDate=freeActiveDate;
+      area.value=freeDayNotes[freeActiveDate]||'';
+      freePreviewRows=[];$('#freePreview').innerHTML='';$('#freeCommitBtn').disabled=true;
+    }
+  }
+  function freeDraftSave(){
+    const t=currentTrip();if(!t||!canEditTrip(t))return;
+    freeDaySaveEditor();
+    cloudPullPausedUntil=Date.now()+8000;localSave();
+    if(t._sharedOwnerId){saveSharedTripNow(t.id).catch(e=>console.warn('draft sync failed',e));}
+    else queueCloudSave();
+  }
+  let freeDraftTimer;
+  function freeDateFromHeading(line,t){
+    const m=line.match(/^(?:第\s*([一二三四五六七八九十\d]+)\s*天|day\s*(\d+))\s*[：:!！]?$/i);
+    if(m){const chars='一二三四五六七八九十';const n=Number(m[1]||m[2])||(chars.indexOf(m[1])+1);if(!n||!t.start_date)return null;const d=new Date(t.start_date+'T12:00:00');d.setDate(d.getDate()+n-1);return d.toISOString().slice(0,10);}
+    const d=line.match(/^(?:(\d{4})[\/-])?(\d{1,2})[\/-](\d{1,2})(?:\s*[（(].*[)）])?$/);
+    if(d){const y=Number(d[1]||t.start_date?.slice(0,4)||new Date().getFullYear());const date=new Date(y,Number(d[2])-1,Number(d[3]));if(date.getFullYear()===y&&date.getMonth()===Number(d[2])-1&&date.getDate()===Number(d[3]))return `${y}-${String(d[2]).padStart(2,'0')}-${String(d[3]).padStart(2,'0')}`;}
+    return null;
+  }
+  function freeParse(){
+    const t=currentTrip();if(!t)return [];
+    let date=t.start_date||new Date().toISOString().slice(0,10), parent=null, last=null;
+    const result=[];
+    for(const raw of freeCombined(t).split(/\r?\n/)){
+      let line=raw.trim();if(!line)continue;
+      const day=freeDateFromHeading(line,t);if(day){date=day;parent=null;last=null;continue;}
+      if(/^評論\s*[:：]|^心得\s*[:：]|^評價\s*[:：]/.test(line)){
+        if(last)last.review+=(last.review?'\n':'')+line.replace(/^[^:：]+[:：]\s*/,'');continue;
+      }
+      const stars=line.match(/(?:⭐|★){1,5}/g);if(stars&&last&&/^(?:⭐|★|評分)/.test(line)){last.rating=Math.min(5,stars.join('').length);continue;}
+      if(/^https?:\/\//.test(line)&&last){last.note+=(last.note?'\n':'')+line;continue;}
+      const parentIcon=/^📍\s*/u.test(line);
+      const emojiKind=line.match(/^(📍|🤤|📷|📸|🛍️?|✈️?|🚗|🚄|🚢)\s*/u);
+      const isChild=!parentIcon&&(/^\s{2,}\S/.test(raw)||/^[-•・→]\s*/.test(line)||!!emojiKind);
+      line=line.replace(/^[-•・→]\s*/,'').replace(/^\d+[.、]\s*/,'');
+      let time='';const tm=line.match(/^(?:([01]?\d|2[0-3])[:：]([0-5]\d)|([01]\d|2[0-3])([0-5]\d))\s*/);
+      if(tm){time=(tm[1]||tm[3]).padStart(2,'0')+':'+(tm[2]||tm[4]);line=line.slice(tm[0].length).trim();}
+      // Allow '10:00 📍 弘大' as well as '📍 弘大'.
+      const postTimeIcon=line.match(/^(📍|🤤|📷|📸|🛍️?|✈️?|🚗|🚄|🚢)\s*/u);
+      if(!line)continue;
+      const links=[...line.matchAll(/https?:\/\/\S+/g)].map(m=>m[0]);line=line.replace(/https?:\/\/\S+/g,'').trim();
+      if(!line&&links.length&&last){last.note+=(last.note?'\n':'')+links.join('\n');continue;}
+      const inline=line.match(/^(.*?)\s+(?:評論|心得|評價)[:：]\s*(.+)$/);
+      let review='';if(inline){line=inline[1];review=inline[2];}
+      // v6.86: 「🤤 韓牛（好吃）」或「🤤 韓牛（好吃」都能把括號後文字當成評論。
+      // Only apply to food, never alter the 5-star rating field.
+      const isFoodLine=(postTimeIcon||emojiKind)?.[1]?.startsWith('🤤')||/^(美食|餐廳|小吃)\s*[:：]/.test(line);
+      if(isFoodLine&&!review){
+        const paren=line.match(/^(.+?)\s*[（(]\s*(.+?)\s*[）)]?\s*$/u);
+        if(paren){line=paren[1].trim();review=paren[2].trim().replace(/[）)]$/u,'').trim();}
+      }
+      const category=line.match(/^(美食|餐廳|小吃|商店|小店|購物|景點)\s*[:：]\s*/);
+      const chosenIcon=postTimeIcon||emojiKind;
+      const mainSpot=chosenIcon&&chosenIcon[1]==='📍';
+      const childRow=mainSpot?false:isChild;
+      const type=chosenIcon?(chosenIcon[1].startsWith('🤤')?'food':chosenIcon[1].startsWith('🛍')?'shop':'spot'):(category?(/商店|小店|購物/.test(category[1])?'shop':/景點/.test(category[1])?'spot':'food'):(isChild?'food':'spot'));
+      if(chosenIcon)line=line.slice(chosenIcon[0].length).trim();
+      if(category&&!chosenIcon)line=line.slice(category[0].length).trim();
+      const row={id:uid(),trip_id:t.id,date,time,type,parent_spot_id:childRow&&parent?parent.id:'',place:line||'未命名地點',transport:chosenIcon?({'✈':'飛機','🚗':'汽車','🚄':'火車','🚢':'船'}[chosenIcon[1].replace('️','')]||''):'',station:'',rating:0,review,note:links.join('\n')};
+      if(childRow&&!parent){row.type='spot';row.parent_spot_id='';}
+      result.push(row);last=row;
+      if(!childRow||!parent)parent=row;
+    }
+    return result;
+  }
+  // v6.81: Only records with free_sync_id are owned by the note.
+  // Unmanaged existing records are never deleted by note sync.
+  function freeManaged(t){
+    return state.itineraries.filter(x=>String(x.trip_id)===String(t.id)&&x.free_sync_id);
+  }
+  function freeIdentity(x,parentName=''){
+    return [x.date||'',String(parentName).trim().toLowerCase(),String(x.place||'').trim().toLowerCase()].join('|');
+  }
+  function freeMatchRows(parsed,t){
+    const old=freeManaged(t), all=state.itineraries.filter(x=>String(x.trip_id)===String(t.id));
+    const used=new Set(), out=[], parentMap=new Map();
+    const priorOrder=old.slice().sort((a,b)=>(a.free_sync_order??999999)-(b.free_sync_order??999999));
+    parsed.forEach((r,i)=>{
+      const originalParent=r.parent_spot_id;
+      const mappedParent=originalParent?parentMap.get(originalParent):'';
+      const parentName=mappedParent?(out.find(x=>x.id===mappedParent)||all.find(x=>x.id===mappedParent))?.place||'':'';
+      const pool=old.filter(x=>!used.has(String(x.id)) && (!!x.parent_spot_id===!!originalParent));
+      let match=pool.find(x=>freeIdentity(x,(all.find(z=>z.id===x.parent_spot_id)||{}).place)===freeIdentity(r,parentName));
+      // If a line was renamed, preserve its id by its position in the same parent/day.
+      if(!match){
+        const previous=priorOrder[i];
+        if(previous && !used.has(String(previous.id)) && previous.date===r.date && (!!previous.parent_spot_id===!!originalParent))match=previous;
+      }
+      // One-time adoption of an identical pre-v6.81 itinerary, without touching unrelated rows.
+      if(!match)match=all.find(x=>!x.free_sync_id&&!used.has(String(x.id))&&x.date===r.date&&x.place===r.place&&String(x.parent_spot_id||'')===String(mappedParent||''));
+      const id=match?.id||uid();used.add(String(id));
+      const result={...match,...r,id,free_sync_id:match?.free_sync_id||uid(),free_sync_order:i,v688_order:i,parent_spot_id:originalParent?(mappedParent||''):''};
+      if(!originalParent)parentMap.set(r.id,id);
+      out.push(result);
+    });
+    return {out,removed:old.filter(x=>!used.has(String(x.id)))};
+  }
+  function freePreviewRender(){
+    freeDraftSave();freePreviewRows=freeParse();const box=$('#freePreview');box.innerHTML='';let lastDay='';
+    freePreviewRows.forEach(r=>{
+      if(r.date!==lastDay){const h=document.createElement('div');h.className='free-preview-day';h.textContent='🗓️ '+r.date;box.appendChild(h);lastDay=r.date;}
+      const el=document.createElement('div');el.className=r.parent_spot_id?'free-preview-child':'free-preview-item';
+      const title=document.createElement('strong');title.textContent=(r.time?r.time+'｜':'')+r.place;el.appendChild(title);
+      if(r.review){const note=document.createElement('div');note.className='free-preview-review';note.textContent='💬 '+r.review;el.appendChild(note);}
+      if(r.note){const note=document.createElement('div');note.className='free-preview-review';note.textContent='🔗 '+r.note;el.appendChild(note);}
+      box.appendChild(el);
+    });
+    const t=currentTrip();const diff=freeMatchRows(freePreviewRows,t);
+    const deleted=diff.removed.length;
+    const added=diff.out.filter(x=>!state.itineraries.some(y=>String(y.id)===String(x.id))).length;
+    const summary=document.createElement('div');summary.className='free-preview-day';
+    summary.textContent=`同步預覽：新增 ${added} 筆、刪除 ${deleted} 筆、保留／更新 ${diff.out.length-added} 筆。只會刪除由備忘錄同步的項目。`;
+    box.prepend(summary);
+    if(!freePreviewRows.length&&!deleted)box.textContent='請先輸入想去的地方。';
+    $('#freeCommitBtn').disabled=(!freePreviewRows.length&&!deleted)||!canEditTrip(t);
+  }
+  function freeSerialize(t){
+    const managed=freeManaged(t);
+    const parents=managed.filter(x=>!x.parent_spot_id).sort((a,b)=>String(a.date||'').localeCompare(String(b.date||'')) || ((Number.isFinite(+a.v688_order)&&Number.isFinite(+b.v688_order)) ? (+a.v688_order)-(+b.v688_order) : `${a.time||''}`.localeCompare(`${b.time||''}`)));
+    const lines=[];let day='';
+    for(const p of parents){
+      if(p.date!==day){day=p.date;lines.push('',day||'第一天');}
+      const add=(x,child)=>{
+        const kind=child?(x.transport?/飛機/.test(x.transport)?'✈️ ': /汽車|開車/.test(x.transport)?'🚗 ': /火車|高鐵|鐵道/.test(x.transport)?'🚄 ': /船/.test(x.transport)?'🚢 ':'📷 ':x.type==='shop'?'🛍️ ':x.type==='spot'?'📷 ':'🤤 '):'📍 ';
+        const inlineFoodReview=child&&x.type==='food'&&x.review&&!x.review.includes('\n');
+        lines.push((child?'':'')+(x.time?x.time+' ':'')+kind+x.place+(inlineFoodReview?'（'+x.review+'）':''));
+
+        if(x.review&&!inlineFoodReview)lines.push('評論：'+x.review.replace(/\n/g,'；'));
+        if(x.rating)lines.push('  '+'⭐'.repeat(Math.min(5,Number(x.rating))));
+        if(x.note)lines.push(...x.note.split(/\n/).map(link=>'  '+link));
+      };
+      add(p,false);
+      managed.filter(x=>String(x.parent_spot_id)===String(p.id)).sort((a,b)=>(+a.v688_order||0)-(+b.v688_order||0)).forEach(x=>add(x,true));
+    }
+    return lines.join('\n').trim();
+  }
+  function freeUpdateAfterItineraryEdit(changedIds=[]){
+    const t=currentTrip();if(!t||!canEditTrip(t))return;
+    const managed=freeManaged(t), known=new Set(managed.map(x=>String(x.id)));
+    // Directly created itinerary items join the note only when related to an existing synced parent.
+    for(const id of changedIds){
+      const row=state.itineraries.find(x=>String(x.id)===String(id));
+      if(row&&!row.free_sync_id && row.parent_spot_id&&known.has(String(row.parent_spot_id)))row.free_sync_id=uid();
+    }
+    if(!managed.length && !t.free_plan_text)return;
+    const text=freeSerialize(t);t.free_plan_text=text;
+    if(freeDayTripId===String(t.id)){freeDayNotes=freeSplitDays(text,t);if(document.activeElement!==$('#freePlanText'))$('#freePlanText').value=freeDayNotes[freeActiveDate]||'';}
+    freePreviewRows=[];$('#freeCommitBtn').disabled=true;$('#freePreview').textContent='';
+  }
+  $('#freePlanText').addEventListener('input',()=>{freePreviewRows=[];$('#freeCommitBtn').disabled=true;clearTimeout(freeDraftTimer);freeDraftTimer=setTimeout(freeDraftSave,650);});
+  $('#freePreviewBtn').onclick=freePreviewRender;
+  $('#freeCommitBtn').onclick=async()=>{
+    const t=currentTrip();if(!t||!canEditTrip(t))return toast('這趟旅程僅能查看');
+    freeDaySaveEditor();const parsed=freeParse();const {out,removed}=freeMatchRows(parsed,t);
+    const existingIds=new Set(state.itineraries.map(x=>String(x.id)));
+    const added=out.filter(x=>!existingIds.has(String(x.id))).length;
+    const updated=out.length-added;
+    const deletions=removed.map(x=>x.place).join('、');
+    const warning=removed.length?`\n\n⚠️ 將刪除 ${removed.length} 筆：${deletions}\n（若刪除主景點，底下子行程也會移除）`:'';
+    if(!confirm(`同步「${t.name}」？\n新增 ${added} 筆，保留／更新 ${updated} 筆。${warning}\n\n不會刪除非備忘錄建立的行程。`))return;
+    const deletedIds=new Set(removed.map(x=>String(x.id)));
+    // Protect descendants of removed parents, but only if they belong to the note.
+    const oldManagedIds=new Set(freeManaged(t).map(x=>String(x.id)));
+    for(const x of state.itineraries)if(oldManagedIds.has(String(x.id))&&deletedIds.has(String(x.parent_spot_id||'')))deletedIds.add(String(x.id));
+    const updates=new Map(out.map(x=>[String(x.id),x]));
+    state.itineraries=state.itineraries.filter(x=>!deletedIds.has(String(x.id))).map(x=>updates.get(String(x.id))||x);
+    for(const row of out)if(!existingIds.has(String(row.id)))state.itineraries.push(row);
+    freePreviewRows=[];$('#freeCommitBtn').disabled=true;
+    $('#freePreview').textContent=`✅ 已同步：新增 ${added} 筆、更新／保留 ${updated} 筆、刪除 ${deletedIds.size} 筆。`;
+    cloudPullPausedUntil=Date.now()+10000;localSave();renderItinerary();renderQuickItinerary();
+    try{
+      if(t._sharedOwnerId){const ok=await saveSharedTripNow(t.id);if(!ok)throw Error('共同行程同步失敗');}
+      else if(state.supabase){
+        let ok=await saveCloudSnapshot(false);
+        if(!ok){await new Promise(resolve=>setTimeout(resolve,700));ok=await saveCloudSnapshot(false);}
+        if(!ok)throw Error('雲端儲存失敗');
+      }
+      else persist();
+      toast('已同步行程表');
+    }catch(e){console.warn('free plan sync',e);toast('已存本機，雲端尚未同步；請稍後重試');}
+  };
+
+  // v6.83: Insert a child marker at the caret, keeping the note as the single editor.
+  document.querySelectorAll('[data-free-icon]').forEach(btn=>btn.addEventListener('click',()=>{
+    const area=$('#freePlanText');if(!area)return;
+    const start=area.selectionStart,end=area.selectionEnd, before=area.value.slice(0,start), after=area.value.slice(end);
+    const atLineStart=!before.length||before.endsWith('\n');
+    const insertion=(atLineStart?'':'\n')+btn.dataset.freeIcon+' ';
+    area.value=before+insertion+after;
+    area.focus();area.setSelectionRange(before.length+insertion.length,before.length+insertion.length);
+    area.dispatchEvent(new Event('input',{bubbles:true}));
+  }));
+
+  function quickChildParse(text,parent){
+    const rows=[];let last=null;
+    for(const raw of String(text||'').split(/\r?\n/)){
+      let line=raw.trim();if(!line)continue;
+      if(/^(?:評論|心得|評價)\s*[:：]/.test(line)){
+        if(last)last.review+=(last.review?'\n':'')+line.replace(/^[^:：]+[:：]\s*/,'');
+        continue;
+      }
+      if(/^(?:評分\s*[:：]?\s*)?[⭐★]{1,5}$/.test(line)){
+        if(last)last.rating=Math.min(5,(line.match(/[⭐★]/g)||[]).length);
+        continue;
+      }
+      line=line.replace(/^[-•・→]\s*/,'').replace(/^\d+[.、]\s*/,'');
+      let type='food';
+      const category=line.match(/^(美食|餐廳|小吃|商店|小店|購物|景點|遊樂設施)\s*[:：]\s*/);
+      if(category){type=/商店|小店|購物/.test(category[1])?'shop':/景點|遊樂設施/.test(category[1])?'spot':'food';line=line.slice(category[0].length);}
+      let time='';const tm=line.match(/^(?:([01]?\d|2[0-3])[:：]([0-5]\d)|([01]\d|2[0-3])([0-5]\d))\s*/);
+      if(tm){time=(tm[1]||tm[3]).padStart(2,'0')+':'+(tm[2]||tm[4]);line=line.slice(tm[0].length).trim();}
+      const links=[...line.matchAll(/https?:\/\/\S+/g)].map(m=>m[0]);line=line.replace(/https?:\/\/\S+/g,'').trim();
+      if(!line&&links.length&&last){last.note+=(last.note?'\n':'')+links.join('\n');continue;}
+      const inline=line.match(/^(.*?)\s+(?:評論|心得|評價)[:：]\s*(.+)$/);
+      let review='';if(inline){line=inline[1].trim();review=inline[2];}
+      if(!line)continue;
+      const row={id:uid(),trip_id:parent.trip_id,date:parent.date,time:time||parent.time||'',type,parent_spot_id:parent.id,place:line,transport:'',station:'',rating:0,review,note:links.join('\n')};
+      rows.push(row);last=row;
+    }
+    return rows;
+  }
+
+  // v6.88: lightweight additions, keeping the existing Supabase and trip schema.
+  const v688Days=$('#v688Days');
+  let v688ChosenDate='';
+  function v688Dates(t){
+    if(!t?.start_date)return [];
+    const start=new Date(t.start_date+'T12:00:00');
+    const end=t.end_date?new Date(t.end_date+'T12:00:00'):start;
+    const count=Math.max(1,Math.min(30,Math.round((end-start)/86400000)+1));
+    return Array.from({length:count},(_,i)=>{const d=new Date(start);d.setDate(d.getDate()+i);return d.toISOString().slice(0,10);});
+  }
+  function v688Insert(text){
+    const a=$('#freePlanText');if(!a)return;
+    const start=a.selectionStart,end=a.selectionEnd,head=a.value.slice(0,start),tail=a.value.slice(end);
+    const insertion=(head&&!head.endsWith('\n')?'\n':'')+text;
+    a.value=head+insertion+tail;a.focus();a.setSelectionRange(head.length+insertion.length,head.length+insertion.length);
+    a.dispatchEvent(new Event('input',{bubbles:true}));
+  }
+  function v688CurrentDay(){
+    const t=currentTrip(),days=v688Dates(t);
+    if(!days.length)return t?.start_date||'';
+    if(!days.includes(v688ChosenDate))v688ChosenDate=days[0];
+    return v688ChosenDate;
+  }
+  function v688RenderTools(){
+    const t=currentTrip();if(!t)return;
+    const days=v688Dates(t),selected=freeDayTripId===String(t.id)?freeActiveDate:v688CurrentDay();
+    v688Days.innerHTML=days.length?days.map((d,i)=>`<button type="button" class="${d===selected?'active':''}" data-v688-day="${esc(d)}">第${i+1}天 <small>${esc(d.slice(5))}</small></button>`).join(''):'<span>先設定旅程日期，即可快速切換天數</span>';
+
+  }
+  v688Days.addEventListener('click',e=>{
+    const b=e.target.closest('[data-v688-day]');if(!b)return;
+    freeDaySaveEditor();v688ChosenDate=b.dataset.v688Day;freeActiveDate=v688ChosenDate;
+    $('#freePlanText').value=freeDayNotes[freeActiveDate]||'';
+    freePreviewRows=[];$('#freePreview').textContent='';$('#freeCommitBtn').disabled=true;
+    v688RenderTools();freeDraftSave();
+  });
+  $('#v688WishAdd').onclick=()=>{
+    const wishes=globalWishlist.map(normalizeWishItem).filter(x=>x.name);
+    if(!wishes.length)return toast('願望清單目前沒有景點');
+    const shown=wishes.slice(0,35),answer=prompt('選擇加入「'+(v688CurrentDay()||'當天')+'」的願望清單景點：\n'+shown.map((w,i)=>`${i+1}. ${w.name}`).join('\n')+'\n\n請輸入編號：');
+    if(answer===null)return;const idx=Number(answer)-1;
+    if(!Number.isInteger(idx)||idx<0||idx>=shown.length)return toast('編號不正確');
+    const w=shown[idx],icon=w.type==='food'||w.type==='cafe'?'🤤':w.type==='shop'?'🛍️':'📍';
+    v688Insert(icon+' '+w.name+'\n');
+    toast('已加入備忘錄，請按確認同步行程表');
+  };
+  async function v688Save(t){
+    cloudPullPausedUntil=Date.now()+12000;localSave();
+    try{
+      if(t._sharedOwnerId){if(!await saveSharedTripNow(t.id))throw Error('共享儲存失敗');}
+      else if(state.supabase){if(!await saveCloudSnapshot(false))throw Error('雲端儲存失敗');}
+      else persist();
+      toast('已儲存行程');
+    }catch(e){console.warn('v688 save',e);toast('已存本機，雲端同步尚未完成');}
+  }
+  // Touch/pointer drag: use only the handle, so scrolling the itinerary remains normal.
+  let v688Drag=null;
+  document.addEventListener('pointerdown',e=>{
+    const handle=e.target.closest('#itineraryList .v688-handle');if(!handle)return;
+    const card=handle.closest('[data-sub-id], [data-itinerary-id]');if(!card||!canEditTrip(currentTrip()))return;
+    v688Drag={card,id:card.dataset.subId||card.dataset.itineraryId,startY:e.clientY,pointer:e.pointerId,moved:false};
+    e.preventDefault();
+  });
+  document.addEventListener('pointermove',e=>{
+    const d=v688Drag;if(!d||d.pointer!==e.pointerId)return;
+    if(Math.abs(e.clientY-d.startY)<9&&!d.moved)return;
+    e.preventDefault();d.moved=true;d.card.classList.add('v688-dragging');
+    const target=document.elementFromPoint(e.clientX,e.clientY)?.closest(d.card.matches('[data-sub-id]')?'[data-sub-id]':'[data-itinerary-id]');
+    if(!target||target===d.card||target.parentElement!==d.card.parentElement)return;
+    const from=state.itineraries.find(x=>String(x.id)===String(d.id));
+    const to=state.itineraries.find(x=>String(x.id)===String(target.dataset.subId||target.dataset.itineraryId));
+    if(!from||!to||from.date!==to.date||String(from.parent_spot_id||'')!==String(to.parent_spot_id||''))return;
+    const rect=target.getBoundingClientRect();target.parentElement.insertBefore(d.card,e.clientY<rect.top+rect.height/2?target:target.nextSibling);
+  });
+  document.addEventListener('pointerup',async e=>{
+    const d=v688Drag;if(!d||d.pointer!==e.pointerId)return;v688Drag=null;d.card.classList.remove('v688-dragging');
+    if(!d.moved)return;
+    const t=currentTrip(),children=d.card.matches('[data-sub-id]'),nodes=[...d.card.parentElement.children].filter(el=>children?el.hasAttribute('data-sub-id'):el.hasAttribute('data-itinerary-id'));
+    const original=state.itineraries.find(x=>String(x.id)===String(d.id));if(!original)return;
+    const scoped=nodes.filter(el=>{const row=state.itineraries.find(x=>String(x.id)===String(el.dataset.subId||el.dataset.itineraryId));return row&&row.date===original.date&&String(row.parent_spot_id||'')===String(original.parent_spot_id||'');});
+    scoped.forEach((el,i)=>{const r=state.itineraries.find(x=>String(x.id)===String(el.dataset.subId||el.dataset.itineraryId));if(r)r.v688_order=i;});
+    // Keep reverse-sync text in the same order; never delete unmanaged itinerary rows.
+    freeUpdateAfterItineraryEdit();renderItinerary();renderQuickItinerary();await v688Save(t);
+  });
+  document.addEventListener('pointercancel',()=>{if(v688Drag){v688Drag.card.classList.remove('v688-dragging');v688Drag=null;}});
+
+  // v6.90: independent visit markers on trip, not on free-sync rows.
+  function v690Status(id){const t=currentTrip();return !!(t&&t.v690_visited&&t.v690_visited[String(id)]);}
+  function v690CheckHTML(x,compact=false){return `<label class="v690-check ${v690Status(x.id)?'is-done':''}" title="標記已去過"><input type="checkbox" data-v690-check="${esc(x.id)}" ${v690Status(x.id)?'checked':''}><span>${v690Status(x.id)?'已去過':'未完成'}</span></label>`;}
+  async function v690Toggle(id,checked){
+    const t=currentTrip();if(!t||!canEditTrip(t))return toast('這趟旅程僅能查看');
+    if(!state.itineraries.some(x=>String(x.id)===String(id)&&String(x.trip_id)===String(t.id)))return;
+    t.v690_visited ||= {};
+    if(checked)t.v690_visited[String(id)]=true;else delete t.v690_visited[String(id)];
+    // Keep every representation of this same spot in sync immediately.
+    document.querySelectorAll('[data-v690-check]').forEach(cb=>{
+      if(String(cb.dataset.v690Check)!==String(id))return;
+      cb.checked=checked;
+      const label=cb.closest('.v690-check');
+      if(label){label.classList.toggle('is-done',checked);const span=label.querySelector('span');if(span)span.textContent=checked?'已去過':'未完成';}
+      cb.closest('.timeline-card,.subplace-card,.v690-item')?.classList.toggle('v690-done',checked);
+    });
+    renderItinerary();renderV690Overview();await v688Save(t);
+  }
+  document.addEventListener('change',e=>{
+    const cb=e.target.closest('[data-v690-check]');if(!cb)return;
+    e.stopPropagation();v690Toggle(cb.dataset.v690Check,cb.checked);
+  });
+  function renderV690Overview(){
+    const panel=$('#v690Overview');if(!panel)return;
+    const t=currentTrip();if(!t)return;
+    const all=state.itineraries.filter(x=>String(x.trip_id)===String(t.id));
+    const byParent={};all.forEach(x=>{if(x.parent_spot_id)(byParent[String(x.parent_spot_id)]||=[]).push(x);});
+    const sortRows=(a,b)=>String(a.date||'').localeCompare(String(b.date||''))||((Number.isFinite(+a.v688_order)&&Number.isFinite(+b.v688_order))?(+a.v688_order)-(+b.v688_order):String(a.time||'').localeCompare(String(b.time||'')));
+    const roots=all.filter(x=>!x.parent_spot_id).sort(sortRows);
+    const groups=new Map();roots.forEach(x=>{const day=x.date||'未指定日期';if(!groups.has(day))groups.set(day,[]);groups.get(day).push(x);});
+    const done=all.filter(x=>v690Status(x.id)).length;
+    $('#v690Progress').textContent=`已完成 ${done} / ${all.length} 個景點`;
+    if(!roots.length){panel.innerHTML='<p class="helper">目前還沒有行程，先在備忘錄新增景點吧。</p>';return;}
+    const itemHTML=(x,child=false)=>{
+      const icon=x.transport?'🚙':x.type==='food'?'🤤':x.type==='shop'?'🛍️':child?'📷':'📍';
+      const stars=x.rating?`<span class="v690-stars">${'★'.repeat(Math.min(5,+x.rating))}${'☆'.repeat(Math.max(0,5-(+x.rating)))}</span>`:'';
+      return `<div class="v690-item ${child?'v690-child':''} ${v690Status(x.id)?'v690-done':''}"><div class="v690-main"><strong>${x.time?`<span class="v690-time">${esc(x.time.slice(0,5))}</span>`:''}${icon} ${esc(x.place)}</strong>${stars}${x.review?`<div class="v690-review">💬 ${esc(x.review)}</div>`:''}${x.note?`<div class="v690-review">📝 ${esc(x.note)}</div>`:''}</div>${v690CheckHTML(x,true)}</div>`;
+    };
+    panel.innerHTML=[...groups].map(([date,items],idx)=>`<section class="v690-day"><h4>第 ${idx+1} 天 · ${esc(date==='未指定日期'?date:fmtDate(date))}</h4>${items.map(x=>itemHTML(x)+((byParent[String(x.id)]||[]).sort(sortRows).map(y=>itemHTML(y,true)).join(''))).join('')}</section>`).join('');
+  }
+  $('#v690OverviewToggle').addEventListener('click',()=>{
+    const box=$('#v690OverviewBox');box.classList.toggle('hidden');
+    $('#v690OverviewToggle').textContent=box.classList.contains('hidden')?'📖 查看整趟旅程總覽':'📖 收起旅程總覽';
+    if(!box.classList.contains('hidden'))renderV690Overview();
+  });
+  function renderItinerary(){
     const list=$('#itineraryList');
     const rows=state.itineraries.filter(x=>x.trip_id===state.currentTripId)
-      .sort((a,b)=>`${a.date} ${a.time}`.localeCompare(`${b.date} ${b.time}`));
+      .sort((a,b)=>String(a.date||'').localeCompare(String(b.date||'')) || ((Number.isFinite(+a.v688_order)&&Number.isFinite(+b.v688_order)) ? (+a.v688_order)-(+b.v688_order) : `${a.time||''}`.localeCompare(`${b.time||''}`)));
     list.innerHTML='';
     if(!rows.length){
       list.innerHTML='<div class="empty-card"><div class="empty-illu">🗓️</div><h3>還沒有行程</h3><p>新增第一個時間點吧！</p></div>';
-      return;
+      renderV690Overview();return;
     }
 
     const childrenByParent={};
@@ -1981,23 +2395,31 @@ function renderItinerary(){
     let lastDate='';
     topRows.forEach((x,idx)=>{
       const item=document.createElement('div');
-      item.className='timeline-item';
+      item.className='timeline-item'+(v690Status(x.id)?' v690-done':'');
       const dateLabel=x.date!==lastDate?`<small>${fmtDate(x.date)}</small><br>`:'';
       lastDate=x.date;
-      const icon=x.type==='food'?'🍜':x.type==='shop'?'🛍️':'📍';
+      const icon=x.transport?/飛機/.test(x.transport)?'✈️':/汽車|開車/.test(x.transport)?'🚗':/火車|高鐵|鐵道/.test(x.transport)?'🚄':/船/.test(x.transport)?'🚢':'📷':x.type==='food'?'🤤':x.type==='shop'?'🛍️':'📍';
       item.dataset.itineraryId=x.id;
       item.innerHTML=`<div class="timeline-time">${dateLabel}${esc(x.time?.slice(0,5)||'')}</div>
         <div class="timeline-card">
+          <button type="button" class="v688-handle v689-leading" title="按住拖曳排序" aria-label="按住拖曳排序">☰</button>
           <div class="mini-actions"><button type="button" title="編輯" data-it-edit="${esc(x.id)}">✏️</button><button type="button" title="刪除" data-it-delete="${esc(x.id)}">🗑️</button></div>
           <h3>${icon} ${esc(x.place)}</h3>
+          ${v690CheckHTML(x)}
           <p class="timeline-map-row"><button type="button" class="place-map-btn" data-map-place="${esc(x.place)}">🗺️ 地圖</button></p>
           ${x.station?`<p class="it-station-line">🚉 站名：${esc(x.station)}</p>`:''}
-          ${x.type==='food'&&x.rating?`<p class="food-stars">${'★'.repeat(Number(x.rating))}${'☆'.repeat(5-Number(x.rating))}</p>`:''}
-          ${x.type==='food'&&x.review?`<p class="food-review multiline-note">💬 ${esc(x.review)}</p>`:''}
+          ${x.rating?`<p class="food-stars">${'★'.repeat(Number(x.rating))}${'☆'.repeat(5-Number(x.rating))}</p>`:''}
+          ${x.review?`<p class="food-review multiline-note">💬 ${esc(x.review)}</p>`:''}
           ${x.note?`<p class="multiline-note">📝 ${esc(x.note)}</p>`:''}
           ${x.type==='spot'?`<div class="subplace-add-actions">
-            <button type="button" class="add-food-child">＋ 🍜 加入美食</button>
+            
+            <button type="button" class="add-food-child">＋ 🤤 加入美食</button>
             <button type="button" class="add-shop-child">＋ 🛍️ 加入小店</button>
+          </div>`:''}
+          ${x.type==='spot'?`<div class="quick-child-editor hidden">
+            <textarea placeholder="飯湯\n評論：湯頭很好喝\n宵夜\n- 服飾店\n評論：很好逛"></textarea>
+            <p>一行一個美食或商店；「評論：」會附在上一項。可用「商店：」「景點：」「美食：」指定分類，沒寫時間也可以。</p>
+            <div class="quick-child-buttons"><button type="button" class="ghost quick-child-cancel">取消</button><button type="button" class="primary quick-child-save">＋ 一次新增</button></div>
           </div>`:''}
           <div class="subplace-list"></div>
         </div>`;
@@ -2006,25 +2428,48 @@ function renderItinerary(){
       if(e)e.onclick=(ev)=>{ev.preventDefault();ev.stopPropagation();openItineraryDialog(x);};
       if(d)d.onclick=async(ev)=>{ev.preventDefault();ev.stopPropagation();await deleteMainItineraryById(x.id);};
 
+      const quickToggle=item.querySelector('.quick-child-toggle');
+      if(quickToggle){
+        const editor=item.querySelector('.quick-child-editor'), area=editor.querySelector('textarea');
+        quickToggle.onclick=()=>{editor.classList.toggle('hidden');if(!editor.classList.contains('hidden'))area.focus();};
+        editor.querySelector('.quick-child-cancel').onclick=()=>editor.classList.add('hidden');
+        editor.querySelector('.quick-child-save').onclick=async()=>{
+          const t=currentTrip();if(!t||!canEditTrip(t))return toast('這趟旅程僅能查看');
+          const parsed=quickChildParse(area.value,x);
+          if(!parsed.length)return toast('請先輸入要新增的美食或商店');
+          if(!confirm(`要在「${x.place}」底下一次新增 ${parsed.length} 個項目嗎？`))return;
+          const btn=editor.querySelector('.quick-child-save');btn.disabled=true;
+          state.itineraries.push(...parsed);cloudPullPausedUntil=Date.now()+10000;localSave();
+          renderItinerary();renderQuickItinerary();
+          try{
+            if(t._sharedOwnerId)await saveSharedTripNow(t.id);
+            else if(state.supabase)await saveCloudSnapshot(false);
+            else persist();
+            toast('已新增 '+parsed.length+' 個項目');
+          }catch(err){console.warn('quick child save',err);toast('已加入本機，雲端同步尚未完成');}
+        };
+      }
       const addFood=item.querySelector('.add-food-child');
       if(addFood) addFood.onclick=()=>openChildItineraryDialog(x,'food');
       const addShop=item.querySelector('.add-shop-child');
       if(addShop) addShop.onclick=()=>openChildItineraryDialog(x,'shop');
 
       const sub=item.querySelector('.subplace-list');
-      const kids=(childrenByParent[x.id]||[]).sort((a,b)=>`${a.date} ${a.time}`.localeCompare(`${b.date} ${b.time}`));
+      const kids=(childrenByParent[x.id]||[]).sort((a,b)=>String(a.date||'').localeCompare(String(b.date||'')) || ((Number.isFinite(+a.v688_order)&&Number.isFinite(+b.v688_order)) ? (+a.v688_order)-(+b.v688_order) : `${a.time||''}`.localeCompare(`${b.time||''}`)));
       if(kids.length){
         sub.innerHTML=kids.map(k=>{
-          const kicon=k.type==='food'?'🍜':'🛍️';
+          const kicon=k.transport?/飛機/.test(k.transport)?'✈️':/汽車|開車/.test(k.transport)?'🚗':/火車|高鐵|鐵道/.test(k.transport)?'🚄':/船/.test(k.transport)?'🚢':'📷':k.type==='food'?'🤤':k.type==='shop'?'🛍️':'📷';
           const stars=k.type==='food'&&k.rating?`<span class="sub-stars">${'★'.repeat(Number(k.rating))}${'☆'.repeat(5-Number(k.rating))}</span>`:'';
-          const review=k.type==='food'&&k.review?`<div class="sub-review multiline-note">💬 ${esc(k.review)}</div>`:'';
-          return `<div class="subplace-card" data-sub-id="${esc(k.id)}">
+          const review=k.review?`<div class="sub-review multiline-note">💬 ${esc(k.review)}</div>`:'';
+          return `<div class="subplace-card ${v690Status(k.id)?'v690-done':''}" data-sub-id="${esc(k.id)}">
+            <button type="button" class="v688-handle v689-child-leading" title="按住拖曳小景點">☰</button>
             <div class="subplace-main"><strong>${kicon} ${esc(k.place)}</strong>
               ${k.station?`<span>🚉 ${esc(k.station)}</span>`:''}
               ${stars}${review}
               ${k.note?`<div class="sub-note multiline-note">📝 ${esc(k.note)}</div>`:''}
               <div class="subplace-map-row"><button type="button" class="place-map-btn" data-map-place="${esc(k.place)}">🗺️ 地圖</button></div>
             </div>
+            ${v690CheckHTML(k,true)}
             <div class="subplace-actions"><button type="button" data-sub-edit="${esc(k.id)}">✏️</button><button type="button" data-sub-del="${esc(k.id)}">🗑️</button></div>
           </div>`;
         }).join('');
@@ -2039,6 +2484,7 @@ function renderItinerary(){
             if(!row)return;
             if(!confirm(`確定刪除「${row.place||'這個小行程'}」嗎？`))return;
             state.itineraries=state.itineraries.filter(r=>String(r.id)!==id);
+            freeUpdateAfterItineraryEdit();
             localSave();
             renderItinerary();
             if(typeof renderQuickItinerary==='function')renderQuickItinerary();
@@ -2074,9 +2520,10 @@ function renderItinerary(){
     const orphans=rows.filter(x=>x.parent_spot_id && !rows.some(p=>p.id===x.parent_spot_id));
     orphans.forEach(x=>{
       const item=document.createElement('div'); item.className='timeline-item';
-      item.innerHTML=`<div class="timeline-time">${esc(x.time?.slice(0,5)||'')}</div><div class="timeline-card"><h3>${x.type==='food'?'🍜':'🛍️'} ${esc(x.place)}</h3></div>`;
+      item.innerHTML=`<div class="timeline-time">${esc(x.time?.slice(0,5)||'')}</div><div class="timeline-card"><h3>${x.type==='food'?'🤤':x.type==='shop'?'🛍️':'📷'} ${esc(x.place)}</h3></div>`;
       list.appendChild(item);
     });
+    if(!$('#v690OverviewBox').classList.contains('hidden'))renderV690Overview();
   }
 
 
@@ -2092,11 +2539,11 @@ function renderItinerary(){
     let last='';
     box.innerHTML=topRows.map(x=>{
       const date=x.date!==last?`<div class="memo-date">${esc((x.date||'').replaceAll('-','/'))}</div>`:''; last=x.date;
-      const icon=x.type==='food'?'🍜':x.type==='shop'?'🛍️':'📍';
+      const icon=x.transport?/飛機/.test(x.transport)?'✈️':/汽車|開車/.test(x.transport)?'🚗':/火車|高鐵|鐵道/.test(x.transport)?'🚄':/船/.test(x.transport)?'🚢':'📷':x.type==='food'?'🤤':x.type==='shop'?'🛍️':'📍';
       const stars=x.type==='food'&&x.rating?`<div class="memo-stars">${'★'.repeat(Number(x.rating))}${'☆'.repeat(5-Number(x.rating))}</div>`:'';
       const review=x.type==='food'&&x.review?`<div class="memo-review multiline-note">💬 ${esc(x.review)}</div>`:'';
       const kids=(childrenByParent[x.id]||[]).map(k=>{
-        const ki=k.type==='food'?'🍜':'🛍️';
+        const ki=k.transport?/飛機/.test(k.transport)?'✈️':/汽車|開車/.test(k.transport)?'🚗':/火車|高鐵|鐵道/.test(k.transport)?'🚄':/船/.test(k.transport)?'🚢':'📷':k.type==='food'?'🤤':k.type==='shop'?'🛍️':'📷';
         const ks=k.type==='food'&&k.rating?`<span class="memo-sub-stars">${'★'.repeat(Number(k.rating))}${'☆'.repeat(5-Number(k.rating))}</span>`:'';
         const kr=k.type==='food'&&k.review?`<div class="memo-review multiline-note">💬 ${esc(k.review)}</div>`:'';
         return `<div class="memo-subitem"><strong>${ki} ${esc(k.place)}</strong>${k.station?`<span>🚉 ${esc(k.station)}</span>`:''}${ks}${kr}${k.note?`<div class="memo-note multiline-note">📝 ${esc(k.note)}</div>`:''}</div>`;
@@ -2131,7 +2578,7 @@ function renderItinerary(){
       const day=x.date!==last?`<div class="export-day">🗓️ ${esc(fmtDate(x.date))}</div>`:''; last=x.date;
       const kids=(childrenByParent[String(x.id)]||[]).map(k=>`
         <div class="export-subplace">
-          <strong>${k.type==='food'?'🍜':k.type==='shop'?'🛍️':'📍'} ${esc(k.place)}</strong>
+          <strong>${k.transport?/飛機/.test(k.transport)?'✈️':/汽車|開車/.test(k.transport)?'🚗':/火車|高鐵|鐵道/.test(k.transport)?'🚄':/船/.test(k.transport)?'🚢':'📷':k.type==='food'?'🤤':k.type==='shop'?'🛍️':'📷'} ${esc(k.place)}</strong>
           ${k.rating?`<span class="export-substars">${'★'.repeat(Number(k.rating))}${'☆'.repeat(5-Number(k.rating))}</span>`:''}
           ${k.review?`<span>💬 ${esc(k.review)}</span>`:''}
           ${k.note?`<span>📝 ${esc(k.note)}</span>`:''}
@@ -2389,7 +2836,9 @@ function renderItinerary(){
     const row={id:$('#itineraryId').value||uid(),trip_id:state.currentTripId,date:$('#itDate').value,time:timeFromSelects('itHour','itMinute'),type:$('#itType').value||'spot',parent_spot_id:($('#itType').value==='spot'?'':($('#itParentSpot').value||'')),place:$('#itPlace').value.trim(),transport:$('#itTransport').value.trim(),station:$('#itStation').value.trim(),rating:Number($('#itRating').value||0),review:$('#itReview').value.trim(),note:$('#itNote').value.trim()};
     // v6.3：先更新畫面，再背景同步。景點／美食／小店按下儲存就立刻出現。
     const i=state.itineraries.findIndex(x=>x.id===row.id);
-    if(i>=0)state.itineraries[i]=row; else state.itineraries.push(row);
+    if(i>=0)state.itineraries[i]={...state.itineraries[i],...row}; else state.itineraries.push(row);
+    // v6.82: Reflect itinerary edits back into the free-form note before saving locally/cloud.
+    freeUpdateAfterItineraryEdit([row.id]);
     localSave();
     cloudPullPausedUntil=Date.now()+5000;
     renderItinerary();
@@ -2436,6 +2885,7 @@ function renderItinerary(){
   if(!confirm('確定要刪除嗎？'))return;
   if(!Array.isArray(state[table]))return;
   state[table]=state[table].filter(x=>String(x.id)!==String(id));
+  if(table==='itineraries')freeUpdateAfterItineraryEdit();
   localSave();
   if(table==='itineraries'){
     renderItinerary();
@@ -3893,7 +4343,50 @@ button#openQuickMemoBtn,
 }
 </style>
 
-</head>
+
+<style>
+/* v6.86: Mobile-first memo editor; only presentation, no cloud/storage changes */
+#freePlanBox{max-width:900px;margin:18px auto;border-radius:24px;padding:clamp(14px,3vw,24px);background:linear-gradient(180deg,#ffffff,#fffdfb);border:1px solid #e7e5ef}
+#freePlanBox h3{font-size:21px;letter-spacing:.02em}
+#freePlanBox>p{line-height:1.6;margin-bottom:12px}
+#freePlanText{display:block;width:100%;min-height:270px;line-height:1.65!important;padding:16px 17px!important;border-radius:18px!important;background:#fff!important;border:1.5px solid #e4e6ee!important;font-size:16px!important;letter-spacing:.015em;tab-size:2}
+#freePlanText:focus{outline:none;border-color:#99bfdc!important;box-shadow:0 0 0 4px rgba(151,194,225,.16)}
+.free-icon-toolbar{display:grid!important;grid-template-columns:repeat(4,minmax(0,1fr));gap:9px!important;margin-top:12px!important;align-items:stretch}
+.free-icon-toolbar>span{grid-column:1/-1;display:block;font-size:14px;line-height:1.4;font-weight:700;color:#59677a;padding:0 2px 2px}.free-icon-toolbar button{min-width:0!important;min-height:46px;border-radius:14px!important;border:1px solid #e7e7ec!important;background:#f7f8fb!important;font-size:23px!important;line-height:1!important;box-shadow:none!important;touch-action:manipulation}
+.free-icon-toolbar button:active{transform:scale(.96);background:#e8f2fc!important}
+#freePlanBox .free-help{line-height:1.65;margin-top:12px;padding:11px 12px;border-radius:13px;background:#f7f9fc}
+#freePlanBox .free-actions{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:15px}
+#freePlanBox .free-actions button{min-width:0!important;width:100%;border-radius:15px;min-height:48px}
+#freePlanBox .free-preview{margin-top:14px}
+#freePlanBox .free-preview-item{border-radius:15px;padding:12px 14px}
+#freePlanBox .free-preview-child{margin-left:13px;padding:8px 10px;border-radius:0 12px 12px 0;background:#f8fbff}
+@media(max-width:560px){#freePlanBox .free-actions{grid-template-columns:1fr}#freePlanBox .free-icon-toolbar{gap:7px!important}#freePlanBox .free-icon-toolbar button{min-height:45px}}
+</style>
+<style>
+/* v6.88 optional itinerary productivity tools */
+.v688-tools{margin:14px 0;padding:12px;border:1px solid #e5e8ef;border-radius:17px;background:#f9fbff}
+.v688-search-label{display:block;font-weight:800;margin-bottom:8px;font-size:14px}
+.v688-search-row{display:grid;grid-template-columns:minmax(0,1fr) auto auto;gap:7px}
+.v688-search-row input{min-width:0;border:1px solid #d9e1ec;border-radius:12px;padding:10px;background:#fff;color:#263550;font-size:15px}
+.v688-search-row button,.v688-wish-row button{border:1px solid #d9e1ec;border-radius:12px;background:#fff;padding:10px;font-weight:700;color:#334e68;cursor:pointer}
+.v688-search-hint{font-size:12px;color:#728094;margin-top:7px;line-height:1.6}
+.v688-days{display:flex;gap:7px;overflow-x:auto;padding:12px 0 5px;scrollbar-width:thin}
+.v688-days button{flex:none;border:1px solid #dce3ee;border-radius:12px;background:#fff;color:#526178;padding:8px 12px;font-weight:800;cursor:pointer}
+.v688-days button small{display:block;font-weight:500;margin-top:2px}
+.v688-days button.active{background:#e7f2ff;border-color:#9fc8f0;color:#22587e}
+.v688-wish-row button{width:100%;margin-top:7px;background:#fff4f8;border-color:#f2d7e2;color:#93536c}
+.v688-handle{touch-action:none!important;user-select:none;cursor:grab!important;background:#eaf3ff!important;color:#446783!important}
+.v688-dragging{opacity:.72;outline:2px dashed #8ab8dd;z-index:5}
+/* v6.89: handles are the first control, with enough space for a finger. */
+.timeline-card{padding-left:58px!important}
+.v689-leading{position:absolute;left:10px;top:12px;min-width:39px;min-height:49px;border:1px solid #d6e4f2;border-radius:12px;font-size:20px;z-index:3}
+.subplace-card{align-items:flex-start!important}
+.v689-child-leading{flex:none;align-self:stretch;min-width:43px;min-height:54px;border:1px solid #d6e4f2;border-radius:12px;font-size:20px}
+.v688-handle{-webkit-user-select:none;-webkit-touch-callout:none;touch-action:none!important}
+@media(max-width:600px){.timeline-card{padding-left:54px!important}.v689-leading{left:8px;min-width:38px}.v689-child-leading{min-width:40px}}
+
+@media(max-width:600px){.v688-search-row{grid-template-columns:1fr 1fr}.v688-search-row input{grid-column:1/-1}.v688-search-row button{min-width:0}.v688-tools{padding:10px}.timeline-card .mini-actions{gap:3px}.timeline-card .mini-actions button{padding:6px!important}}
+</style></head>
 <body>
   <div id="toast" class="toast"></div>
   <div id="multiLoginGate" class="multi-login-gate show">
@@ -4249,6 +4742,32 @@ button#openQuickMemoBtn,
           <div id="transportTopList" class="transport-list"></div>
         </div>
 
+        <div class="v690-overview-control"><button type="button" class="ghost" id="v690OverviewToggle">📖 查看整趟旅程總覽</button></div>
+        <div class="v690-overview hidden" id="v690OverviewBox"><div class="v690-overview-head"><h3>📖 整趟旅程總覽</h3><span id="v690Progress"></span></div><div id="v690Overview"></div></div>
+
+        <div class="free-plan" id="freePlanBox">
+          <h3>📝 自由編排行程</h3>
+          <p>像備忘錄一樣編輯，按確認同步即可新增、修改或刪除行程；重複同步不會重複建立。</p>
+          <textarea id="freePlanText" spellcheck="false" placeholder="📍 弘大&#10;🤤 韓牛（肉質很好）&#10;📷 弘大街頭&#10;🛍️ 服飾店&#10;&#10;📍 明洞&#10;🤤 醬蟹（醬汁很香）"></textarea>
+          <div class="v688-tools">
+            <div class="v688-days" id="v688Days" aria-label="快速切換日期"></div>
+            <div class="v688-wish-row"><button type="button" id="v688WishAdd">💗 從願望清單加入這一天</button></div>
+          </div>
+          <div class="free-icon-toolbar" aria-label="快速插入子景點圖示">
+            <span>點圖示加入大景點或小景點：</span>
+            <button type="button" data-free-icon="📍" title="大景點">📍</button>
+            <button type="button" data-free-icon="🤤" title="美食">🤤</button>
+            <button type="button" data-free-icon="📷" title="照相景點">📷</button>
+            <button type="button" data-free-icon="🛍️" title="購物">🛍️</button>
+            <button type="button" data-free-icon="✈️" title="飛機">✈️</button>
+            <button type="button" data-free-icon="🚗" title="汽車">🚗</button>
+            <button type="button" data-free-icon="🚄" title="火車">🚄</button>
+            <button type="button" data-free-icon="🚢" title="船">🚢</button>
+          </div>
+          <div class="free-help">💡 點上方日期切換各天獨立備忘錄；主景點可按 📍 插入，小景點直接按 🤤 📷 🛍️ 等圖示；美食評論可寫成「🤤 韓牛（很好吃）」；五顆星評分仍可在正式行程設定。時間可不填。也可寫 ⭐⭐⭐⭐ 或網址。</div>
+          <div class="free-actions"><button type="button" class="ghost" id="freePreviewBtn">✨ 整理預覽</button><button type="button" class="primary" id="freeCommitBtn" disabled>✓ 確認同步行程表</button></div>
+          <div id="freePreview" class="free-preview" aria-live="polite"></div>
+        </div>
         <div class="panel-head">
           <div><h2>旅遊行程</h2><p>用時間軸安排每天的景點、住宿與交通</p></div>
           <div class="panel-actions">
@@ -4415,7 +4934,7 @@ button#openQuickMemoBtn,
       <label>類型
         <select id="itType">
           <option value="spot">📍 景點</option>
-          <option value="food">🍜 美食</option>
+          <option value="food">🤤 美食</option>
           <option value="shop">🛍️ 小店</option>
         </select>
       </label>
@@ -4428,7 +4947,7 @@ button#openQuickMemoBtn,
       <label>地點／店名<input id="itPlace" required placeholder="例如：青青草原、Egg Drop、樂天百貨" /></label>
       <label>交通<input id="itTransport" placeholder="例如：機車 / 船 / 計程車" /></label>
       <label>🚉 這個地點的站名<input id="itStation" placeholder="例如：西門站（沒有可留白）" /></label>
-      <div id="foodReviewFields" class="food-review-fields hidden"><div class="food-review-title">🍜 美食評價</div>
+      <div id="foodReviewFields" class="food-review-fields hidden"><div class="food-review-title">🤤 美食評價</div>
         <label>⭐ 五星評分
           <div id="itRatingStars" class="rating-stars" aria-label="五星評分">
             <button type="button" data-rating="1">☆</button><button type="button" data-rating="2">☆</button><button type="button" data-rating="3">☆</button><button type="button" data-rating="4">☆</button><button type="button" data-rating="5">☆</button>
