@@ -4,7 +4,7 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
   <meta name="theme-color" content="#fff8f4" />
-  <title>我的旅遊計畫｜Travel Planner v6.90</title>
+  <title>我的旅遊計畫｜Travel Planner v6.90.2 測試版</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link rel="preload" href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;600;700;800&display=swap" as="style" onload="this.onload=null;this.rel='stylesheet'">
@@ -647,6 +647,27 @@ document.addEventListener('DOMContentLoaded',()=>{
   let cloudBusy=false;
   let cloudLastLoadedAt=0;
   let cloudPullPausedUntil=0;
+  // v6.90.2: keep old cloud pulls from resurrecting a deletion while its write is pending.
+  let deletionWritesPending=0;
+  let deletionWriteQueue=Promise.resolve();
+  function queueDeletionWrite(work){
+    deletionWritesPending++;
+    cloudPullPausedUntil=Date.now()+60000;
+    const task=deletionWriteQueue.catch(()=>{}).then(async()=>{
+      // Wait for an in-flight older snapshot to finish before writing the new state.
+      for(let i=0;i<120&&cloudBusy;i++)await new Promise(r=>setTimeout(r,100));
+      if(cloudBusy)throw Error('先前的雲端儲存尚未完成');
+      clearTimeout(cloudSaveTimer);
+      const ok=await work();
+      if(ok===false)throw Error('雲端未確認儲存成功');
+      return true;
+    });
+    deletionWriteQueue=task.catch(()=>{});
+    task.catch(err=>{console.warn('deletion sync pending',err);toast('⚠️ 已在本機刪除，但雲端尚未同步，請稍後再試');})
+      .finally(()=>{deletionWritesPending=Math.max(0,deletionWritesPending-1);cloudPullPausedUntil=Date.now()+12000;});
+    return task;
+  }
+
 
   const DELETED_CHECKLIST_KEY='travel_deleted_checklist_ids_v1';
   const DELETED_WISH_KEY='travel_deleted_wish_ids_v1';
@@ -897,7 +918,7 @@ document.addEventListener('DOMContentLoaded',()=>{
 
   async function loadCloud(){
     if(!state.supabase)return false;
-    if(Date.now()<cloudPullPausedUntil)return true;
+    if(deletionWritesPending || cloudBusy || Date.now()<cloudPullPausedUntil)return true;
     try{
       const {data,error}=await state.supabase
         .from('user_travel_data')
@@ -905,6 +926,7 @@ document.addEventListener('DOMContentLoaded',()=>{
         .eq('user_id',state.user.id)
         .maybeSingle();
       if(error)throw error;
+      if(deletionWritesPending || cloudBusy || Date.now()<cloudPullPausedUntil)return true;
       if(data?.data){
         applyCloudData(data.data);
         cloudLastLoadedAt=Date.now();
@@ -1031,6 +1053,7 @@ document.addEventListener('DOMContentLoaded',()=>{
       const memberMap=new Map((members||[]).map(m=>[String(m.trip_id),m]));
       const {data:rows,error}=await state.supabase.from('shared_trips').select('trip_id,owner_id,data,updated_at');
       if(error)throw error;
+      if(deletionWritesPending)return;
       (rows||[]).forEach(row=>{
         const tripId=String(row.trip_id);
         const mutatedAt=sharedLocalMutationAt.get(tripId)||0;
@@ -1263,57 +1286,44 @@ document.addEventListener('DOMContentLoaded',()=>{
 
 
   async function deleteTrip(id){
-    const t=state.trips.find(x=>x.id===id);
+    const t=state.trips.find(x=>String(x.id)===String(id));
     if(!t)return;
     if(!(await ensureTripUnlocked(t)))return;
-    const ok=confirm(`確定要刪除「${t.name}」嗎？\n\n這會一起刪除這個旅程的行程、分帳與照片紀錄。`);
-    if(!ok)return;
-
-    try{
-      if(state.cloud){
-        // Best-effort cleanup of child data before deleting the trip.
-        const childTables=['itineraries','expenses'];
-        for(const table of childTables){
-          const rows=(state[table]||[]).filter(x=>x.trip_id===id);
-          for(const r of rows){
-            try{ await cloudDelete(table,r.id); }catch(e){ console.warn('delete child failed',table,e); }
-          }
-        }
-        const photos=(state.photos||[]).filter(x=>x.trip_id===id);
-        for(const p of photos){
-          try{
-            if(p.storage_path) await state.supabase.storage.from('trip-photos').remove([p.storage_path]);
-            await cloudDelete('travel_photos',p.id);
-          }catch(e){ console.warn('delete photo failed',e); }
-        }
-        await cloudDelete('trips',id);
-        await loadCloud();
-      }else{
-        state.trips=state.trips.filter(x=>x.id!==id);
-        state.itineraries=(state.itineraries||[]).filter(x=>x.trip_id!==id);
-        state.expenses=(state.expenses||[]).filter(x=>x.trip_id!==id);
-        state.photos=(state.photos||[]).filter(x=>x.trip_id!==id);
-        if(state.currentTripId===id) state.currentTripId=null;
-        persist();
-      }
-
-      try{
-        if(Array.isArray(window.quickArchives)){
-          window.quickArchives=window.quickArchives.filter(a=>a.tripId!==id);
-          if(typeof saveQuickArchives==='function') saveQuickArchives();
-        }else if(typeof quickArchives!=='undefined'){
-          quickArchives=quickArchives.filter(a=>a.tripId!==id);
-          if(typeof saveQuickArchives==='function') saveQuickArchives();
-        }
-      }catch(e){}
-
-      renderTrips();
-      setView('home');
-      toast('旅程已刪除');
-    }catch(e){
-      console.error(e);
-      alert('刪除旅程時發生問題，請再試一次。');
+    if(!confirm(`確定要刪除「${t.name}」嗎？\n\n這會一起刪除這個旅程的行程、分帳與照片紀錄。`))return;
+    if(t._sharedOwnerId && String(t._sharedOwnerId)!==String(state.user?.id)){
+      toast('共同行程須由擁有者刪除');return;
     }
+    const photos=(state.photos||[]).filter(x=>String(x.trip_id)===String(id));
+    const shared=!!t._sharedOwnerId;
+    // Remove the whole trip and its children in one synchronous state mutation.
+    state.trips=state.trips.filter(x=>String(x.id)!==String(id));
+    state.itineraries=(state.itineraries||[]).filter(x=>String(x.trip_id)!==String(id));
+    state.expenses=(state.expenses||[]).filter(x=>String(x.trip_id)!==String(id));
+    state.photos=(state.photos||[]).filter(x=>String(x.trip_id)!==String(id));
+    if(String(state.currentTripId)===String(id))state.currentTripId=null;
+    if(shared)markSharedLocalMutation(id);
+    try{
+      if(typeof quickArchives!=='undefined'){
+        quickArchives=quickArchives.filter(a=>String(a.tripId)!==String(id));
+        if(typeof saveQuickArchives==='function')saveQuickArchives();
+      }
+    }catch(e){console.warn('archive cleanup',e);}
+    localSave();renderTrips();setView('home');toast('旅程已刪除，正在同步 ☁️');
+    if(!state.supabase){persist();return;}
+    queueDeletionWrite(async()=>{
+      // Shared trip deletion is a separate record; delete it before syncing the personal snapshot.
+      if(shared){
+        const {error:e1}=await state.supabase.from('trip_members').delete().eq('trip_id',id);
+        if(e1)throw e1;
+        const {error:e2}=await state.supabase.from('shared_trips').delete().eq('trip_id',id);
+        if(e2)throw e2;
+      }
+      const ok=await forceCloudWriteLatest();
+      if(!ok)return false;
+      // Photo storage cleanup is best effort and must not delay the UI.
+      Promise.allSettled(photos.filter(p=>p.storage_path).map(p=>state.supabase.storage.from('trip-photos').remove([p.storage_path]))).catch(()=>{});
+      return true;
+    }).then(()=>toast('☁️ 旅程刪除已同步')).catch(()=>{});
   }
 
   async function openTrip(id,tab='itinerary'){
@@ -1974,14 +1984,11 @@ async function deleteMainItineraryById(id){
   if(typeof renderQuickItinerary==='function')renderQuickItinerary();
 
   try{
-    if(state.cloud){
-      // 目前網站的 Supabase 是整份快照同步，所以直接把「刪除後的新狀態」寫回雲端。
-      cloudPullPausedUntil=Date.now()+8000;
-      await forceCloudWriteLatest();
-    }else{
-      persist();
-    }
-    toast('行程已刪除');
+    const trip=currentTrip();
+    if(state.supabase){
+      queueDeletionWrite(()=>trip?._sharedOwnerId?saveSharedTripNow(trip.id):forceCloudWriteLatest()).catch(()=>{});
+    }else persist();
+    toast('行程已刪除，正在同步 ☁️');
   }catch(err){
     console.error('delete itinerary failed',err);
     alert('畫面已刪除，但雲端同步失敗。請重新整理前先再按一次「立即同步」。');
@@ -2488,11 +2495,11 @@ async function deleteMainItineraryById(id){
             localSave();
             renderItinerary();
             if(typeof renderQuickItinerary==='function')renderQuickItinerary();
-            if(state.cloud){
-              cloudPullPausedUntil=Date.now()+8000;
-              await forceCloudWriteLatest();
+            const trip=currentTrip();
+            if(state.supabase){
+              queueDeletionWrite(()=>trip?._sharedOwnerId?saveSharedTripNow(trip.id):forceCloudWriteLatest()).catch(()=>{});
             }else persist();
-            toast('已刪除');
+            toast('已刪除，正在同步 ☁️');
           };
         });
       }else sub.remove();
