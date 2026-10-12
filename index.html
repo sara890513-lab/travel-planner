@@ -4,7 +4,7 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
   <meta name="theme-color" content="#fff8f4" />
-  <title>我的旅遊計畫｜Travel Planner v6.90.2 測試版</title>
+  <title>我的旅遊計畫｜Travel Planner v6.90.3 排版測試版</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link rel="preload" href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;600;700;800&display=swap" as="style" onload="this.onload=null;this.rel='stylesheet'">
@@ -4393,6 +4393,33 @@ button#openQuickMemoBtn,
 @media(max-width:600px){.timeline-card{padding-left:54px!important}.v689-leading{left:8px;min-width:38px}.v689-child-leading{min-width:40px}}
 
 @media(max-width:600px){.v688-search-row{grid-template-columns:1fr 1fr}.v688-search-row input{grid-column:1/-1}.v688-search-row button{min-width:0}.v688-tools{padding:10px}.timeline-card .mini-actions{gap:3px}.timeline-card .mini-actions button{padding:6px!important}}
+
+/* v6.90.3 手機行程卡片：避免子項目內容與按鈕撐破畫面 */
+#itineraryPanel, #itineraryPanel .timeline, #itineraryPanel .timeline-item,
+#itineraryPanel .timeline-card, #itineraryPanel .subplace-list {min-width:0;max-width:100%;}
+#itineraryPanel .timeline-card {width:100%;}
+#itineraryPanel .subplace-list {box-sizing:border-box;}
+#itineraryPanel .subplace-card {min-width:0;max-width:100%;box-sizing:border-box;flex-wrap:wrap;}
+#itineraryPanel .subplace-main {min-width:0;flex:1 1 0;overflow-wrap:anywhere;word-break:break-word;}
+#itineraryPanel .subplace-main strong,#itineraryPanel .subplace-main span,
+#itineraryPanel .sub-review,#itineraryPanel .sub-note {overflow-wrap:anywhere;word-break:break-word;}
+#itineraryPanel .subplace-actions {flex-shrink:0;}
+@media(max-width:700px){
+  #itineraryPanel .timeline-card {padding-right:12px!important;}
+  #itineraryPanel .subplace-list {margin-left:0!important;padding-left:9px!important;}
+  #itineraryPanel .subplace-card {display:grid!important;grid-template-columns:40px minmax(0,1fr) auto;column-gap:8px;row-gap:8px;align-items:start!important;padding:10px 8px!important;}
+  #itineraryPanel .v689-child-leading {grid-column:1;grid-row:1 / span 2;min-width:0!important;width:40px;min-height:54px;align-self:stretch;}
+  #itineraryPanel .subplace-main {grid-column:2 / 4;grid-row:1;min-width:0;width:100%;}
+  #itineraryPanel .subplace-card>.v690-check {grid-column:2;grid-row:2;justify-self:start;align-self:center;max-width:100%;}
+  #itineraryPanel .subplace-actions {grid-column:3;grid-row:2;display:flex!important;gap:5px;justify-self:end;}
+  #itineraryPanel .subplace-actions button {min-width:36px!important;min-height:36px!important;padding:6px!important;}
+  #itineraryPanel .timeline-card h3 {overflow-wrap:anywhere;word-break:break-word;}
+}
+@media(max-width:370px){
+  #itineraryPanel .subplace-card {grid-template-columns:36px minmax(0,1fr) auto;column-gap:6px;}
+  #itineraryPanel .v689-child-leading {width:36px;}
+  #itineraryPanel .subplace-card>.v690-check {padding:4px 5px;font-size:11px;}
+}
 </style></head>
 <body>
   <div id="toast" class="toast"></div>
