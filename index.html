@@ -3485,24 +3485,24 @@ body{background:#fffaf7}
 
 /* v5.8 手機旅遊行程排版修正 */
 @media(max-width:620px){
-  #itineraryPanel .panel-head{
+  #itineraryTab .panel-head{
     gap:14px!important;
     margin-bottom:8px!important;
   }
 
-  #itineraryPanel .panel-actions{
+  #itineraryTab .panel-actions{
     display:grid!important;
     grid-template-columns:1fr 1fr!important;
     gap:8px!important;
     width:100%!important;
   }
-  #itineraryPanel .panel-actions .export-btn{
+  #itineraryTab .panel-actions .export-btn{
     width:100%!important;
     min-height:46px!important;
     padding:10px 8px!important;
     font-size:14px!important;
   }
-  #itineraryPanel .panel-actions .primary{
+  #itineraryTab .panel-actions .primary{
     grid-column:1 / -1!important;
     width:100%!important;
     min-height:52px!important;
@@ -3511,7 +3511,7 @@ body{background:#fffaf7}
     font-size:16px!important;
     padding:12px 16px!important;
   }
-  #itineraryPanel .panel-actions .primary:after{content:none!important}
+  #itineraryTab .panel-actions .primary:after{content:none!important}
 
   .timeline{
     margin-top:20px!important;
@@ -4394,31 +4394,37 @@ button#openQuickMemoBtn,
 
 @media(max-width:600px){.v688-search-row{grid-template-columns:1fr 1fr}.v688-search-row input{grid-column:1/-1}.v688-search-row button{min-width:0}.v688-tools{padding:10px}.timeline-card .mini-actions{gap:3px}.timeline-card .mini-actions button{padding:6px!important}}
 
-/* v6.90.3 手機行程卡片：避免子項目內容與按鈕撐破畫面 */
-#itineraryPanel, #itineraryPanel .timeline, #itineraryPanel .timeline-item,
-#itineraryPanel .timeline-card, #itineraryPanel .subplace-list {min-width:0;max-width:100%;}
-#itineraryPanel .timeline-card {width:100%;}
-#itineraryPanel .subplace-list {box-sizing:border-box;}
-#itineraryPanel .subplace-card {min-width:0;max-width:100%;box-sizing:border-box;flex-wrap:wrap;}
-#itineraryPanel .subplace-main {min-width:0;flex:1 1 0;overflow-wrap:anywhere;word-break:break-word;}
-#itineraryPanel .subplace-main strong,#itineraryPanel .subplace-main span,
-#itineraryPanel .sub-review,#itineraryPanel .sub-note {overflow-wrap:anywhere;word-break:break-word;}
-#itineraryPanel .subplace-actions {flex-shrink:0;}
+/* v6.90.3.1: target the actual itineraryTab element, not nonexistent itineraryPanel */
 @media(max-width:700px){
-  #itineraryPanel .timeline-card {padding-right:12px!important;}
-  #itineraryPanel .subplace-list {margin-left:0!important;padding-left:9px!important;}
-  #itineraryPanel .subplace-card {display:grid!important;grid-template-columns:40px minmax(0,1fr) auto;column-gap:8px;row-gap:8px;align-items:start!important;padding:10px 8px!important;}
-  #itineraryPanel .v689-child-leading {grid-column:1;grid-row:1 / span 2;min-width:0!important;width:40px;min-height:54px;align-self:stretch;}
-  #itineraryPanel .subplace-main {grid-column:2 / 4;grid-row:1;min-width:0;width:100%;}
-  #itineraryPanel .subplace-card>.v690-check {grid-column:2;grid-row:2;justify-self:start;align-self:center;max-width:100%;}
-  #itineraryPanel .subplace-actions {grid-column:3;grid-row:2;display:flex!important;gap:5px;justify-self:end;}
-  #itineraryPanel .subplace-actions button {min-width:36px!important;min-height:36px!important;padding:6px!important;}
-  #itineraryPanel .timeline-card h3 {overflow-wrap:anywhere;word-break:break-word;}
+ #itineraryTab .timeline-item{grid-template-columns:45px minmax(0,1fr)!important;gap:24px!important;}
+ #itineraryTab .timeline-card{min-width:0!important;max-width:100%!important;}
+ #itineraryTab .subplace-list{min-width:0!important;max-width:100%!important;}
+}
+/* v6.90.3.1 手機行程卡片：避免子項目內容與按鈕撐破畫面 */
+#itineraryTab, #itineraryTab .timeline, #itineraryTab .timeline-item,
+#itineraryTab .timeline-card, #itineraryTab .subplace-list {min-width:0;max-width:100%;}
+#itineraryTab .timeline-card {width:100%;}
+#itineraryTab .subplace-list {box-sizing:border-box;}
+#itineraryTab .subplace-card {min-width:0;max-width:100%;box-sizing:border-box;flex-wrap:wrap;}
+#itineraryTab .subplace-main {min-width:0;flex:1 1 0;overflow-wrap:anywhere;word-break:break-word;}
+#itineraryTab .subplace-main strong,#itineraryTab .subplace-main span,
+#itineraryTab .sub-review,#itineraryTab .sub-note {overflow-wrap:anywhere;word-break:break-word;}
+#itineraryTab .subplace-actions {flex-shrink:0;}
+@media(max-width:700px){
+  #itineraryTab .timeline-card {padding-right:12px!important;}
+  #itineraryTab .subplace-list {margin-left:0!important;padding-left:9px!important;}
+  #itineraryTab .subplace-card {display:grid!important;grid-template-columns:40px minmax(0,1fr) auto;column-gap:8px;row-gap:8px;align-items:start!important;padding:10px 8px!important;}
+  #itineraryTab .v689-child-leading {grid-column:1;grid-row:1 / span 2;min-width:0!important;width:40px;min-height:54px;align-self:stretch;}
+  #itineraryTab .subplace-main {grid-column:2 / 4;grid-row:1;min-width:0;width:100%;}
+  #itineraryTab .subplace-card>.v690-check {grid-column:2;grid-row:2;justify-self:start;align-self:center;max-width:100%;}
+  #itineraryTab .subplace-actions {grid-column:3;grid-row:2;display:flex!important;gap:5px;justify-self:end;}
+  #itineraryTab .subplace-actions button {min-width:36px!important;min-height:36px!important;padding:6px!important;}
+  #itineraryTab .timeline-card h3 {overflow-wrap:anywhere;word-break:break-word;}
 }
 @media(max-width:370px){
-  #itineraryPanel .subplace-card {grid-template-columns:36px minmax(0,1fr) auto;column-gap:6px;}
-  #itineraryPanel .v689-child-leading {width:36px;}
-  #itineraryPanel .subplace-card>.v690-check {padding:4px 5px;font-size:11px;}
+  #itineraryTab .subplace-card {grid-template-columns:36px minmax(0,1fr) auto;column-gap:6px;}
+  #itineraryTab .v689-child-leading {width:36px;}
+  #itineraryTab .subplace-card>.v690-check {padding:4px 5px;font-size:11px;}
 }
 </style></head>
 <body>
