@@ -580,6 +580,61 @@ html,body{max-width:100%;overflow-x:hidden}
 .v690-item{display:flex;align-items:flex-start;justify-content:space-between;gap:8px;padding:11px 10px;border-top:1px solid #f2eded}.v690-child{margin-left:16px;background:#fffcfa;border-left:3px solid #dcecf6}.v690-main{flex:1;min-width:0;overflow-wrap:anywhere}.v690-main strong{font-size:15px}.v690-time{color:#6582a0;margin-right:8px}.v690-stars{display:block;color:#d99b2b}.v690-review{white-space:pre-wrap;font-size:12px;color:#777;margin-top:4px}
 .v690-check{display:inline-flex;align-items:center;gap:5px;border:1px solid #dfe9e4;background:#f7fbf8;border-radius:999px;padding:5px 8px;font-size:12px;font-weight:800;white-space:nowrap;cursor:pointer;flex-shrink:0}.v690-check input{width:18px;height:18px;accent-color:#4b9871;margin:0}.v690-check.is-done{background:#e9f7ef;color:#387752}.timeline-item.v690-done .timeline-card h3,.subplace-card.v690-done .subplace-main strong{color:#8c9990;text-decoration:line-through}.v690-done .v690-main strong{color:#8c9990;text-decoration:line-through}.timeline-card>.v690-check{margin:0 0 8px}.subplace-card>.v690-check{align-self:center}
 @media(max-width:560px){.v690-overview{padding:11px}.v690-check span{font-size:11px}.v690-item{gap:4px;padding:10px 7px}.v690-child{margin-left:8px}.v690-main strong{font-size:14px}}
+
+/* v6.90.4: single overview, keep hidden legacy timeline for existing exports */
+#itineraryList{display:none!important}
+.v690-overview{margin-top:20px}
+.v690-overview-actions{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:9px;margin:16px 0}
+.v690-overview-actions button{min-width:0;padding:12px 8px;font-size:14px;white-space:normal}
+.v690-main{min-width:0;overflow-wrap:anywhere}
+.v690-edit-actions{display:flex;flex-wrap:wrap;gap:6px;margin-top:9px}
+.v690-edit-actions button{border:1px solid #e2e8ef;background:#f5f9ff;color:#425f79;border-radius:10px;padding:7px 9px;font-size:12px;font-weight:700}
+.v690-rating{display:flex;gap:3px;margin-top:5px}
+.v690-rating button{border:0;background:none;color:#d99b2b;font-size:25px;padding:1px 3px;line-height:1.2}
+@media(max-width:560px){.v690-overview-actions{grid-template-columns:1fr 1fr}.v690-overview-actions #addItineraryBtn{grid-column:1/-1}.v690-item{align-items:flex-start}.v690-check{max-width:85px}}
+
+/* v6.90.5: same-size overview cards with per-item disclosure and quick notes */
+.v690-expand{display:inline-block;margin-top:6px;padding:3px 7px;border:1px solid #dce8f3;background:#f7fbff;color:#51718a;border-radius:9px;font-size:12px;font-weight:700;cursor:pointer}
+.v690-detail{margin-top:7px;min-width:0}
+.v690-detail.hidden{display:none!important}
+.v690-review{overflow-wrap:anywhere;white-space:pre-wrap}
+.v690-item .v690-main{min-width:0}
+
+/* v6.90.6: prominent disclosure on each overview row, no change to card width */
+.v690-item{min-width:0;overflow:hidden}
+.v690-main{flex:1;min-width:0}
+.v690-expand{display:flex!important;align-items:center;justify-content:center;width:max-content;min-width:84px;min-height:34px;margin:9px 0 2px;padding:6px 12px!important;border:1px solid #bad9ed!important;border-radius:999px!important;background:#eaf6ff!important;color:#315e82!important;font-size:13px!important;font-weight:900!important;cursor:pointer;visibility:visible!important;opacity:1!important}
+.v690-detail.hidden{display:none!important}
+.v690-transport{background:#f3f9ff;border-left:3px solid #b5d8f1}
+@media(max-width:560px){.v690-item{gap:6px}.v690-expand{min-height:36px}.v690-check{flex-shrink:0}}
+
+/* v6.90.7 — calm, compact itinerary overview */
+.v690-overview{padding:16px!important;overflow:hidden}
+.v690-overview-head{align-items:center!important;gap:10px!important;flex-wrap:nowrap!important}
+.v690-overview-head>div{min-width:0}
+.v690-overview-head h3{font-size:clamp(17px,4.2vw,22px)!important;line-height:1.35}
+.v690-overview-head span{display:block;margin-top:5px;font-size:12px!important}
+.v690-all-toggle{flex:none;border:1px solid #d9e7f2;background:#eff7fd;color:#466983;border-radius:999px;padding:10px 13px;font-size:13px;font-weight:800;cursor:pointer}
+.v690-item{display:grid!important;grid-template-columns:minmax(0,1fr) auto!important;column-gap:10px!important;align-items:start!important;padding:13px 12px!important}
+.v690-main{min-width:0!important;display:block!important}
+.v690-main>strong{display:block!important;font-size:15px!important;line-height:1.55!important;overflow-wrap:anywhere}
+.v690-time{font-size:13px!important;margin-right:6px!important}
+.v690-item>.v690-check{grid-column:2;grid-row:1;align-self:start!important;margin:0!important;padding:6px 8px!important}
+.v690-expand{display:inline-flex!important;align-items:center;justify-content:center;white-space:nowrap;margin:8px 0 0!important;padding:6px 11px!important;border:1px solid #dae7f0!important;background:#f4f9fd!important;border-radius:999px!important;color:#53728a!important;font-size:12px!important;font-weight:800!important}
+.v690-detail{margin-top:10px!important;padding:10px 11px!important;background:#f8fafc;border:1px solid #edf1f5;border-radius:12px;line-height:1.65}
+.v690-edit-actions{margin-top:10px}
+.v690-day{overflow:hidden}
+.v690-child{margin-left:9px!important;padding-left:12px!important}
+.v690-transport .v690-main>strong{font-size:14px!important}
+@media(max-width:560px){
+ .v690-overview{padding:11px!important}
+ .v690-overview-head h3{font-size:17px!important}
+ .v690-all-toggle{padding:8px 10px;font-size:12px}
+ .v690-item{padding:12px 9px!important;gap:7px!important}
+ .v690-main>strong{font-size:14px!important}
+ .v690-item>.v690-check{padding:5px 6px!important}
+ .v690-item>.v690-check span{font-size:11px!important}
+}
 </style>
 <script>window.TRAVEL_SUPABASE={url:"https://lfvzobfvotcehkkjkgdc.supabase.co",anonKey:"sb_publishable_iwDwCSXNjpVLJyl16mKDyw_NcFqrAoW"};</script>
 <script>
@@ -1937,7 +1992,7 @@ document.addEventListener('DOMContentLoaded',()=>{
     const i=rows.findIndex(x=>x.id===id);
     const backup=i>=0?{...rows[i]}:null;
     if(i>=0)rows[i]=row; else rows.push(row);
-    localSave(); renderMajorTransports(); closeModal('#transportDialog'); toast('交通資訊已儲存，正在同步…');
+    localSave(); renderMajorTransports(); renderV690Overview(); closeModal('#transportDialog'); toast('交通資訊已儲存，正在同步…');
     const ok=await saveTripObject(t);
     if(ok===false && t._sharedOwnerId){
       const now=rows.findIndex(x=>x.id===id);
@@ -1958,6 +2013,7 @@ document.addEventListener('DOMContentLoaded',()=>{
   window.transportStore = transportStore;
   window.saveTripObject = saveTripObject;
   window.renderMajorTransports = renderMajorTransports;
+  window.renderTripOverview = ()=>renderV690Overview();
 
   
 async function deleteMainItineraryById(id){
@@ -2052,11 +2108,22 @@ async function deleteMainItineraryById(id){
     for(const raw of freeCombined(t).split(/\r?\n/)){
       let line=raw.trim();if(!line)continue;
       const day=freeDateFromHeading(line,t);if(day){date=day;parent=null;last=null;continue;}
+      // v6.90.9: explicitly marked notes belong to the preceding itinerary item.
+      if(/^(?:📝\s*|備註\s*[:：]\s*)/.test(line)){
+        if(last)last.note+=(last.note?'\n':'')+line.replace(/^(?:📝\s*|備註\s*[:：]\s*)/,'');
+        continue;
+      }
       if(/^評論\s*[:：]|^心得\s*[:：]|^評價\s*[:：]/.test(line)){
         if(last)last.review+=(last.review?'\n':'')+line.replace(/^[^:：]+[:：]\s*/,'');continue;
       }
       const stars=line.match(/(?:⭐|★){1,5}/g);if(stars&&last&&/^(?:⭐|★|評分)/.test(line)){last.rating=Math.min(5,stars.join('').length);continue;}
       if(/^https?:\/\//.test(line)&&last){last.note+=(last.note?'\n':'')+line;continue;}
+      // Older versions serialized plain notes as indented text. Treat these as notes,
+      // not new child attractions; explicit emoji or bullet lines remain itinerary items.
+      if(last && /^\s{2,}\S/.test(raw) && !/^(?:📍|🤤|📷|📸|🛍|✈|🚗|🚄|🚢|⭐|★|[-•・→])/u.test(line)){
+        last.note+=(last.note?'\n':'')+line;
+        continue;
+      }
       const parentIcon=/^📍\s*/u.test(line);
       const emojiKind=line.match(/^(📍|🤤|📷|📸|🛍️?|✈️?|🚗|🚄|🚢)\s*/u);
       const isChild=!parentIcon&&(/^\s{2,}\S/.test(raw)||/^[-•・→]\s*/.test(line)||!!emojiKind);
@@ -2117,7 +2184,8 @@ async function deleteMainItineraryById(id){
       // One-time adoption of an identical pre-v6.81 itinerary, without touching unrelated rows.
       if(!match)match=all.find(x=>!x.free_sync_id&&!used.has(String(x.id))&&x.date===r.date&&x.place===r.place&&String(x.parent_spot_id||'')===String(mappedParent||''));
       const id=match?.id||uid();used.add(String(id));
-      const result={...match,...r,id,free_sync_id:match?.free_sync_id||uid(),free_sync_order:i,v688_order:i,parent_spot_id:originalParent?(mappedParent||''):''};
+      // Keep notes edited in the overview even when free-form text does not mention them.
+      const result={...match,...r,id,note:r.note||match?.note||'',free_sync_id:match?.free_sync_id||uid(),free_sync_order:i,v688_order:i,parent_spot_id:originalParent?(mappedParent||''):''};
       if(!originalParent)parentMap.set(r.id,id);
       out.push(result);
     });
@@ -2155,7 +2223,7 @@ async function deleteMainItineraryById(id){
 
         if(x.review&&!inlineFoodReview)lines.push('評論：'+x.review.replace(/\n/g,'；'));
         if(x.rating)lines.push('  '+'⭐'.repeat(Math.min(5,Number(x.rating))));
-        if(x.note)lines.push(...x.note.split(/\n/).map(link=>'  '+link));
+        if(x.note)lines.push(...x.note.split(/\n/).map(note=>'📝 '+note));
       };
       add(p,false);
       managed.filter(x=>String(x.parent_spot_id)===String(p.id)).sort((a,b)=>(+a.v688_order||0)-(+b.v688_order||0)).forEach(x=>add(x,true));
@@ -2356,6 +2424,15 @@ async function deleteMainItineraryById(id){
     const cb=e.target.closest('[data-v690-check]');if(!cb)return;
     e.stopPropagation();v690Toggle(cb.dataset.v690Check,cb.checked);
   });
+  const v690Expanded=new Set();
+  let v690OverviewOpen=true;
+  const v690AllToggle=$('#v690AllToggle');
+  v690AllToggle?.addEventListener('click',()=>{
+    v690OverviewOpen=!v690OverviewOpen;
+    $('#v690OverviewContent').classList.toggle('hidden',!v690OverviewOpen);
+    v690AllToggle.textContent=v690OverviewOpen?'⌃ 收合總覽':'⌄ 展開總覽';
+    v690AllToggle.setAttribute('aria-expanded',String(v690OverviewOpen));
+  });
   function renderV690Overview(){
     const panel=$('#v690Overview');if(!panel)return;
     const t=currentTrip();if(!t)return;
@@ -2363,21 +2440,90 @@ async function deleteMainItineraryById(id){
     const byParent={};all.forEach(x=>{if(x.parent_spot_id)(byParent[String(x.parent_spot_id)]||=[]).push(x);});
     const sortRows=(a,b)=>String(a.date||'').localeCompare(String(b.date||''))||((Number.isFinite(+a.v688_order)&&Number.isFinite(+b.v688_order))?(+a.v688_order)-(+b.v688_order):String(a.time||'').localeCompare(String(b.time||'')));
     const roots=all.filter(x=>!x.parent_spot_id).sort(sortRows);
-    const groups=new Map();roots.forEach(x=>{const day=x.date||'未指定日期';if(!groups.has(day))groups.set(day,[]);groups.get(day).push(x);});
+    const groups=new Map();roots.forEach(x=>{const day=x.date||'未指定日期';if(!groups.has(day))groups.set(day,[]);groups.get(day).push({kind:'spot',row:x});});
+    // Transport entries are read directly from the trip, never copied into itineraries.
+    const transports=Array.isArray(t.major_transports)?t.major_transports:[];
+    transports.forEach(r=>{
+      const day=String(r.depart||r.arrive||'').slice(0,10)||'未指定日期';
+      if(!groups.has(day))groups.set(day,[]);
+      groups.get(day).push({kind:'transport',row:r});
+    });
     const done=all.filter(x=>v690Status(x.id)).length;
     $('#v690Progress').textContent=`已完成 ${done} / ${all.length} 個景點`;
     if(!roots.length){panel.innerHTML='<p class="helper">目前還沒有行程，先在備忘錄新增景點吧。</p>';return;}
     const itemHTML=(x,child=false)=>{
       const icon=x.transport?'🚙':x.type==='food'?'🤤':x.type==='shop'?'🛍️':child?'📷':'📍';
-      const stars=x.rating?`<span class="v690-stars">${'★'.repeat(Math.min(5,+x.rating))}${'☆'.repeat(Math.max(0,5-(+x.rating)))}</span>`:'';
-      return `<div class="v690-item ${child?'v690-child':''} ${v690Status(x.id)?'v690-done':''}"><div class="v690-main"><strong>${x.time?`<span class="v690-time">${esc(x.time.slice(0,5))}</span>`:''}${icon} ${esc(x.place)}</strong>${stars}${x.review?`<div class="v690-review">💬 ${esc(x.review)}</div>`:''}${x.note?`<div class="v690-review">📝 ${esc(x.note)}</div>`:''}</div>${v690CheckHTML(x,true)}</div>`;
+      const n=Math.max(0,Math.min(5,Number(x.rating)||0));
+      const stars=x.type==='food'?`<div class="v690-rating" aria-label="五星評價">${[1,2,3,4,5].map(i=>`<button type="button" data-overview-rating="${esc(x.id)}" data-star="${i}" aria-label="${i} 星">${i<=n?'★':'☆'}</button>`).join('')}</div>`:(n?`<span class="v690-stars">${'★'.repeat(n)}${'☆'.repeat(5-n)}</span>`:'');
+      const editActions=`<div class="v690-edit-actions"><button type="button" data-overview-edit="${esc(x.id)}">✏️ 編輯</button><button type="button" data-overview-note="${esc(x.id)}">📝 ${x.note?'修改備註':'新增備註'}</button><button type="button" data-overview-delete="${esc(x.id)}">🗑️ 刪除</button>${!child?`<button type="button" data-overview-add="${esc(x.id)}" data-child-type="food">＋ 美食</button><button type="button" data-overview-add="${esc(x.id)}" data-child-type="shop">＋ 小店</button>`:''}</div>`;
+      return `<div class="v690-item ${child?'v690-child':''} ${v690Status(x.id)?'v690-done':''}"><div class="v690-main"><strong>${x.time?`<span class="v690-time">${esc(x.time.slice(0,5))}</span>`:''}${icon} ${esc(x.place)}</strong><button type="button" class="v690-expand" data-overview-expand="${esc(x.id)}" aria-expanded="${v690Expanded.has(String(x.id))}">${v690Expanded.has(String(x.id))?'▴ 收合':'▾ 展開'}</button><div class="v690-detail ${v690Expanded.has(String(x.id))?'':'hidden'}" data-overview-detail="${esc(x.id)}">${stars}${x.review?`<div class="v690-review">💬 ${esc(x.review)}</div>`:''}${x.note?`<div class="v690-review">📝 ${esc(x.note)}</div>`:''}${editActions}</div></div>${v690CheckHTML(x,true)}</div>`;
     };
-    panel.innerHTML=[...groups].map(([date,items],idx)=>`<section class="v690-day"><h4>第 ${idx+1} 天 · ${esc(date==='未指定日期'?date:fmtDate(date))}</h4>${items.map(x=>itemHTML(x)+((byParent[String(x.id)]||[]).sort(sortRows).map(y=>itemHTML(y,true)).join(''))).join('')}</section>`).join('');
+    const transportHTML=r=>{
+      const dt=String(r.depart||r.arrive||'');
+      const tm=/T(\d\d:\d\d)/.exec(dt)?.[1]||'';
+      const icon=/飛機|航班/.test(r.mode||'')?'✈️':/船/.test(r.mode||'')?'🚢':/火車|高鐵/.test(r.mode||'')?'🚄':/租車|汽車|開車/.test(r.mode||'')?'🚗':'🚌';
+      const title=[r.from||'',r.to||''].filter(Boolean).join(' → ');
+      const id='transport:'+String(r.id||'');
+      const expanded=v690Expanded.has(id);
+      return `<div class="v690-item v690-transport"><div class="v690-main"><strong>${tm?`<span class="v690-time">${esc(tm)}</span>`:''}${icon} ${esc(r.mode||'交通')}${title?'｜'+esc(title):''}</strong><button type="button" class="v690-expand" data-overview-expand="${esc(id)}" aria-expanded="${expanded}">${expanded?'▴ 收合':'▾ 展開'}</button><div class="v690-detail ${expanded?'':'hidden'}" data-overview-detail="${esc(id)}">${r.arrive?`<div class="v690-review">🏁 抵達：${esc(fmtDT(r.arrive))}</div>`:''}${r.ref?`<div class="v690-review">🎫 ${esc(r.ref)}</div>`:''}${r.landmark?`<div class="v690-review">📍 ${esc(r.landmark)}</div>`:''}${r.note?`<div class="v690-review">📝 ${esc(r.note)}</div>`:''}<div class="v690-review">交通資訊會自動同步顯示，不需重複新增行程。</div></div></div></div>`;
+    };
+    panel.innerHTML=[...groups].sort(([a],[b])=>a.localeCompare(b)).map(([date,items],idx)=>{
+      items.sort((a,b)=>String(a.kind==='transport'?(a.row.depart||a.row.arrive||'').slice(11,16):a.row.time||'').localeCompare(String(b.kind==='transport'?(b.row.depart||b.row.arrive||'').slice(11,16):b.row.time||'')));
+      return `<section class="v690-day"><h4>第 ${idx+1} 天 · ${esc(date==='未指定日期'?date:fmtDate(date))}</h4>${items.map(entry=>entry.kind==='transport'?transportHTML(entry.row):itemHTML(entry.row)+((byParent[String(entry.row.id)]||[]).sort(sortRows).map(y=>itemHTML(y,true)).join(''))).join('')}</section>`;
+    }).join('');
   }
-  $('#v690OverviewToggle').addEventListener('click',()=>{
-    const box=$('#v690OverviewBox');box.classList.toggle('hidden');
-    $('#v690OverviewToggle').textContent=box.classList.contains('hidden')?'📖 查看整趟旅程總覽':'📖 收起旅程總覽';
-    if(!box.classList.contains('hidden'))renderV690Overview();
+  // v6.90.4: overview is always visible; keep the old timeline in the DOM for export compatibility.
+  document.querySelector('#v690Overview').addEventListener('click',e=>{
+    const expand=e.target.closest('[data-overview-expand]');
+    if(expand){
+      const id=String(expand.dataset.overviewExpand);
+      if(v690Expanded.has(id))v690Expanded.delete(id);else v690Expanded.add(id);
+      const detail=document.querySelectorAll('[data-overview-detail]');
+      detail.forEach(el=>{if(String(el.dataset.overviewDetail)===id)el.classList.toggle('hidden',!v690Expanded.has(id));});
+      expand.textContent=v690Expanded.has(id)?'▴ 收合':'▾ 展開';
+      expand.setAttribute('aria-expanded',String(v690Expanded.has(id)));
+      return;
+    }
+    const note=e.target.closest('[data-overview-note]');
+    if(note){
+      const row=state.itineraries.find(x=>String(x.id)===String(note.dataset.overviewNote)&&String(x.trip_id)===String(state.currentTripId));
+      if(!row||!canEditTrip(currentTrip()))return toast('這趟旅程僅能查看');
+      const answer=prompt('📝 '+(row.place||'景點')+' 的備註（可換行）',row.note||'');
+      if(answer===null)return;
+      row.note=answer.trim();
+      freeUpdateAfterItineraryEdit([row.id]);
+      localSave();renderV690Overview();
+      v688Save(currentTrip()).catch(err=>console.warn('note sync',err));
+      return;
+    }
+    const edit=e.target.closest('[data-overview-edit]');
+    if(edit){
+      const row=state.itineraries.find(x=>String(x.id)===String(edit.dataset.overviewEdit));
+      if(row && canEditTrip(currentTrip()))openItineraryDialog(row);
+      return;
+    }
+    const del=e.target.closest('[data-overview-delete]');
+    if(del){
+      if(!canEditTrip(currentTrip()))return toast('這趟旅程僅能查看');
+      deleteMainItineraryById(del.dataset.overviewDelete);
+      return;
+    }
+    const add=e.target.closest('[data-overview-add]');
+    if(add){
+      const parent=state.itineraries.find(x=>String(x.id)===String(add.dataset.overviewAdd));
+      if(parent && canEditTrip(currentTrip()))openChildItineraryDialog(parent,add.dataset.childType||'food');
+      return;
+    }
+    const star=e.target.closest('[data-overview-rating]');
+    if(star){
+      if(!canEditTrip(currentTrip()))return toast('這趟旅程僅能查看');
+      const row=state.itineraries.find(x=>String(x.id)===String(star.dataset.overviewRating));
+      if(!row)return;
+      row.rating=Number(star.dataset.star||0);
+      freeUpdateAfterItineraryEdit([row.id]);
+      localSave();renderV690Overview();
+      v688Save(currentTrip()).catch(err=>console.warn('rating sync',err));
+    }
   });
   function renderItinerary(){
     const list=$('#itineraryList');
@@ -2530,7 +2676,7 @@ async function deleteMainItineraryById(id){
       item.innerHTML=`<div class="timeline-time">${esc(x.time?.slice(0,5)||'')}</div><div class="timeline-card"><h3>${x.type==='food'?'🤤':x.type==='shop'?'🛍️':'📷'} ${esc(x.place)}</h3></div>`;
       list.appendChild(item);
     });
-    if(!$('#v690OverviewBox').classList.contains('hidden'))renderV690Overview();
+    renderV690Overview();
   }
 
 
@@ -4782,8 +4928,20 @@ button#openQuickMemoBtn,
           <div id="transportTopList" class="transport-list"></div>
         </div>
 
-        <div class="v690-overview-control"><button type="button" class="ghost" id="v690OverviewToggle">📖 查看整趟旅程總覽</button></div>
-        <div class="v690-overview hidden" id="v690OverviewBox"><div class="v690-overview-head"><h3>📖 整趟旅程總覽</h3><span id="v690Progress"></span></div><div id="v690Overview"></div></div>
+        <div class="v690-overview" id="v690OverviewBox">
+          <div class="v690-overview-head">
+            <div><h3>📖 整趟旅程總覽</h3><span id="v690Progress"></span></div>
+            <button type="button" class="v690-all-toggle" id="v690AllToggle" aria-expanded="true">⌃ 收合總覽</button>
+          </div>
+          <div id="v690OverviewContent">
+          <div class="v690-overview-actions">
+            <button class="ghost export-btn" id="exportImageBtn">🖼️ 下載圖檔</button>
+            <button class="ghost export-btn" id="exportPdfBtn">📄 下載 PDF</button>
+            <button class="primary" id="addItineraryBtn">＋ 新增行程</button>
+          </div>
+          <div id="v690Overview"></div>
+          </div>
+        </div>
 
         <div class="free-plan" id="freePlanBox">
           <h3>📝 自由編排行程</h3>
@@ -4794,30 +4952,19 @@ button#openQuickMemoBtn,
             <div class="v688-wish-row"><button type="button" id="v688WishAdd">💗 從願望清單加入這一天</button></div>
           </div>
           <div class="free-icon-toolbar" aria-label="快速插入子景點圖示">
-            <span>點圖示加入大景點或小景點：</span>
+            <span>點圖示加入景點、美食或購物：</span>
             <button type="button" data-free-icon="📍" title="大景點">📍</button>
             <button type="button" data-free-icon="🤤" title="美食">🤤</button>
             <button type="button" data-free-icon="📷" title="照相景點">📷</button>
             <button type="button" data-free-icon="🛍️" title="購物">🛍️</button>
-            <button type="button" data-free-icon="✈️" title="飛機">✈️</button>
-            <button type="button" data-free-icon="🚗" title="汽車">🚗</button>
-            <button type="button" data-free-icon="🚄" title="火車">🚄</button>
-            <button type="button" data-free-icon="🚢" title="船">🚢</button>
           </div>
           <div class="free-help">💡 點上方日期切換各天獨立備忘錄；主景點可按 📍 插入，小景點直接按 🤤 📷 🛍️ 等圖示；美食評論可寫成「🤤 韓牛（很好吃）」；五顆星評分仍可在正式行程設定。時間可不填。也可寫 ⭐⭐⭐⭐ 或網址。</div>
           <div class="free-actions"><button type="button" class="ghost" id="freePreviewBtn">✨ 整理預覽</button><button type="button" class="primary" id="freeCommitBtn" disabled>✓ 確認同步行程表</button></div>
           <div id="freePreview" class="free-preview" aria-live="polite"></div>
         </div>
-        <div class="panel-head">
-          <div><h2>旅遊行程</h2><p>用時間軸安排每天的景點、住宿與交通</p></div>
-          <div class="panel-actions">
-            <button class="ghost export-btn" id="exportImageBtn">🖼️ 下載圖檔</button>
-            <button class="ghost export-btn" id="exportPdfBtn">📄 下載 PDF</button>
-            <button class="primary" id="addItineraryBtn">＋ 新增行程</button>
-          </div>
-        </div>
+
         <div id="archivedSplitSummary" class="archived-split-summary"></div>
-<div id="itineraryList" class="timeline"></div>
+<div id="itineraryList" class="timeline" hidden aria-hidden="true"></div>
       </section>
 
 
@@ -5665,6 +5812,7 @@ document.addEventListener('click', async function(e){
       if(i>=0){
         const removed=rows.splice(i,1)[0];
         if(typeof window.renderMajorTransports==='function') window.renderMajorTransports();
+        if(typeof window.renderTripOverview==='function') window.renderTripOverview();
         if(typeof toast==='function')toast('交通已刪除，正在同步…');
         let ok=true;
         if(typeof window.saveTripObject==='function') { const t=(typeof window.currentTrip==='function'?window.currentTrip():(state?.trips||[]).find(x=>String(x.id)===String(window.state?.currentTripId))); ok=await window.saveTripObject(t); }
@@ -5675,6 +5823,7 @@ document.addEventListener('click', async function(e){
           return;
         }
         if(typeof window.renderMajorTransports==='function') window.renderMajorTransports();
+        if(typeof window.renderTripOverview==='function') window.renderTripOverview();
         if(typeof toast==='function')toast('交通資訊已刪除並同步');
       }
     }catch(err){ console.error(err); alert('刪除失敗，請再試一次。'); }
