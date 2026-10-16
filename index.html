@@ -635,6 +635,7 @@ html,body{max-width:100%;overflow-x:hidden}
  .v690-item>.v690-check{padding:5px 6px!important}
  .v690-item>.v690-check span{font-size:11px!important}
 }
+.export-note{white-space:pre-wrap;overflow-wrap:anywhere}.export-transport{background:#f5faff!important;border-color:#d9e9f5!important}
 </style>
 <script>window.TRAVEL_SUPABASE={url:"https://lfvzobfvotcehkkjkgdc.supabase.co",anonKey:"sb_publishable_iwDwCSXNjpVLJyl16mKDyw_NcFqrAoW"};</script>
 <script>
@@ -2108,7 +2109,7 @@ async function deleteMainItineraryById(id){
     for(const raw of freeCombined(t).split(/\r?\n/)){
       let line=raw.trim();if(!line)continue;
       const day=freeDateFromHeading(line,t);if(day){date=day;parent=null;last=null;continue;}
-      // v6.90.9: explicitly marked notes belong to the preceding itinerary item.
+      // v6.91.0: explicitly marked notes belong to the preceding itinerary item.
       if(/^(?:📝\s*|備註\s*[:：]\s*)/.test(line)){
         if(last)last.note+=(last.note?'\n':'')+line.replace(/^(?:📝\s*|備註\s*[:：]\s*)/,'');
         continue;
@@ -2720,23 +2721,32 @@ async function deleteMainItineraryById(id){
   function itineraryRows(){
     return state.itineraries.filter(x=>x.trip_id===state.currentTripId).sort((a,b)=>`${a.date} ${a.time}`.localeCompare(`${b.date} ${b.time}`));
   }
+  // v6.91.0: export from the same current itinerary + transport sources as the overview.
   function buildExportSheet(){
-    const t=currentTrip(); const rows=itineraryRows(); const sheet=$('#exportSheet');
-    if(!t||!rows.length){toast('目前還沒有可以匯出的行程');return null;}
-    const childrenByParent={};
-    rows.forEach(x=>{if(x.parent_spot_id)(childrenByParent[String(x.parent_spot_id)] ||= []).push(x);});
-    const topRows=rows.filter(x=>!x.parent_spot_id);
-    let last='';
-    const body=topRows.map(x=>{
-      const day=x.date!==last?`<div class="export-day">🗓️ ${esc(fmtDate(x.date))}</div>`:''; last=x.date;
-      const kids=(childrenByParent[String(x.id)]||[]).map(k=>`
-        <div class="export-subplace">
-          <strong>${k.transport?/飛機/.test(k.transport)?'✈️':/汽車|開車/.test(k.transport)?'🚗':/火車|高鐵|鐵道/.test(k.transport)?'🚄':/船/.test(k.transport)?'🚢':'📷':k.type==='food'?'🤤':k.type==='shop'?'🛍️':'📷'} ${esc(k.place)}</strong>
-          ${k.rating?`<span class="export-substars">${'★'.repeat(Number(k.rating))}${'☆'.repeat(5-Number(k.rating))}</span>`:''}
-          ${k.review?`<span>💬 ${esc(k.review)}</span>`:''}
-          ${k.note?`<span>📝 ${esc(k.note)}</span>`:''}
-        </div>`).join('');
-      return `${day}<div class="export-row"><div class="export-time">${esc(x.time?.slice(0,5)||'')}</div><div class="export-card"><h3>📍 ${esc(x.place)}</h3>${x.station?`<p>🚉 站名：${esc(x.station)}</p>`:''}${x.stay?`<p>🏠 住宿：${esc(x.stay)}</p>`:''}${x.transport?`<p>🚌 交通：${esc(x.transport)}</p>`:''}${x.note?`<p>📝 ${esc(x.note)}</p>`:''}${kids?`<div class="export-subplaces">${kids}</div>`:''}</div></div>`;
+    const t=currentTrip(),sheet=$('#exportSheet');
+    if(!t)return null;
+    const rows=state.itineraries.filter(x=>String(x.trip_id)===String(t.id));
+    const transports=Array.isArray(t.major_transports)?t.major_transports:[];
+    if(!rows.length&&!transports.length){toast('目前還沒有可以匯出的行程');return null;}
+    const byParent={};
+    rows.forEach(x=>{if(x.parent_spot_id)(byParent[String(x.parent_spot_id)]||=[]).push(x);});
+    const ordered=(a,b)=>String(a.date||'').localeCompare(String(b.date||''))||((Number.isFinite(+a.v688_order)&&Number.isFinite(+b.v688_order))?(+a.v688_order)-(+b.v688_order):String(a.time||'').localeCompare(String(b.time||'')));
+    const groups=new Map();
+    const put=(day,kind,row)=>{day=day||'未指定日期';if(!groups.has(day))groups.set(day,[]);groups.get(day).push({kind,row});};
+    rows.filter(x=>!x.parent_spot_id).sort(ordered).forEach(x=>put(x.date,'spot',x));
+    transports.forEach(r=>put(String(r.depart||r.arrive||'').slice(0,10),'transport',r));
+    const iconOf=x=>x.transport?'🚙':x.type==='food'?'🤤':x.type==='shop'?'🛍️':'📍';
+    const details=x=>`${x.station?`<p>🚉 ${esc(x.station)}</p>`:''}${x.stay?`<p>🏠 ${esc(x.stay)}</p>`:''}${x.transport?`<p>🚌 ${esc(x.transport)}</p>`:''}${x.rating?`<p>⭐ ${'★'.repeat(Math.max(0,Math.min(5,Number(x.rating)||0)))}</p>`:''}${x.review?`<p>💬 ${esc(x.review)}</p>`:''}${x.note?`<p class="export-note">📝 ${esc(x.note)}</p>`:''}`;
+    const renderSpot=x=>{
+      const kids=(byParent[String(x.id)]||[]).sort(ordered).map(k=>`<div class="export-subplace"><strong>${iconOf(k)} ${esc(k.place)}</strong>${k.time?`<span>🕒 ${esc(String(k.time).slice(0,5))}</span>`:''}${k.rating?`<span>⭐ ${'★'.repeat(Math.max(0,Math.min(5,Number(k.rating)||0)))}</span>`:''}${k.review?`<span>💬 ${esc(k.review)}</span>`:''}${k.note?`<span class="export-note">📝 ${esc(k.note)}</span>`:''}</div>`).join('');
+      return `<div class="export-row"><div class="export-time">${esc(String(x.time||'').slice(0,5))}</div><div class="export-card"><h3>${iconOf(x)} ${esc(x.place)}</h3>${details(x)}${kids?`<div class="export-subplaces">${kids}</div>`:''}</div></div>`;
+    };
+    const transportIcon=r=>/飛機|航班/.test(r.mode||'')?'✈️':/船/.test(r.mode||'')?'🚢':/火車|高鐵/.test(r.mode||'')?'🚄':/租車|汽車|開車/.test(r.mode||'')?'🚗':'🚌';
+    const clock=v=>(/T(\d\d:\d\d)/.exec(String(v||''))||[])[1]||'';
+    const renderTransport=r=>`<div class="export-row"><div class="export-time">${esc(clock(r.depart||r.arrive))}</div><div class="export-card export-transport"><h3>${transportIcon(r)} ${esc(r.mode||'交通')}${r.from||r.to?'｜'+esc([r.from,r.to].filter(Boolean).join(' → ')):''}</h3>${r.depart?`<p>🕒 出發：${esc(fmtDT(r.depart))}</p>`:''}${r.arrive?`<p>🏁 抵達：${esc(fmtDT(r.arrive))}</p>`:''}${r.ref?`<p>🎫 ${esc(r.ref)}</p>`:''}${r.landmark?`<p>📍 ${esc(r.landmark)}</p>`:''}${r.note?`<p class="export-note">📝 ${esc(r.note)}</p>`:''}</div></div>`;
+    const body=[...groups].sort(([a],[b])=>a.localeCompare(b)).map(([date,items])=>{
+      items.sort((a,b)=>String(a.kind==='transport'?clock(a.row.depart||a.row.arrive):a.row.time||'').localeCompare(String(b.kind==='transport'?clock(b.row.depart||b.row.arrive):b.row.time||'')) || (a.kind==='spot'&&b.kind==='spot'?ordered(a.row,b.row):0));
+      return `<div class="export-day">🗓️ ${esc(date==='未指定日期'?date:fmtDate(date))}</div>${items.map(e=>e.kind==='transport'?renderTransport(e.row):renderSpot(e.row)).join('')}`;
     }).join('');
     sheet.innerHTML=`<div class="export-head"><div class="export-kicker">TRAVEL ITINERARY</div><h1>${esc(t.name)}</h1><p>🗓️ ${esc(t.start_date||'')} ${t.end_date?`～ ${esc(t.end_date)}`:''}</p><p>📍 ${esc(t.location||'未設定')}　👥 ${esc(peopleOf(t).join('、')||'')}</p></div>${body}<div class="export-foot">我的旅遊計畫 · Travel Planner ♡</div>`;
     return sheet;
